@@ -245,9 +245,9 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td-today-in{position:relative;padding:18px 20px;max-width:64%}
 .td-today-art{position:absolute;right:0;top:0;bottom:0;width:48%;background:center/cover no-repeat}
 .td-today .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_rust.webp)}
-.sf-ochtend .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_ochtend.webp)}
-.sf-herstel .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_herstel.webp)}
-.sf-training .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_training.webp)}
+.ka-ochtend .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_ochtend.webp)}
+.ka-herstel .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_herstel.webp)}
+.ka-training .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_training.webp)}
 .td-today-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--td-ink)}
 .td-today .td-title{font-size:30px;margin-top:6px}
 .td-count{background:#E3F3EE;color:#1B5E4B;padding:3px 10px;border-radius:999px;font-size:13.5px}
@@ -744,7 +744,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.11.3";
+const APP_VERSION = "block2-2.11.4";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2749,8 +2749,11 @@ function todayWideHTML(d, ctx, parts){
   const greet = st.isToday ? (hr < 12 ? 'Goedemorgen' : hr < 18 ? 'Goedemiddag' : 'Goedenavond') : (isFuture ? 'Vooruitkijken' : 'Terugkijken');
   const dateTxt = fmt(d,{weekday:'long',day:'numeric',month:'long'});
   // sfeerbeeld past bij de dag: training → pad, herstel oranje/rood → nevel, verder ochtend (vóór 12 uur) of rust
-  const sfeer = (st.planned || st.done) ? 'training' : (!st.und && (st.status==='orange' || st.status==='red')) ? 'herstel' : (st.isToday && hr < 12) ? 'ochtend' : 'rust';
-  let h = `<div class="td sf-${sfeer}">
+  // kop en kaart Vandaag krijgen elk een eigen beeld (nooit twee keer hetzelfde)
+  const train = !!(st.planned || st.done), herstel = !st.und && (st.status==='orange' || st.status==='red');
+  const sfeer = train ? 'ochtend' : herstel ? 'herstel' : (st.isToday && hr < 12) ? 'ochtend' : 'rust';
+  const kaart = train ? 'training' : sfeer==='rust' ? 'ochtend' : 'rust';
+  let h = `<div class="td sf-${sfeer} ka-${kaart}">
     <section class="td-hero">${TD_HERO}<div class="td-hero-fade"></div>
       <div class="td-hero-text"><div class="td-eyebrow">${esc(ctx.title)}${ctx.subtitle && ctx.period!=='program' ? ' · '+esc(ctx.subtitle) : ''}</div>
         <h2 class="td-greet">${greet}</h2><div class="td-date">${esc(dateTxt.charAt(0).toUpperCase()+dateTxt.slice(1))}</div></div>
