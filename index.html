@@ -138,6 +138,11 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .dagadvies .toggles{display:flex;flex-wrap:wrap;gap:4px 20px;margin-top:7px}
 .dagadvies .toggles details{flex:0 0 auto}
 .dagadvies .toggles details[open]{flex:1 1 100%}
+.today-coach .tc-train{margin-top:10px;font-size:15px;color:var(--ink)}
+.today-coach .tc-btn{margin-top:10px}
+.today-coach .tc-next{margin-top:8px}
+.today-coach.st-none{border-left-color:var(--line2)}
+.today-hide{font-weight:400;margin-left:8px;letter-spacing:0;text-transform:none}
 .dagadvies .toggles summary{font-size:11.5px;font-weight:650;color:var(--green);cursor:pointer;list-style:none}
 .dagadvies .toggles summary::-webkit-details-marker{display:none}
 .dagadvies .toggles summary::marker{content:""}
@@ -493,7 +498,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.9.0";
+const APP_VERSION = "block2-2.10.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1188,13 +1193,22 @@ function runOutcome(s){
 }
 const runDoneSessions = () => RP().sessions.filter(s=>s.status==='done').sort(runByDate);
 
-/* herstelstatus (ondersteunend, geen medisch oordeel). Ontbrekende gegevens -> nooit automatisch groen. */
+/* DE herstelbeoordeling van Atempo (één voor Vandaag en Hardlopen; ondersteunend, geen medisch oordeel).
+   Per signaal geldt de strengste regel van de vroegere twee beoordelingen; pijn en vermoeidheid staan apart.
+   Rood   : pijn ≥ 6 · energie ≤ 2 · vorige training niet goed verdragen · twee duidelijke signalen tegelijk
+            (duidelijk = energie ≤ 3, pijn ≥ 4, stijfheid ≥ 7)
+   Oranje : pijn 1–5 · energie 3–5 · stijfheid ≥ 7 · klachten bij wandelen/traplopen · vorige training deels goed ·
+            > 4 weken niet gelopen · twee lichte signalen samen (stijfheid 5–6, slaap < 5,5 u)
+   Groen  : geen signaal en de Ochtendcheck is ingevuld. Ontbrekende gegevens -> nooit automatisch groen.
+   HRV- en rustpolstrend tellen alleen als informatie. Je eigen beoordeling maakt het strenger, nooit milder. */
 function runReadiness(date){
   const th = RP().settings.thresholds, pre = runPre(date);
+  const day = typeof adviceInputs==='function' ? adviceInputs(date) : {};
   const reasons = [], missing = [];
-  let red = false, orange = false;
+  let red = false, orange = false, strong = 0, light = 0;
   const R = t => { red = true; reasons.push({ sev:'red', text:t }); };
   const O = t => { orange = true; reasons.push({ sev:'orange', text:t }); };
+  const L = t => { light++; reasons.push({ sev:'light', text:t }); };
   if(!runPreComplete(pre)){ missing.push('Ochtendcheck van vandaag is nog niet compleet (energie, pijn linkerbeen, wandelen/traplopen)'); }
   if(pre){
     // één gecombineerde vraag uit de Ochtendcheck (wandelen of traplopen) telt als oranje; de oude losse vraag 'wandelen' blijft rood
@@ -1204,7 +1218,18 @@ function runReadiness(date){
     if(num(pre.energy)!=null && pre.energy<=th.energyRed) R('Zeer lage energie ('+pre.energy+'/10; rood bij '+th.energyRed+' of lager)');
     if(num(pre.painLeft)!=null && pre.painLeft>=th.painOrange && pre.painLeft<th.painRed) O('Nog klachten aan het linkerbeen ('+pre.painLeft+'/10; groen alleen bij '+th.greenPainMax+')');
     if(num(pre.energy)!=null && pre.energy>th.energyRed && pre.energy<=th.energyOrange) O('Beperkte energie ('+pre.energy+'/10; oranje bij '+th.energyOrange+' of lager)');
+    if(num(pre.painLeft)!=null && pre.painLeft>=4) strong++;
+    if(num(pre.energy)!=null && pre.energy<=3) strong++;
   }
+  const stiff = num(day.stiffness), sleep = num(day.sleepHours);
+  if(stiff!=null){ if(stiff>=7){ O('Veel spierpijn of stijfheid ('+stiff+'/10)'); strong++; } else if(stiff>=5) L('Spierpijn of stijfheid '+stiff+'/10'); }
+  if(sleep!=null && sleep<5.5) L('Korte nacht ('+nl(round(sleep,1))+' u slaap)');
+  if(light>=2) O('Twee lichte signalen tegelijk');
+  if(strong>=2) R('Twee duidelijke signalen tegelijk');
+  // HRV en rustpols: alleen ter informatie (vergeleken met je eigen gemiddelde van vroeger)
+  const base = (typeof HISTORICAL!=='undefined' && HISTORICAL.baselineSummary) || {};
+  if(day.rhr7!=null && base.rhrAvg!=null && day.rhr7 > base.rhrAvg+5) reasons.push({ sev:'info', text:'Rustpols (7 dagen) ligt meer dan 5 slagen boven je gemiddelde' });
+  if(day.hrv7!=null && base.hrvAvg!=null && day.hrv7 < base.hrvAvg-10) reasons.push({ sev:'info', text:'HRV (7 dagen) ligt duidelijk onder je gemiddelde' });
   const last = runDoneSessions().filter(s=>s.date<=date).pop() || null;
   if(!last){ missing.push('Nog geen eerdere training geregistreerd'); }
   else {
@@ -1223,11 +1248,13 @@ function runReadiness(date){
   else if(num(pre.painLeft)>th.greenPainMax) auto = 'orange';
   else auto = 'green';
   if(!red && !orange && missing.length) reasons.push({ sev:'info', text:'Gegevens ontbreken — daarom geen groene status.' });
+  const complete = runPreComplete(pre), undetermined = !complete && !red && !orange;      // Ochtendcheck nog niet ingevuld en geen signaal
   // trainingsadvies = de strengste van automatisch en eigen beoordeling (rood > oranje > groen):
   // een eigen beoordeling kan het advies strenger maken, maar een automatische waarschuwing nooit wegnemen
   const RANK = { green:0, orange:1, red:2 };
   const shown = own && RANK[own] > RANK[auto] ? own : auto;
-  return { auto, own, shown, ownMilder: !!own && RANK[own] < RANK[auto], reasons, missing, last, hasPre: !!pre };
+  return { auto, own, shown, ownMilder: !!own && RANK[own] < RANK[auto], reasons, missing, last, hasPre: !!pre, complete, undetermined,
+    values:{ energy:pre ? num(pre.energy) : null, pain:pre ? num(pre.painLeft) : null, stiffness:stiff, sleep } };
 }
 /* korte, leesbare kop voor het overzicht (gaat over het gecombineerde advies) */
 function runStatusHeadline(rd){
@@ -2018,9 +2045,9 @@ function renderToday(){
       <button class="btn sm" data-nav-today>Vandaag</button>
   </div></div>`;
 
-  if(!isFuture && (ctx.period==='program' || ctx.period==='transition')){
+  if(!isFuture){
     snapshotAdvice(d);
-    html += dayAdviceBlock(d, ctx.primary ? ctx.primary.type : null);
+    html += todayCoachBlock(d, ctx);
   }
 
   /* ---- DAG IN DE TOEKOMST: ingeklapt houden (less is more) ---- */
@@ -2041,23 +2068,13 @@ function renderToday(){
   /* ---- VANDAAG: één primaire actie, context-gedreven ---- */
   const routineDoneVal = l.routineDone || (checks.routine ? 'ja' : '');
   const routineChecked = routineDoneVal==='ja' || routineDoneVal==='deels';
-  html += `<div class="card"><div class="answer">
-    <div class="seg"><h4>Ochtend</h4><div class="lines">
+  const showRoutines = routinesShown();
+  html += `<div class="card"><div class="answer">` + (showRoutines ? `
+    <div class="seg"><h4>Ochtend <a href="#" class="tny muted today-hide" data-routines="hide">niet tonen</a></h4><div class="lines">
       <label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> Meditatie · contemplatie · gebed</label>
       <label><input type="checkbox" data-routine-check${routineChecked?' checked':''}> Bestaande fysieke ochtendroutine (~${num(CB.routineMinutesTarget)||45} min)</label>
       ${routineChecked ? `<label class="tny muted" style="margin-left:26px"><input type="checkbox" data-routine-deels${routineDoneVal==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}
-    </div></div>`;
-  if(ctx.primary){
-    const p = ctx.primary;
-    html += `<div class="seg"><h4>Vandaag</h4>
-      <div class="big">${esc(p.label)}</div>
-      <div class="chips" style="margin-top:8px">
-        ${p.type==='coach' ? `<button class="btn primary" data-run-open="${(runPlannedOn(d)||{}).id||''}">Training openen</button>` : `<button class="btn ${p.minimal?'sm':'primary'}" data-add="${p.type}|${d}">${p.minimal?'Run registreren':'Registreren'}</button>`}
-      </div>
-    </div>`;
-  } else if(ctx.period==='program' && !ctx.logged.coach && !ctx.logged.strengthA && !ctx.logged.strengthB && !ctx.logged.longwalk && !ctx.logged.learning){
-    html += `<div class="seg"><h4>Vandaag</h4><div class="small muted">Niets specifieks gepland — ochtendroutine is voldoende.</div></div>`;
-  }
+    </div></div>` : '');
   // openstaande weekdoelen — klein en secundair, nooit als primaire taak
   if((ctx.openGoals||[]).length){
     const tech = focusEx ? ws.learning.focusTech : null;
@@ -2065,13 +2082,6 @@ function renderToday(){
       ${ctx.openGoals.map(gl=>`<a href="#" class="tny" data-add="${gl.type==='learning'?'learning':gl.type}|${d}" style="margin-left:6px">+ ${esc(gl.label)}</a>`).join(' ·')}
       ${tech && tech!=='vertrouwd' ? `<br>Techniek ${esc(focusEx.name)} tot nu toe: <b>${esc(tech)}</b> — rustig blijven oefenen.` : ''}
     </div></div>`;
-  }
-  // coach los gepland naast een reeds geregistreerde andere activiteit
-  if(ctx.plannedCoach && !ctx.logged.coach && ctx.primary && ctx.primary.type!=='coach'){
-    html += `<div class="seg"><div class="small">Ook gepland vandaag: <b>${runCoachWord()}</b>
-      <div class="chips" style="margin-top:6px">
-        <button class="btn sm" data-run-open="${(runPlannedOn(d)||{}).id||''}">Training openen</button>
-      </div></div></div>`;
   }
   html += `<div class="seg"><div class="lines">
       <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling — optioneel, naar behoefte</label>
@@ -2081,7 +2091,7 @@ function renderToday(){
 
   /* ---- invoer hoort bij het Ochtend-blok: eerst de ochtendcheck, dan het routine-detail ---- */
   html += ochtendcheckCard();
-  html += routineDetailCard(d);
+  if(showRoutines) html += routineDetailCard(d);
 
   /* ---- WAT AL GEREGISTREERD IS ---- */
   const cardsToday = todayCards(d);
@@ -2169,7 +2179,7 @@ function renderToday(){
    HRV/RHR-trend zijn context. Schalen: energie hoger = gunstiger; stijfheid
    en pijn hoger = ongunstiger. Historische waarden worden nooit geïnverteerd.
    =========================================================================== */
-const ADVICE_VERSION = 1;
+const ADVICE_VERSION = 2;          // 2 = dezelfde herstelbeoordeling als Hardlopen (runReadiness); versie 1 blijft bij oude dagen bewaard
 const ADVICE_LABEL = { green:'Normaal belastbaar', orange:'Verminderde belastbaarheid', red:'Herstel heeft prioriteit' };
 const ADVICE_EMOJI = { green:'🟢', orange:'🟠', red:'🔴' };
 function adviceInputs(d){
@@ -2182,61 +2192,13 @@ function adviceInputs(d){
   };
 }
 function dayAdvice(d){
-  const inp = adviceInputs(d);
-  const base = HISTORICAL.baselineSummary || {};
-  const reasons = [];   // { sev:'strong'|'moderate'|'info'|'good', text }
-  const add = (sev,text)=> reasons.push({ sev, text });
-  const { energy:e, stiffness:st, pain:pn, sleepHours:sl, hrv7, rhr7 } = inp;
-  if(e!=null){
-    if(e<=3) add('strong', `energie laag (${nl(e)}/10)`);
-    else if(e===4) add('moderate', `energie aan de lage kant (4/10)`);
-    else if(e>=7) add('good', `energie goed (${nl(e)}/10)`);
-  }
-  if(st!=null){
-    if(st>=7) add('strong', `stijfheid hoog (${nl(st)}/10)`);
-    else if(st>=5) add('moderate', `stijfheid verhoogd (${nl(st)}/10)`);
-    else if(st<=2) add('good', `weinig stijfheid (${nl(st)}/10)`);
-  }
-  if(pn!=null){
-    if(pn>=4) add('strong', `pijn (${nl(pn)}/10)`);
-    else if(pn>=2) add('moderate', `lichte pijn (${nl(pn)}/10)`);
-    else if(pn===0) add('good', `geen pijn`);
-  }
-  if(sl!=null){
-    if(sl<5.5) add('moderate', `korte slaap (${nl(round(sl,1))} u)`);
-    else if(sl<6.5) add('info', `slaap aan de korte kant (${nl(round(sl,1))} u)`);
-  }
-  if(rhr7!=null && base.rhrAvg!=null && rhr7 > base.rhrAvg+5) add('info', `RHR-trend > 5 bpm boven historisch gemiddelde`);
-  if(hrv7!=null && base.hrvAvg!=null && hrv7 < base.hrvAvg-10) add('info', `HRV-trend duidelijk onder historisch gemiddelde`);
-
-  const strong = reasons.filter(r=>r.sev==='strong').length;
-  const moderate = reasons.filter(r=>r.sev==='moderate').length;
-  const hasCore = e!=null || st!=null || pn!=null;
-
-  let status = null;
-  if(hasCore){
-    if(strong>=2 || (pn!=null && pn>=6)) status = 'red';
-    else if(strong>=1 || moderate>=2) status = 'orange';
-    else status = 'green';
-  }
-  return {
-    status, label: status ? ADVICE_LABEL[status] : 'Nog niet te bepalen',
-    emoji: status ? ADVICE_EMOJI[status] : '⚪',
-    reasons, inputs: inp, version: ADVICE_VERSION,
-    summary: status ? reasons.filter(r=>['strong','moderate','good'].includes(r.sev)).slice(0,3).map(r=>r.text).join(' · ') : 'vul energie / stijfheid / pijn in',
-  };
-}
-/* per activiteit: wat betekent dit advies concreet — nooit blokkerend */
-function adviceForActivity(status, primaryType){
-  if(status==='red') return 'Geen normale trainingsprikkel adviseren. Jij beslist of en wat je vandaag doet.';
-  if(status==='orange'){
-    if(primaryType==='coach') return 'Begin rustig; beperk zo nodig duur of intensiteit.';
-    if(primaryType==='learning') return 'Kort en technisch rustig uitvoeren.';
-    if(primaryType==='strengthA'||primaryType==='strengthB') return 'Verlaag zo nodig volume of gewicht; techniek eerst.';
-    if(primaryType==='longwalk') return 'Rustig tempo, kort houden indien nodig.';
-    return 'Rustiger aan; volume of intensiteit eventueel beperken.';
-  }
-  return primaryType ? 'Normaal uitvoeren.' : 'Ochtendroutine is voldoende.';
+  const inp = adviceInputs(d), rd = runReadiness(d);
+  const SEV = { red:'strong', orange:'moderate', light:'moderate', info:'info' };
+  const reasons = rd.reasons.map(r=>({ sev:SEV[r.sev]||'info', text:r.text }));
+  const status = rd.undetermined ? null : rd.auto;
+  return { status, label: status ? ADVICE_LABEL[status] : 'Nog niet te bepalen', emoji: status ? ADVICE_EMOJI[status] : '⚪',
+    reasons, inputs: inp, version: ADVICE_VERSION, readiness: rd,
+    summary: status ? (reasons.filter(r=>r.sev!=='info').slice(0,3).map(r=>r.text).join(' · ') || todayValuesText(rd.values)) : 'vul de Ochtendcheck in' };
 }
 /* snapshot: bewaar het advies + de inputs waarop het is gebaseerd. Alleen
    (her)schrijven als de inputs veranderd zijn of er nog geen snapshot is —
@@ -2248,6 +2210,7 @@ function snapshotAdvice(d){
   const l = ensureLog(d);
   const key = JSON.stringify(a.inputs);
   if(l.advice && l.advice.inputsKey === key && l.advice.version === a.version) return;
+  if(l.advice && d < todayISO() && l.advice.version !== a.version) return;     // oude dag: het advies van toen blijft bewaard
   l.advice = { status:a.status, reasons:a.reasons.map(r=>r.text), version:a.version, inputs:a.inputs, inputsKey:key, computedAt: new Date().toISOString() };
 }
 /* strengste van automatisch advies en eigen beoordeling (rood > oranje > groen): een eigen beoordeling
@@ -2282,46 +2245,71 @@ function recoveryLabel(){
        : n===1 ? 'één hersteltrend wijkt af van je historische gemiddelde'
        : 'hersteltrends in lijn met je historische gemiddelde';
 }
-/* Dagadvies-blok op Vandaag: automatisch advies + "Waarom?" + koppeling aan de
-   geplande activiteit + ruimte voor je eigen afwijkende beoordeling. */
-function dayAdviceBlock(d, primaryType){
-  const a = dayAdvice(d);
-  const l = CB.dailyLogs[d] || {};
-  const own = l.traffic && DAY_STATUS[l.traffic] ? l.traffic : null;
-  if(!a.status){
-    return `<div class="dagadvies">
-      <div class="lbl">Dagadvies</div>
-      <div class="status">⚪ Nog niet te bepalen</div>
-      <div class="sub">vul energie, stijfheid en pijn linkerbeen in bij de Ochtendcheck</div>
-    </div>`;
-  }
-  const ownPanel = own
-    ? `<div class="panel">Jouw beoordeling: <b>${DAY_STATUS[own].emoji} ${esc(DAY_STATUS[own].label)}</b>${own!==a.status?' — wijkt af van het automatische advies':', gelijk aan het advies'}. <a href="#" data-own-clear="${d}">wissen</a></div>`
-    : `<div class="panel">Eigen inschatting kiezen (staat los van het automatische advies):
-        <span class="own-row">${['green','orange','red'].map(s=>`<a href="#" data-own-set="${d}|${s}" title="${esc(DAY_STATUS[s].label)}">${DAY_STATUS[s].emoji}</a>`).join('')}</span></div>`;
-  const shown = strictestStatus(a.status, own);
-  const stricterOwn = shown!==a.status, milderOwn = !!own && STATUS_RANK[own] < STATUS_RANK[a.status];
-  return `<div class="dagadvies st-${shown}">
-    <div class="lbl">Dagadvies${own&&own!==a.status?` <span class="own-tag">eigen ${DAY_STATUS[own].emoji}</span>`:''}</div>
-    <div class="status">${stricterOwn ? `${DAY_STATUS[shown].emoji} ${esc(DAY_STATUS[shown].label)}` : `${a.emoji} ${esc(a.label)}`}</div>
-    <div class="sub">${stricterOwn ? `Jouw eigen beoordeling is strenger dan het automatische advies (${a.emoji} ${esc(a.label)}).` : esc(a.summary)}</div>
-    ${milderOwn ? `<div class="sub">Je eigen beoordeling (${DAY_STATUS[own].emoji} ${esc(DAY_STATUS[own].label)}) wijkt af van de automatische waarschuwing. De waarschuwing blijft zichtbaar omdat er risicofactoren zijn geregistreerd.</div>` : ''}
-    <div class="act">${esc(adviceForActivity(shown, primaryType))}</div>
-    <div class="toggles">
-      <details><summary>Waarom?</summary><div class="panel">Gebruikte waarden (regelversie ${a.version}): ${adviceValueList(a.inputs)}. Waarden van vandaag wegen zwaarder dan de 7-daagse trend. De app beslist en blokkeert niets.</div></details>
-      <details><summary>Eigen beoordeling</summary>${ownPanel}</details>
-    </div>
-  </div>`;
+/* ---------- Vandaag: drie antwoorden en één knop ----------
+   1. Hoe is je herstel?  2. Wat staat er vandaag?  3. Wat is de volgende stap?
+   Vandaag: de live herstelbeoordeling (runReadiness). Een eerdere dag: het advies dat toen is bewaard. */
+const TODAY_HEAD = {
+  train: { green:'Je kunt vandaag trainen', orange:'Rustig aan vandaag', red:'Vandaag geen hardlooptraining' },
+  rest:  { green:'Goed hersteld', orange:'Rustig aan vandaag', red:'Herstel gaat voor vandaag' } };
+function todayValuesText(v){
+  if(!v) return '';
+  return [v.energy!=null ? 'energie '+nl(v.energy) : null, v.pain!=null ? (v.pain===0 ? 'geen pijn' : 'pijn '+nl(v.pain)) : null,
+          v.stiffness!=null ? 'stijfheid '+nl(v.stiffness) : null, v.sleep!=null ? 'slaap '+nl(round(v.sleep,1))+' u' : null].filter(Boolean).join(' · ');
 }
-function adviceValueList(inp){
-  const bits = [];
-  if(inp.energy!=null) bits.push(`energie ${nl(inp.energy)}`);
-  if(inp.stiffness!=null) bits.push(`stijfheid ${nl(inp.stiffness)}`);
-  if(inp.pain!=null) bits.push(`pijn ${nl(inp.pain)}`);
-  if(inp.sleepHours!=null) bits.push(`slaap ${nl(round(inp.sleepHours,1))} u`);
-  if(inp.hrv7!=null) bits.push(`HRV 7d ${nl(round(inp.hrv7,0))}`);
-  if(inp.rhr7!=null) bits.push(`RHR 7d ${nl(round(inp.rhr7,0))}`);
-  return bits.length ? esc(bits.join(' · ')) : 'geen';
+function todaySessionLine(s){
+  const z = typeof runHrZoneOf==='function' ? runHrZoneOf(s) : '';
+  return `<div class="tc-train"><b>${esc(s.name)}</b>${z ? ` · ${esc(runHrZone(z)[1])} ${s.target.low}–${s.target.high} bpm` : ''}</div>
+    <div class="small muted">${runMinLabel(runTotals(s.steps).total)} · ${esc(runShortStructure(s.steps))}</div>`;
+}
+function routinesShown(){
+  if(CB.showRoutines===true || CB.showRoutines===false) return CB.showRoutines;
+  return Object.values(CB.dailyLogs||{}).some(l=> l && ((l.checks && (l.checks.spiritual || l.checks.routine)) || l.routineDone));   // wie ze al gebruikte, ziet ze; een nieuwe gebruiker niet
+}
+function todayCoachBlock(d, ctx){
+  const isToday = d===todayISO(), l = CB.dailyLogs[d] || {};
+  const own = l.traffic && DAY_STATUS[l.traffic] ? l.traffic : null;
+  let status, why = [], und, vals, onlyMissing = '';
+  if(isToday){ const rd = runReadiness(d); und = rd.undetermined && !own; status = und ? null : (rd.undetermined ? own : rd.shown); why = rd.reasons.concat(rd.missing.map(t=>({ sev:'info', text:t }))); vals = rd.values;
+    // oranje alleen door ontbrekende gegevens: zeg meteen welke (anders lijken goede waarden met oranje tegenstrijdig)
+    if(status==='orange' && !own && !rd.reasons.some(r=>r.sev!=='info') && rd.missing.length)
+      onlyMissing = /^Evaluatie/.test(rd.missing[rd.missing.length-1]) ? 'de vragen bij je vorige training nog niet zijn ingevuld' : /^Nog geen eerdere/.test(rd.missing[rd.missing.length-1]) ? 'er nog geen eerdere training is om op te bouwen' : 'er gegevens ontbreken'; }
+  else { const a = l.advice; status = a ? strictestStatus(a.status, own) : own; und = !status; why = a ? (a.reasons||[]).map(t=>({ sev:'info', text:t })) : []; vals = dayAdvice(d).readiness.values; }
+  const rp = RP(), ses = rp.sessions.filter(s=> s.date===d && s.status!=='cancelled').sort(runByDate);
+  const planned = ses.find(s=>s.status==='planned'), done = ses.find(s=>s.status==='done');
+  const other = (!planned && !done && ctx.primary && ctx.primary.type!=='coach') ? ctx.primary : null;
+  const next = rp.settings.paused ? null : rp.sessions.filter(s=> s.status==='planned' && s.date>d).sort(runByDate)[0];
+  const head = (planned || other) ? TODAY_HEAD.train : TODAY_HEAD.rest;
+  // 1. herstel
+  let h = `<div class="dagadvies today-coach st-${status||'none'}">`;
+  h += und ? `<div class="status">⚪ Hoe voel je je vandaag?</div><div class="sub">Vul de Ochtendcheck in, dan zie je of trainen verstandig is.</div>`
+           : `<div class="status">${ADVICE_EMOJI[status]} ${esc(head[status])}</div>${todayValuesText(vals) ? `<div class="sub">${esc(todayValuesText(vals))}</div>` : ''}${onlyMissing ? `<div class="sub">Oranje omdat ${esc(onlyMissing)}.</div>` : ''}`;
+  // 2. vandaag
+  if(planned){
+    h += todaySessionLine(planned);
+    if(status==='orange') h += `<div class="act">Doe hem op Herstel of Rustig, of korter. Niet opschalen.</div>`;
+    if(status==='red') h += `<div class="act">Rustig wandelen mag. Verzet de training naar een andere dag.</div>`;
+  } else if(done){
+    h += `<div class="tc-train">✓ Gedaan: <b>${esc(done.name)}</b></div>`;
+  } else if(other){
+    h += `<div class="tc-train"><b>${esc(other.label)}</b></div>`;
+  } else {
+    h += `<div class="tc-train">Rustdag.</div>`;
+  }
+  // 3. volgende stap: één knop
+  let btn = '';
+  if(isToday && und) btn = `<button class="btn primary" data-oc-open>Ochtendcheck invullen</button>`;
+  else if(planned) btn = `<button class="btn primary" data-run-open="${planned.id}">${status==='red' ? 'Training verzetten' : 'Training openen'}</button>`;
+  else if(other && isToday) btn = `<button class="btn ${other.minimal?'sm':'primary'}" data-add="${other.type}|${d}">${other.minimal?'Run registreren':'Registreren'}</button>`;
+  if(btn) h += `<div class="tc-btn">${btn}</div>`;
+  if(next) h += `<div class="sub tc-next">${planned||other ? 'Daarna' : 'Volgende training'}: ${esc(fmt(next.date,{weekday:'long',day:'numeric',month:'long'}))} – ${esc(next.name.replace(/ – .*/, ''))}</div>`;
+  // waarom + eigen beoordeling (ingeklapt)
+  const ownPanel = own
+    ? `<div class="panel">Jouw beoordeling: <b>${DAY_STATUS[own].emoji} ${esc(DAY_STATUS[own].label)}</b>. Die kan het advies strenger maken, nooit milder. <a href="#" data-own-clear="${d}">wissen</a></div>`
+    : `<div class="panel">Voel je je slechter dan het advies zegt? Kies je eigen beoordeling: <span class="own-row">${['green','orange','red'].map(s=>`<a href="#" data-own-set="${d}|${s}" title="${esc(DAY_STATUS[s].label)}">${DAY_STATUS[s].emoji}</a>`).join('')}</span></div>`;
+  const whyList = why.length ? `<ul class="small">${why.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>` : `<div class="small">Geen aandachtspunten.</div>`;
+  h += `<div class="toggles"><details><summary>Waarom?</summary><div class="panel">${whyList}<div class="tny muted">Ondersteunend advies, geen medische beoordeling. Atempo blokkeert niets; jij beslist.</div></div></details>
+    <details><summary>Eigen beoordeling</summary>${ownPanel}</details></div></div>`;
+  return h;
 }
 function latestContinuous(){ const v = allRunRecords().filter(r=>r.done===true).map(r=>num(r.continuousMin)).filter(x=>x!=null); return v[v.length-1] ?? null; }
 function biggestAsymmetry(){
@@ -3820,6 +3808,7 @@ function renderData(){
     <p>Je data wordt in deze browser bewaard en, als je hieronder bent ingelogd, ook gesynchroniseerd met je eigen cloud (telefoon en computer delen dan dezelfde data). Maak daarnaast geregeld een JSON-back-up. Historische data is read-only.</p></div>`;
 
   html += syncCardHTML();
+  html += `<div class="card"><h3>Vandaag</h3><label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-routines="${routinesShown()?'hide':'show'}" ${routinesShown()?'checked':''}> Ochtendroutines tonen (meditatie·contemplatie·gebed en de fysieke ochtendroutine)</label></div>`;
   if(typeof coachSettingsHTML==='function') html += `<div class="card">${coachSettingsHTML()}</div>`;   // koppeling met Intervals.icu (Garmin) naast de synchronisatie
   html += `<div class="grid cols-2">
     <div class="card"><h3>Back-up &amp; herstel</h3>
@@ -4616,6 +4605,7 @@ document.addEventListener('click', e=>{
     return;
   }
   const apr = e.target.closest('[data-apply-prev-routine]'); if(apr){ e.preventDefault(); applyPreviousRoutineValues(apr.dataset.applyPrevRoutine); return; }
+  const rtn = e.target.closest('[data-routines]'); if(rtn){ if(rtn.tagName!=='INPUT') e.preventDefault(); CB.showRoutines = rtn.dataset.routines==='show'; saveState(); renderCurrent(); return; }
   const ost = e.target.closest('[data-own-set]'); if(ost){ e.preventDefault(); const [dd,s]=ost.dataset.ownSet.split('|'); ensureLog(dd).traffic = s; saveState(); renderToday(); return; }
   const ocl = e.target.closest('[data-own-clear]'); if(ocl){ e.preventDefault(); const dd=ocl.dataset.ownClear; if(CB.dailyLogs[dd]) CB.dailyLogs[dd].traffic = null; saveState(); renderToday(); return; }
   const mvs = e.target.closest('[data-move-start]'); if(mvs){ const [kind,id]=mvs.dataset.moveStart.split('|'); ui.moveOn={kind,id}; renderToday(); return; }
@@ -5480,7 +5470,7 @@ function runViewOverview(){
     <details class="acc"><summary>Waarom?</summary><div class="acc-body">
       ${rd.reasons.length?`<ul class="small">${rd.reasons.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>`:''}
       ${rd.missing.length?`<div class="tny muted">Ontbrekend: ${rd.missing.map(esc).join('; ')}.</div>`:''}
-      ${!rd.reasons.length && !rd.missing.length?'<div class="small muted">Geen aandachtspunten. Groen geldt bij pijn linkerbeen 0, energie boven 5 en geen klachten bij wandelen of traplopen.</div>':''}
+      ${!rd.reasons.length && !rd.missing.length?'<div class="small muted">Geen aandachtspunten. Groen geldt bij pijn linkerbeen 0, energie boven 5, weinig spierpijn of stijfheid en geen klachten bij wandelen of traplopen.</div>':''}
       <div class="tny muted">Ondersteunend advies, geen medische beoordeling.</div>
     </div></details></div>`;
 
