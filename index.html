@@ -394,6 +394,15 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 }
 #view-running .form-grid{align-items:end}
 #ocCard{scroll-margin-top:90px}
+
+/* intensiteit (hartslagdoel) bij een training */
+#view-running .run-hr{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:8px 0}
+#view-running .run-hr-pick{display:flex;align-items:center;gap:8px;font-size:14px;width:auto;margin:0}
+#view-running .run-hr-pick select{width:auto;min-width:0;max-width:170px;flex:0 0 auto}
+#view-running .run-hr-bpm{font-size:15px}
+#view-running .run-hr-ask{max-width:320px;margin:4px 0 8px}
+#view-running .run-hrset{margin-top:12px}
+#view-running .run-hr-own{display:flex;align-items:center;gap:8px;margin:6px 0}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -484,7 +493,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.8.4";
+const APP_VERSION = "block2-2.9.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1037,9 +1046,53 @@ const runCurrentTpl = () => runTpl(RP().settings.currentTemplateId) || RP().temp
 const runSes = id => RP().sessions.find(s=>s.id===id) || null;
 const runByDate = (a,b) => (a.date||'').localeCompare(b.date||'') || (a.createdAt||'').localeCompare(b.createdAt||'');
 
+/* ---------- hartslag: één centrale berekening voor iedere gebruiker ----------
+   De instellingen staan in de eigen stand van de gebruiker (runningProgram.settings.hr) en gaan mee met zijn eigen
+   opslag en cloud (Firebase, per account afgeschermd). Geen vaste persoonlijke waarden in de code.
+   Maximale hartslag: eigen waarde als die is gekozen, anders Tanaka (2001): 208 − 0,7 × leeftijd (volwassenen, 18+).
+   Bereik = percentage van de maximale hartslag, afgerond op hele bpm. Een training bewaart het bereik dat bij het kiezen
+   gold (momentopname: target {type:'hr', zone, low, high, hrMax, basis}); een latere wijziging van leeftijd of maximum
+   verandert pas iets na bevestiging, en nooit bij afgeronde trainingen. */
+const RUN_HR_ZONES = [            // [sleutel, naam, ondergrens, bovengrens] als deel van de maximale hartslag
+  ['herstel','Herstel',.55,.65], ['rustig','Rustig',.65,.75], ['stevig','Stevig',.75,.85], ['intensief','Intensief',.85,.90], ['zeerintensief','Zeer intensief',.90,1.00] ];
+const RUN_HR_AGE = [18, 99], RUN_HR_OWN = [120, 230];
+const runHrRound = x => Math.round(Math.round(x*1e6)/1e6);          // zonder zwevendekommafoutjes (0,9 × 185 = 166,5 → 167)
+const runHrSet = () => RP().settings.hr || {};
+const runHrZone = k => RUN_HR_ZONES.find(z=>z[0]===k) || null;
+function runHrMax(h){                                                // { bpm, basis:'eigen'|'leeftijd' } of null
+  h = h || runHrSet();
+  const own = num(h.ownMax), age = num(h.age);
+  if(h.useOwn && own>=RUN_HR_OWN[0] && own<=RUN_HR_OWN[1]) return { bpm:Math.round(own), basis:'eigen' };
+  if(age>=RUN_HR_AGE[0] && age<=RUN_HR_AGE[1]) return { bpm:runHrRound(208 - 0.7*age), basis:'leeftijd' };
+  return null;
+}
+function runHrRange(zone, max){ const z = runHrZone(zone); return z && max ? { low:runHrRound(z[2]*max), high:runHrRound(z[3]*max) } : null; }
+function runHrTarget(zone, h){                                       // trainingsdoel voor één training (of 'geen doel')
+  const mx = runHrMax(h), r = mx && runHrRange(zone, mx.bpm);
+  return r ? { type:'hr', zone, low:r.low, high:r.high, hrMax:mx.bpm, basis:mx.basis } : { type:'none', low:null, high:null };
+}
+const runHrOn = () => !!runHrMax();
+const runHrZoneOf = s => (s && s.target && s.target.type==='hr' && runHrZone(s.target.zone)) ? s.target.zone : '';
+const runHrHeavy = z => z==='stevig' || z==='intensief' || z==='zeerintensief';
+/* intensiteit voor een nieuwe training: de laatst bewust gekozen (eerste keer Rustig). Zeer intensief nooit vanzelf;
+   Stevig/Intensief niet vanzelf als het herstel van die dag (vandaag) niet groen is. Zonder hartslaginstelling: geen doel. */
+function runHrDefaultTarget(date){
+  if(!runHrOn()) return null;
+  let z = runHrSet().lastZone || 'rustig';
+  if(!runHrZone(z) || z==='zeerintensief') z = 'rustig';
+  if(runHrHeavy(z) && date===todayISO() && runReadiness(date).shown!=='green') z = 'rustig';
+  return runHrTarget(z);
+}
+/* toekomstige geplande trainingen waarvan het bereik niet meer past bij de huidige instellingen */
+function runHrOutdated(){
+  const today = todayISO();
+  return RP().sessions.filter(s=> s.status==='planned' && s.date>=today && runHrZoneOf(s)).filter(s=>{
+    const n = runHrTarget(s.target.zone); return n.type!=='hr' || n.low!==s.target.low || n.high!==s.target.high; });
+}
+
 function runNewSession(date, tpl){
   return { id:runId(), date, templateId:tpl.id, name:tpl.name + (tpl.label ? ' – '+tpl.label : ''), status:'planned',
-    steps: runStepsFromParams(tpl), intensity:tpl.intensity||'rustig', target:{ ...(tpl.target||{type:'none',low:null,high:null}) },
+    steps: runStepsFromParams(tpl), intensity:tpl.intensity||'rustig', target: runHrDefaultTarget(date) || { ...(tpl.target||{type:'none',low:null,high:null}) },
     notes:'', createdAt:runNow(), garminExternalId:null, manual:null, post:null, next:null };
 }
 function runSessionsOn(date){ return RP().sessions.filter(s=>s.date===date).sort(runByDate); }
@@ -1261,7 +1314,8 @@ function runSetLevel(id, reason){
 function runChangeSessionLevel(sesId, tplId){      // sessie wordt een verse kopie van het andere niveau (datum, status en resultaat blijven)
   const s = runSes(sesId), t = runTpl(tplId); if(!s || !t) return;
   if(s.status==='done'){ return runMsg('Een uitgevoerde training verander je niet achteraf van niveau.','err'); }
-  s.templateId = t.id; s.name = t.name + (t.label ? ' – '+t.label : ''); s.steps = runStepsFromParams(t); s.intensity = t.intensity; s.target = { ...(t.target||{type:'none',low:null,high:null}) };
+  s.templateId = t.id; s.name = t.name + (t.label ? ' – '+t.label : ''); s.steps = runStepsFromParams(t); s.intensity = t.intensity;
+  if(!runHrZoneOf(s)) s.target = { ...(t.target||{type:'none',low:null,high:null}) };      // niveau en hartslagintensiteit staan los van elkaar
 }
 
 /* ---------- koppeling met de rest van de app (alleen LEZEN van hardloopresultaten) ---------- */
@@ -4788,7 +4842,7 @@ function syncFootUpdate(){
   const ss = $('#saveState'); if(ss && !SYNC.msg) ss.textContent = syncIdleLabel();
 }
 function syncSetMsg(m){ SYNC.msg = m; const el = $('#syncStatus'); if(el) el.textContent = m; const ss = $('#saveState'); if(ss && m) ss.textContent = m; syncFootUpdate(); }
-function syncMarkers(cloudAt, localAt){ const s = syncLoad(); s.lastCloudAt = cloudAt; s.lastLocalAt = localAt; syncSave(s); }
+function syncMarkers(cloudAt, localAt){ const s = syncLoad(); s.lastCloudAt = cloudAt; s.lastLocalAt = localAt; if(s.auth && s.auth.uid) s.dataUid = s.auth.uid; syncSave(s); }   // dataUid: van wie de gegevens in deze browser zijn
 async function fbGetCurrent(uid){
   const raw = await fbDb('trainingsplan/'+uid+'/current');
   if(!raw || !raw.state) return null;
@@ -4831,6 +4885,7 @@ async function syncNow(retry){
   const s0 = syncLoad(); if(!s0.auth) return;
   SYNC.busy = true; syncSetMsg('☁ Synchroniseren…');
   try{
+    if(s0.dataUid && s0.dataUid !== s0.auth.uid){ await syncSwitchAccount(s0); return; }     // ander account: nooit samenvoegen of uploaden
     const row = await fbGetCurrent(s0.auth.uid), s = syncLoad();
     if(!row){ await syncPush(null,false); return; }
     const localChanged = state.meta.updatedAt !== s.lastLocalAt;
@@ -4855,6 +4910,20 @@ async function syncNow(retry){
     syncSetMsg('☁ Sync mislukt: '+e.message);
   }finally{ SYNC.busy = false; }
 }
+/* inloggen met een ander account dan van wie de gegevens in deze browser zijn: de gegevens van de vorige gebruiker worden
+   nooit naar het nieuwe account gestuurd of ermee samengevoegd. Niet-gesynchroniseerde wijzigingen eerst als bestand bewaren,
+   dan de eigen cloud van het nieuwe account laden (of met een lege app beginnen). */
+async function syncSwitchAccount(s0){
+  const row = await fbGetCurrent(s0.auth.uid);
+  if(state.meta.updatedAt !== s0.lastLocalAt && !syncEmpty(state))
+    dl(new Blob([JSON.stringify({ ...state, historicalData:HISTORICAL },null,2)],{type:'application/json'}), 'Atempo_vorige_gebruiker_'+todayISO()+'.json');
+  try { sessionStorage.removeItem('atempo-intervals'); } catch(e){}                       // Garmin-koppeling is per gebruiker
+  if(row){ const s = syncLoad(); s.dataUid = s0.auth.uid; syncSave(s); syncApplyCloud(row); return; }
+  localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('trainingsplan-rens-hist');
+  const s = syncLoad(); s.dataUid = s0.auth.uid; s.lastCloudAt = null; s.lastLocalAt = null; s.lastVersionAt = null; syncSave(s);
+  syncReload();
+}
+function syncReload(){ location.reload(); }
 function syncSoon(){
   if(!fbConfigured() || SYNC.conflict) return; const s = syncLoad(); if(!s.auth) return;
   clearTimeout(SYNC.timer); SYNC.timer = setTimeout(()=>syncNow(), 4000);
@@ -4923,7 +4992,7 @@ async function syncLogin(){
   try{ await fbLogin(email, pw); syncSetMsg('☁ Ingelogd'); renderData(); syncNow(); }
   catch(e){ syncSetMsg('Inloggen mislukt: '+e.message); }
 }
-function syncLogout(){ const s = syncLoad(); delete s.auth; syncSave(s); syncSetMsg(''); renderData(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
+function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-intervals'); } catch(e){} syncSetMsg(''); renderData(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
 function syncCardHTML(){
   if(!fbConfigured()) return `<div class="card"><h3>Synchronisatie</h3><p class="small muted">Nog niet ingesteld op dit apparaat.</p></div>`;
   const s = syncLoad();
@@ -5302,12 +5371,30 @@ function runEditHTML(s){
     ${runInp('Notitie', '__run.ses.'+s.id+'.notes', s.notes, { ph:'optioneel' })}
     <div class="run-actions">${runBtn('close|'+s.id,'Klaar','sm primary')}</div></div>`;
 }
+/* intensiteit (hartslagdoel) van één training: één keuzelijst met het bereik ernaast */
+const runBpm = t => t && t.type==='hr' ? t.low+'–'+t.high+' bpm' : '';
+function runHrLine(s){
+  const z = runHrZoneOf(s), b = '__run.ses.'+s.id+'.';
+  if(s.status!=='planned') return z ? `<div class="small run-hr"><b>Intensiteit:</b> ${esc(runHrZone(z)[1])} · ${runBpm(s.target)}</div>` : '';
+  const opts = [['','Geen hartslagdoel'], ...RUN_HR_ZONES.map(x=>[x[0], x[1]])];
+  let h = `<div class="run-hr"><label class="run-hr-pick">Intensiteit <select data-bind="${b}zone">${opts.map(([v,t])=>`<option value="${v}" ${v===(RUI.hrAsk===s.id ? RUI.hrAskZone : z)?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`
+    + (z ? `<b class="run-hr-bpm">${runBpm(s.target)}</b>` : '') + `</div>`;
+  if(RUI.hrAsk===s.id) h += `<div class="run-hr-ask">${runInp('Je leeftijd (één keer invullen)', '__run.set.hrAge', '', { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1], ph:'bijv. 45' })}<div class="tny muted">Daarmee berekent Atempo je hartslagbereik. Aanpassen kan later bij Instellingen.</div></div>`;
+  if(z==='zeerintensief') h += `<div class="warnline">Zeer intensief is een zeer zware belasting. Kies dit alleen als je dit gewend bent en goed hersteld bent.</div>`;
+  if(z && runHrHeavy(z) && s.date===todayISO()){
+    const rd = runReadiness(s.date).shown;
+    if(rd==='red') h += `<div class="warnline">Je herstel is vandaag rood: liever niet hardlopen, zeker niet ${esc(runHrZone(z)[1].toLowerCase())}.</div>`;
+    else if(rd==='orange') h += `<div class="warnline">Je herstel is vandaag oranje. Rustiger is verstandig. ${runBtn('hrCalm|'+s.id,'Maak het Rustig','sm')}</div>`;
+  }
+  return h;
+}
 /* alles van één training, onder de training in de kalender */
 function runSessionDetail(s){
   const today = todayISO(), b = '__run.ses.'+s.id+'.';
   let h = runTimelineSVG(s.steps, 30) + runTotalsLine(s.steps);
   if(s.status==='planned'){
     h += runRestWarnings(s).map(w=>`<div class="warnline">${esc(w)}</div>`).join('');
+    h += runHrLine(s);
     h += coachLineHTML(s);
     if(s.date<=today) h += `<div class="run-sub">Hoe ging het?</div><div class="run-actions">${runResultButtons(s)}</div>`;
     const editing = RUI.editId===s.id;
@@ -5316,7 +5403,7 @@ function runSessionDetail(s){
         ${editing ? '' : runBtn('editToggle|'+s.id, 'Aanpassen', 'sm')}${runBtn('del|'+s.id,'Verwijderen','sm danger')}${editing ? '' : runBtn('close|'+s.id,'Klaar','sm primary run-close')}</div>`;
     if(editing) h += runEditHTML(s);
   } else if(s.status==='done'){
-    h += `<div class="small run-res">${runResultLine(s)}</div><div class="run-sub">Na de training</div>${runPostForm(s)}`;
+    h += runHrLine(s) + `<div class="small run-res">${runResultLine(s)}</div><div class="run-sub">Na de training</div>${runPostForm(s)}`;
     h += `<div class="small"><b>Beoordeling:</b> ${esc(runOutcome(s).text)}</div>`;
     if(!s.garminExternalId) h += `<div class="form-grid cols-2">${runInp('Duur (min)', b+'manDuration', s.manual && s.manual.durationMin, { type:'number', inputmode:'decimal' })}${runInp('Afstand (km)', b+'manDistance', s.manual && s.manual.distanceKm, { type:'number', inputmode:'decimal' })}</div>`;
     h += `<div class="run-actions">${runBtn('undo|'+s.id,'Ongedaan maken','sm')}${runBtn('close|'+s.id,'Klaar','sm primary run-close')}</div>`;
@@ -5471,11 +5558,27 @@ function runViewProgram(){
     <div class="small"><b>Trainingsdagen</b> <span class="tny muted">(daar komen de voorstellen)</span></div>
     <div class="run-chips">${DOW.map(k=>runBtn('day|'+k, esc(DOW_NL[k]), 'sm'+(rp.settings.trainingDays.includes(k)?' active':''))).join('')}</div>
     <div class="form-grid cols-4">${runInp('Weken vooruit plannen','__run.set.planWeeksAhead',rp.settings.planWeeksAhead,{type:'number',inputmode:'numeric',min:1,max:8})}</div>
+    ${runHrSettingsHTML()}
   </div></details>`;
   return h;
 }
 
 /* ---------- invoer-verwerking (komt binnen via setByPath voor '__run.*'-velden) ---------- */
+/* Instellingen › Mijn hartslag: leeftijd, de maximale hartslag (geschat of eigen) en de bevestiging na een wijziging */
+function runHrSettingsHTML(){
+  const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
+  const ageOld = mx && mx.basis==='leeftijd' && h.ageSetAt && (Date.now()-Date.parse(h.ageSetAt)) > 365*86400000;
+  return `<div class="small run-hrset"><b>Mijn hartslag</b></div>
+    <div class="form-grid cols-4">${runInp('Leeftijd', '__run.set.hrAge', h.age, { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1] })}
+      ${h.useOwn ? runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] }) : ''}</div>
+    <div class="small">${mx ? `Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span>` : '<span class="muted">Vul je leeftijd in om met een hartslagdoel te trainen.</span>'}</div>
+    ${ageOld ? `<div class="small">Klopt je leeftijd (${esc(h.age)}) nog? ${runBtn('hrAgeOk','Ja, klopt','sm')}</div>` : ''}
+    <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
+    ${old.length && h.dismissed!==runHrSig() ? runHrUpdateHTML(old.length) : ''}`;
+}
+const runHrSig = () => { const m = runHrMax(); return m ? m.bpm+'/'+m.basis : ''; };
+const runHrUpdateHTML = n => `<div class="run-msg run-hr-upd">Je hartslaginstellingen zijn gewijzigd. ${n===1 ? '1 toekomstige training' : n+' toekomstige trainingen'} bijwerken?
+  <div class="run-actions">${runBtn('hrUpdate','Bijwerken','sm primary')}${runBtn('hrLater','Niet nu','sm')}</div></div>`;
 function runSet(parts, raw){
   RUI.msg = ''; const rp = RP(), k = parts[0];
   const bad = t => runMsg(t,'err');
@@ -5491,6 +5594,13 @@ function runSet(parts, raw){
     const s = runSes(parts[1]); if(!s) return; const f = parts[2];
     if(f==='date'){ if(!runValidDate(raw)) return bad('Ongeldige datum.'); if(raw!==s.date && !s.movedFrom) s.movedFrom = s.date; if(raw===s.movedFrom) delete s.movedFrom; s.date = raw; rp.sessions.sort(runByDate); RUI.openId = s.id; RUI.scrollTo = s.id; }
     else if(f==='notes') s.notes = String(raw);
+    else if(f==='zone'){
+      if(s.status!=='planned') return;
+      const z = runHrZone(raw) ? String(raw) : '';
+      if(!z){ s.target = { type:'none', low:null, high:null }; RUI.hrAsk = null; }
+      else if(!runHrOn()){ RUI.hrAsk = s.id; RUI.hrAskZone = z; RUI.openId = s.id; return; }     // eerst één keer de leeftijd
+      else { s.target = runHrTarget(z); runHrRemember(z); }
+      RUI.openId = s.id; clearTimeout(window._rr); window._rr = setTimeout(renderCurrent, 60); }      // bereik meteen tonen
     else if(f==='manDuration' || f==='manDistance'){ s.manual = s.manual || {}; const v = String(raw).trim()===''?null:numIn(raw,0,1000); if(v===undefined) return bad('Vul een geldig getal in.'); s.manual[f==='manDuration'?'durationMin':'distanceKm'] = v; }
     coachSoon(); return;
   }
@@ -5508,16 +5618,34 @@ function runSet(parts, raw){
     else if(f==='vo2max'){ if(String(raw).trim()===''){ delete o.vo2max; } else { const n = numIn(raw,20,95); if(n===undefined) return bad('VO₂-max: een getal tussen 20 en 95.'); o.vo2max = Math.round(n*10)/10; } }
     return;
   }
+  if(k==='set' && ['hrAge','hrOwnMax'].includes(parts[1])){
+    const h = rp.settings.hr = rp.settings.hr || {}, wasOn = runHrOn(), f = parts[1];
+    if(f==='hrAge'){ if(String(raw).trim()===''){ delete h.age; } else { const n = numIn(raw,0,150); if(n===undefined || n<RUN_HR_AGE[0] || n>RUN_HR_AGE[1]) return bad(n!==undefined && n<RUN_HR_AGE[0] ? 'De hartslagberekening is bedoeld voor volwassenen (18 jaar en ouder).' : 'Vul een leeftijd in tussen '+RUN_HR_AGE[0]+' en '+RUN_HR_AGE[1]+'.'); h.age = Math.round(n); h.ageSetAt = runNow(); } }
+    else if(f==='hrOwnMax'){ if(String(raw).trim()===''){ delete h.ownMax; } else { const n = numIn(raw,RUN_HR_OWN[0],RUN_HR_OWN[1]); if(n===undefined) return bad('Eigen maximale hartslag: tussen '+RUN_HR_OWN[0]+' en '+RUN_HR_OWN[1]+' bpm.'); h.ownMax = Math.round(n); } }
+    if(!wasOn && runHrOn()){                                         // net aangezet: gekozen training afmaken + eenmalige tip
+      const s = RUI.hrAsk && runSes(RUI.hrAsk); if(s && s.status==='planned'){ s.target = runHrTarget(RUI.hrAskZone || 'rustig'); runHrRemember(RUI.hrAskZone || 'rustig'); RUI.openId = s.id; coachSoon(); }
+      RUI.hrAsk = null;
+      if(!h.tipSeen){ h.tipSeen = true; runMsg('Loop ontspannen. De hartslag is een richtwaarde; de tijd bepaalt wanneer de volgende stap begint.'); }
+    }
+    return;
+  }
   if(k==='set' && parts[1]==='planWeeksAhead'){ const n = numIn(raw,1,8); if(n===undefined) return bad('Weken: 1 t/m 8.'); rp.settings.planWeeksAhead = Math.round(n); }
 }
 
 /* ---------- knoppen en acties ---------- */
+/* laatst bewust gekozen intensiteit onthouden (per gebruiker, in zijn eigen stand); Zeer intensief wordt nooit de standaard */
+function runHrRemember(z){ if(z==='zeerintensief') return; const h = RP().settings.hr = RP().settings.hr || {}; h.lastZone = z; }
 function runAct0(act, args, el){
   const rp = RP(), today = todayISO(); RUI.msg = '';
   const s = args[0] ? runSes(args[0]) : null;
   if(act.startsWith('coach')) return coachAct(act, args);
   switch(act){
     case 'tab': RUI.tab = args[0]==='program' ? 'program' : 'overview'; break;
+    case 'hrCalm': if(s && s.status==='planned' && runHrOn()){ s.target = runHrTarget('rustig'); RUI.openId = s.id; coachSoon(); runMsg('Deze training is nu Rustig ('+runBpm(s.target)+').'); } break;
+    case 'hrOwn': { const h = rp.settings.hr = rp.settings.hr || {}; h.useOwn = !h.useOwn; } break;
+    case 'hrAgeOk': { const h = rp.settings.hr = rp.settings.hr || {}; h.ageSetAt = runNow(); } break;
+    case 'hrLater': { const h = rp.settings.hr = rp.settings.hr || {}; h.dismissed = runHrSig(); } break;
+    case 'hrUpdate': { const list = runHrOutdated(); list.forEach(x=>{ x.target = runHrTarget(x.target.zone); }); if(list.length){ coachSoon(); runMsg(list.length===1 ? '1 training bijgewerkt.' : list.length+' trainingen bijgewerkt.'); } } break;
     case 'open': if(s){ RUI.tab = 'program'; RUI.openId = s.id; RUI.scrollTo = s.id; } break;
     case 'plan': { const t = runTpl(args[1]) || runCurrentTpl(); if(rp.restDays[args[0]]) delete rp.restDays[args[0]]; const n = runPlanOn(args[0], t); if(n && n.id){ RUI.openId = n.id; runMsg(n.name+' ingepland op '+runDateShort(args[0])+'.'); } break; }
     case 'planAhead': { const t = runCurrentTpl(), ds = runSuggestionDates(today, (rp.settings.planWeeksAhead||2)+1).filter(d=>d>=today);
@@ -5868,10 +5996,17 @@ function coachAutoRemove(s){
 function coachSoon(){ clearTimeout(coachSoon.t); coachSoon.t = setTimeout(()=>coachSyncAll(false), 1200); }
 /* Sync met Garmin: elke geplande training vanaf vandaag die nog niet (of niet meer actueel) in Intervals.icu staat,
    gaat in één keer mee. Gebeurt vanzelf zolang je verbonden bent; de knop doet hetzelfde op jouw verzoek. */
+/* niet vanzelf naar Garmin (wel met de knop Sync met Garmin): een training van vandaag bij rood herstel, en Zeer intensief
+   zolang het herstel van die dag niet groen is (voor latere dagen is dat nog niet bekend) */
+function coachHold(s){
+  const today = todayISO(), zi = runHrZoneOf(s)==='zeerintensief';
+  if(s.date===today){ const rd = runReadiness(today).shown; if(rd==='red') return 'rood'; if(zi && rd!=='green') return 'zeer'; return ''; }
+  return zi ? 'zeer' : '';
+}
 async function coachSyncAll(manual){
   if(!coachConnected()){ if(manual) runMsg('Verbind eerst met Intervals.icu.', 'err'); return 0; }
   if(RUI.coachBusy) return 0;
-  const today = todayISO(), list = RP().sessions.filter(s=> s.status==='planned' && s.date>=today && coachState(s)!=='sent');
+  const today = todayISO(), list = RP().sessions.filter(s=> s.status==='planned' && s.date>=today && coachState(s)!=='sent' && (manual || !coachHold(s)));
   if(!list.length){ if(manual){ runMsg('Alles staat al in Garmin.'); coachRerender(); } return 0; }
   const c = coachSet(); RUI.coachBusy = 'all'; if(manual) coachRerender();
   try {
@@ -5919,6 +6054,8 @@ function coachLineHTML(s){
   if(st==='sent') return `<div class="run-g"><span class="run-g-ok">✓ In Garmin</span> <span class="tny muted">${i && i.syncedAt ? esc(new Date(i.syncedAt).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : ''}</span></div>`;
   if(st==='error') return `<div class="run-g"><span class="warnline" style="margin:0">Sync met Garmin mislukt: ${esc(i.error||'onbekende fout')}</span>${runBtn('coachSync','Opnieuw','sm')}</div>`;
   if(RUI.coachBusy) return '<div class="run-g"><span class="tny muted">Bezig met synchroniseren…</span></div>';
+  const hold = coachConnected() ? coachHold(s) : '';
+  if(hold) return `<div class="run-g"><span class="tny muted">${hold==='rood' ? 'Niet vanzelf naar Garmin: je herstel is vandaag rood.' : 'Zeer intensief gaat niet vanzelf naar Garmin, alleen op een dag met groen herstel.'}</span>${runBtn('coachSync','Toch naar Garmin','sm')}</div>`;
   return coachConnected() ? '<div class="run-g"><span class="tny muted">Gaat zo vanzelf naar Garmin.</span></div>' : coachCanConnect() ? `<div class="run-g"><span class="tny muted">Nog niet in Garmin.</span>${runBtn('coachSync','Sync met Garmin','sm')}</div>` : '';
 }
 function coachSettingsHTML(){
