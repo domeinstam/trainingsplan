@@ -141,7 +141,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td{--td-ink:#1F3A55;--td-text:#2A4560;--td-sub:#4A5F72;--td-act:#2F6390;--td-line:#E3EBF0;--td-pos:#3B7D5A;--td-posbg:#F1F8F4;--td-warn:#B86E00;--td-warnbg:#FBF1DD;--td-red:#9A3529;--td-redbg:#F8E8E5;max-width:1360px;margin:0 auto;color:var(--td-text)}
 .td-hero{position:relative;overflow:hidden;background:#fff;border:1px solid var(--td-line);border-radius:18px;padding:18px 24px;display:flex;align-items:flex-end;gap:12px 16px;flex-wrap:wrap;margin-bottom:16px;min-height:150px;box-sizing:border-box}
 .td-hero-art{position:absolute;right:0;top:0;width:55%;height:100%}
-.td-hero-photo{position:absolute;right:0;top:0;width:64%;height:100%;background:url(achtergronden/bergpad_1600.webp) center 58%/cover no-repeat}
+.td-hero-photo{position:absolute;right:0;top:0;width:64%;height:100%;background:url(achtergronden/kop_rust.webp) center 60%/cover no-repeat}
+.sf-ochtend .td-hero-photo{background-image:url(achtergronden/kop_ochtend.webp)}.sf-training .td-hero-photo{background-image:url(achtergronden/kop_training.webp)}.sf-herstel .td-hero-photo{background-image:url(achtergronden/kop_herstel.webp)}.sf-rust .td-hero-photo{background-image:url(achtergronden/kop_rust.webp)}
 .td-hero-fade{position:absolute;inset:0;background:linear-gradient(90deg,#fff 38%,rgba(255,255,255,.85) 52%,rgba(255,255,255,0) 78%)}
 @media(min-width:861px){.app .sidebar{background-image:url(achtergronden/heuvels_zijbalk.webp),linear-gradient(180deg,#E6F3F7 0%,#EAF4F2 55%,#DDEFE6 100%);background-repeat:no-repeat,no-repeat;background-position:center bottom,0 0;background-size:100% auto,100% 100%;padding-bottom:130px}}
 .td-hero-text{position:relative;flex:1 1 320px}
@@ -232,6 +233,75 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td-quick .td-chev{color:var(--td-sub);width:18px;height:18px}
 .td .td-side-regs details.acc{background:#fff;border:1px solid var(--td-line);border-radius:14px;box-shadow:none}
 .td .td-side-regs details.acc>summary{padding:14px 16px;font-size:14.5px;background:#fff;border-radius:14px}
+.td-greet{font-size:32px}
+.td-coach{padding:16px 20px}
+.td-coach-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--td-ink)}
+.td-spark{color:#E0A100}
+.td-coach-body{display:flex;gap:14px;align-items:flex-start;margin-top:10px}
+.td-dot{flex:0 0 auto;width:22px;height:22px;border-radius:50%;margin-top:3px;background:#B9C6D0}
+.td-dot.st-green{background:var(--td-pos)}.td-dot.st-orange{background:#F09A1A}.td-dot.st-red{background:var(--td-red)}
+.td-coach .td-coach-head{margin:0 0 2px!important;font-size:19px!important}
+.td-today{position:relative;overflow:hidden;min-height:132px;padding:0}
+.td-today-in{position:relative;padding:18px 20px;max-width:64%}
+.td-today-art{position:absolute;right:0;top:0;bottom:0;width:48%;background:center/cover no-repeat}
+.td-today .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_rust.webp)}
+.sf-ochtend .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_ochtend.webp)}
+.sf-herstel .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_herstel.webp)}
+.sf-training .td-today-art{background-image:linear-gradient(90deg,#fff 0%,rgba(255,255,255,.55) 35%,rgba(255,255,255,0) 70%),url(achtergronden/kaart_training.webp)}
+.td-today-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--td-ink)}
+.td-today .td-title{font-size:30px;margin-top:6px}
+.td-count{background:#E3F3EE;color:#1B5E4B;padding:3px 10px;border-radius:999px;font-size:13.5px}
+.td-task{align-items:center}
+.td-task-in{flex:1;min-width:0}
+.td-task input[type=checkbox]{appearance:none;-webkit-appearance:none;width:22px;height:22px;border:2px solid #B9C6D0;border-radius:50%;margin:0;display:inline-grid;place-content:center;background:#fff;cursor:pointer;flex:0 0 auto}
+.td-task input[type=checkbox]:checked{background:var(--td-pos);border-color:var(--td-pos)}
+.td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
+.td-tick{width:22px;height:22px;margin-top:0}
+.td-go{background:none;border:0;padding:6px;margin-left:auto;cursor:pointer;color:var(--td-sub);border-radius:8px;display:flex}
+.td-go:hover{background:#F2F8F5}
+.td-stats-4{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:4px}
+.td-stats-4 .td-stat b{font-size:17px}
+.td-stats-4 .td-missing{font-size:12px;font-weight:500}
+.td-recovery details.acc{margin-top:12px}
+.td-week-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(200px,1fr);gap:18px;align-items:start}
+@media(max-width:1000px){.td-week-grid{grid-template-columns:minmax(0,1fr)}}
+.td-week-rows{display:flex;flex-direction:column;gap:12px}
+.td-wkrow{display:grid;grid-template-columns:28px 130px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:15px}
+.td-wkrow b{color:var(--td-ink);min-width:44px;text-align:right}
+.td-wk-ico{display:flex}.td-wk-ico.k .td-ico{color:#5B3D78}.td-wk-ico.w .td-ico{color:#9A6A12}.td-wk-ico.r .td-ico{color:#B07A12}
+.td-wk-k{font-weight:600;color:var(--td-ink)}
+.td-bar{height:8px}
+.td-bar i{background:#2E8A5F}
+.td-bar i.td-bar-k{background:#6B4A8C}.td-bar i.td-bar-w{background:#B5862E}.td-bar i.td-bar-r{background:#C08A2E}
+.td-week-side{border-left:1px solid var(--td-line);padding-left:16px}
+@media(max-width:1000px){.td-week-side{border-left:0;padding-left:0}}
+.td-notes{margin:6px 0 4px;padding-left:18px;font-size:14px;color:var(--td-text);line-height:1.6}
+.wk-date{display:flex;align-items:center;gap:8px}
+.wk-prog{border-color:transparent}
+.wk-tint-run{background:#EAF5F0}.wk-tint-kracht{background:#F1ECF7}.wk-tint-walk{background:#F6F0E3}.wk-tint-routine{background:#FAF3E4}
+.wk-prog-t .td-ico{width:22px;height:22px}
+.wk-ic-run{color:#1B5E4B}.wk-ic-kracht{color:#6B4A8C}.wk-ic-walk{color:#9A6A12}.wk-ic-routine{color:#B07A12}
+.wk-prog .td-bar{background:rgba(255,255,255,.85)}
+.wk-okdot{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--td-pos);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
+.wk-coach .td-coach-text{margin:0}
+.wk .wk-act{display:grid;grid-template-columns:22px minmax(0,1fr);column-gap:6px;align-items:start;text-align:left}
+.wk .wk-act .wk-act-ic{grid-row:1/3;grid-column:1;width:20px;height:20px;margin-top:1px}
+.wk .wk-act b,.wk .wk-act span{grid-column:2}
+.wk-rest{color:var(--td-sub)}.wk-rest b{color:var(--td-sub);font-weight:600}
+.wk .wk-act .wk-dash{grid-row:1;grid-column:1;font-size:16px;color:#9AAAA4;text-align:center}
+.wk .wk-rest b{grid-row:1}
+.wk-routine{display:flex;align-items:center;gap:6px}
+.wk-pill-gap{margin-top:auto}
+.wk-routine .td-ico{width:16px;height:16px;color:#B07A12}
+.wk-pill.st-done{background:#E1F0E7;color:#2B6446}
+.wk-h{opacity:.9}
+.wk-sum-ico{display:flex;width:auto}
+.wk-sum::after{content:none!important}
+.wk-sum-chev{color:var(--td-sub);transition:transform .15s}
+.wk-det[open] .wk-sum-chev{transform:rotate(90deg)}
+.wk-nav .btn{display:flex;align-items:center;justify-content:center;width:40px;height:38px;padding:0}
+.wk-nav .btn .td-ico{color:var(--td-text)}
 .td-section{margin:4px 0 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--td-sub)}
 .td-side-regs details.acc,.td-regs .card{margin-bottom:10px}
 .wk-pillweek{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--td-act);background:#E6F0F7;padding:5px 11px;border-radius:999px}
@@ -589,6 +659,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
 .app .sidebar{background:linear-gradient(180deg,#EDF6F1 0%,#E6F3EC 55%,#DAEEE2 100%)}
 .nav-ico{display:inline-flex;align-items:center;justify-content:center;opacity:1}
 .nav-btn .nav-chev{margin-left:auto;opacity:.7}
+.sidebar-foot{display:none}   /* uitleg over opslag en synchronisatie staat bij Meer › Data & backup */
 .nav-btn:not(.active) .nav-ico{color:#1B5E4B}
 .nav-btn:not(.active):hover{background:rgba(27,94,75,.08)}
 @media(min-width:861px){.app .sidebar{background-image:url(achtergronden/heuvels_zijbalk.webp),linear-gradient(180deg,#EDF6F1 0%,#E6F3EC 55%,#DAEEE2 100%);background-repeat:no-repeat,no-repeat;background-position:center bottom,0 0;background-size:100% auto,100% 100%;padding-bottom:170px}}
@@ -599,7 +670,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
 .tag-learning,.stage-leren{background:#D7EDE3;color:#154C3D}
 .advice{color:#154C3D}
 .td{--td-ink:#173B33;--td-text:#24453D;--td-sub:#4F6660;--td-act:#1B5E4B;--td-line:#E1EAE5;--td-pos:#2E7D57;--td-posbg:#EFF7F2;--td-turq:#1F8F84}
-.td-bar i{background:var(--td-turq)}
+.td-bar i{background:#2E8A5F}
 .wk-pillweek{background:#E3F3EE;color:#1B5E4B}
 .wk-pill.st-planned{background:#E3F3EE;color:#1B5E4B}
 .wk-ico{background:#E3F3EE}.wk-ico::after{background:#1B5E4B}
@@ -623,10 +694,10 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
   <button class="nav-btn" data-view="week"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"></rect><path d="M3.5 9.5h17M8 3v4M16 3v4"></path></svg></span> Deze week</button>
   <div class="sidebar-sep"></div>
   <button class="nav-btn" data-view="running"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.5" cy="4.5" r="1.8"></circle><path d="M9 21l2.5-5.5 3 2.5V22"></path><path d="M6.5 11.5 9.5 8l4 1 2.5 3.5 3 1"></path><path d="M11.5 15.5 13.5 9"></path></svg></span> Hardlopen</button>
-  <button class="nav-btn" data-view="strength"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h2M19 12h2M7 8v8M17 8v8M5 9.5v5M19 9.5v5M7 12h10"></path></svg></span> Kracht</button>
+  <button class="nav-btn" data-view="strength"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="9" width="3" height="6" rx="1"></rect><rect x="5.5" y="6.5" width="3" height="11" rx="1"></rect><rect x="15.5" y="6.5" width="3" height="11" rx="1"></rect><rect x="18.5" y="9" width="3" height="6" rx="1"></rect><path d="M8.5 12h7"></path></svg></span> Kracht</button>
   <div class="sidebar-sep"></div>
   <button class="nav-btn" data-view="progress"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V13M10 20V9M15 20v-6M20 20V5"></path></svg></span> Voortgang</button>
-  <button class="nav-btn" data-view="data" title="Gegevens, back-up en koppelingen"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"></path></svg></span> Meer<svg class="nav-chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+  <button class="nav-btn" data-view="data" title="Gegevens, back-up en koppelingen"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></span> Meer<svg class="nav-chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
   <div class="sidebar-foot" id="sidebarFoot">Opgeslagen in deze browser. Maak geregeld een JSON-back-up.</div>
 </aside>
 <main class="main">
@@ -673,7 +744,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.11.1";
+const APP_VERSION = "block2-2.11.2";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2525,12 +2596,14 @@ function tdCoachCard(st){
   else if(s==='orange'){ head = 'Rustig aan vandaag'; text = train ? 'Doe je training op Herstel of Rustig, of korter. Niet opschalen.' : 'Je herstel vraagt aandacht. Vandaag staat een rustdag op je programma.'; }
   else { head = train ? 'Je kunt vandaag trainen' : 'Goed hersteld'; text = train ? 'Je herstel ziet er goed uit.' : 'Vandaag staat een rustdag op je programma.'; }
   return `<section class="td-card td-coach st-${s}" aria-labelledby="tdCoachH">
-    <div class="td-coach-top"><span class="td-label">Atempo Coach</span>${tdChip(s)}</div>
-    <h3 id="tdCoachH" class="td-coach-head">${esc(head)}</h3>
-    <p class="td-coach-text">${esc(text)}</p>
-    ${st.onlyMissing ? `<p class="td-sub">Oranje omdat ${esc(st.onlyMissing)}.</p>` : ''}
-    ${st.isToday && st.und ? `<div class="td-actions"><button class="btn primary" data-oc-open>Ochtendcheck invullen</button></div>` : ''}
-    ${todayToggles(st)}
+    <div class="td-coach-top"><span class="td-coach-title">${TD_ICO(TDI.spark, 'td-spark')}Atempo Coach</span>${tdChip(s)}</div>
+    <div class="td-coach-body"><span class="td-dot st-${s}" aria-hidden="true"></span><div>
+      <h3 id="tdCoachH" class="td-coach-head">${esc(head)}</h3>
+      <p class="td-coach-text">${esc(text)}</p>
+      ${st.onlyMissing ? `<p class="td-sub">Oranje omdat ${esc(st.onlyMissing)}.</p>` : ''}
+      ${st.isToday && st.und ? `<div class="td-actions"><button class="btn primary" data-oc-open>Ochtendcheck invullen</button></div>` : ''}
+      ${todayToggles(st)}
+    </div></div>
   </section>`;
 }
 function tdActivityCard(st, isFuture){
@@ -2538,7 +2611,9 @@ function tdActivityCard(st, isFuture){
   const z = s => runHrZoneOf(s) ? ` · ${esc(runHrZone(runHrZoneOf(s))[1])} ${s.target.low}–${s.target.high} bpm` : '';
   const sesMeta = s => `${esc(s.name)}${z(s)} · ${runMinLabel(runTotals(s.steps).total)}`;
   const primary = !(isToday && und) ? 'primary' : '';
-  let h = `<section class="td-card td-today" aria-labelledby="tdTodayH"><span class="td-label">${isToday ? 'Vandaag' : esc(fmt(d,{weekday:'long',day:'numeric',month:'long'}))}</span>`;
+  const rest = !planned && !done && !other;
+  const label = `<span class="td-today-label">${TD_ICO(rest ? TDI.bed : TDI.run)}${isToday ? 'Vandaag' : esc((x=>x.charAt(0).toUpperCase()+x.slice(1))(fmt(d,{weekday:'long',day:'numeric',month:'long'})))}</span>`;
+  let h = `<section class="td-card td-today ${rest ? 'is-rest' : 'is-train'}" aria-labelledby="tdTodayH"><div class="td-today-art" aria-hidden="true"></div><div class="td-today-in">${label}`;
   if(planned){
     h += `<h3 id="tdTodayH" class="td-title">Hardlopen</h3><div class="td-meta">${sesMeta(planned)}</div><div class="td-sub">${esc(runShortStructure(planned.steps))}</div>`;
     if(isFuture) h += `<div class="td-sub">Registreren kan op de dag zelf.</div>`;
@@ -2554,9 +2629,9 @@ function tdActivityCard(st, isFuture){
     h += `<h3 id="tdTodayH" class="td-title">${esc(other.label)}</h3>`;
     if(isToday) h += `<div class="td-actions"><button class="btn ${primary}" data-add="${other.type}|${d}">${other.minimal?'Run registreren':'Registreren'}</button></div>`;
   } else {
-    h += `<h3 id="tdTodayH" class="td-title">Rustdag</h3><div class="td-sub">Herstellen en ontspannen${routinesShown() ? ', en je routine volgen' : ''}.</div>`;
+    h += `<h3 id="tdTodayH" class="td-title">Rustdag</h3><div class="td-meta">Herstellen en ontspannen${routinesShown() ? ', en je routine volgen' : ''}.</div>`;
   }
-  return h + `</section>`;
+  return h + `</div></section>`;
 }
 /* mijn taken: afgeleid uit wat Atempo al weet (geen eigen takenlijst); afvinken = dezelfde registratie als altijd */
 function tdTasks(st, ctx){
@@ -2571,17 +2646,17 @@ function tdTasks(st, ctx){
   if(routinesShown()){
     const rv = l.routineDone || (checks.routine ? 'ja' : ''), rOn = rv==='ja' || rv==='deels';
     out.push({ done:!!checks.spiritual, check:true, html:`<label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> Meditatie · contemplatie · gebed</label>` });
-    out.push({ done:rOn, check:true, html:`<label><input type="checkbox" data-routine-check${rOn?' checked':''}> Fysieke ochtendroutine (~${num(CB.routineMinutesTarget)||45} min)</label>${rOn ? `<label class="td-subcheck"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}` });
+    out.push({ done:rOn, check:true, go:'routineCard', html:`<label><input type="checkbox" data-routine-check${rOn?' checked':''}> Fysieke ochtendroutine (~${num(CB.routineMinutesTarget)||45} min)</label>${rOn ? `<label class="td-subcheck"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}` });
   }
   out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
 function tdTaskCard(st, ctx){
   const tasks = tdTasks(st, ctx), plannedT = tasks.filter(x=>!x.optional), n = plannedT.filter(x=>x.done).length;
-  const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div>${x.html}</div>${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
+  const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.go ? `<button class="td-go" data-td-open="${x.go}" aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
   const first = tasks.slice(0,3), rest = tasks.slice(3);
   return `<section class="td-card td-tasks" aria-labelledby="tdTasksH">
-    <div class="td-card-head"><h3 id="tdTasksH">Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
+    <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
     <ul class="td-tasklist">${first.map(row).join('')}</ul>
     ${rest.length ? `<details class="td-more"><summary>Alle taken (${tasks.length})</summary><ul class="td-tasklist">${rest.map(row).join('')}</ul></details>` : ''}
     ${routinesShown() ? `<div class="td-foot"><a href="#" class="tny muted" data-routines="hide">routines niet tonen</a></div>` : ''}
@@ -2589,28 +2664,34 @@ function tdTaskCard(st, ctx){
 }
 function tdRecoveryCard(st, oc){
   const s = st.und ? 'none' : st.status, v = st.vals || {};
-  const cell = (k, val, unit) => `<div class="td-val"><span class="td-val-k">${k}</span><span class="td-val-v">${val!=null ? esc(nl(val))+unit : '<span class="td-missing">niet ingevuld</span>'}</span></div>`;
+  const cell = (ico, k, val, unit) => `<div class="td-stat">${TD_ICO(ico)}<b>${val!=null ? esc(nl(val))+unit : '<span class="td-missing">niet ingevuld</span>'}</b><span>${k}</span></div>`;
   return `<section class="td-card td-recovery" aria-labelledby="tdRecH">
-    <div class="td-card-head"><h3 id="tdRecH">Mijn herstel</h3>${tdChip(s)}</div>
-    <div class="td-vals">${cell('Energie', v.energy, '/10')}${cell('Pijn', v.pain, '/10')}${cell('Stijfheid', v.stiffness, '/10')}${cell('Slaap', v.sleep!=null ? round(v.sleep,1) : null, ' u')}</div>
+    <div class="td-card-head"><h3 id="tdRecH" class="td-h-ico">${TD_ICO(TDI.heart)}Mijn herstel</h3>${tdChip(s)}</div>
+    <div class="td-stats td-stats-4">${cell(TDI.bolt, 'Energie', v.energy, '/10')}${cell(TDI.pain, 'Pijn', v.pain, '/10')}${cell(TDI.stiff, 'Stijfheid', v.stiffness, '/10')}${cell(TDI.moon, 'Slaap', v.sleep!=null ? round(v.sleep,1) : null, ' u')}</div>
     ${st.own ? `<div class="td-sub">Je eigen beoordeling telt mee: ${esc(DAY_STATUS[st.own].label)}.</div>` : ''}
     ${oc}
   </section>`;
 }
-/* mijn week: dezelfde berekening als Deze week (weekStatus); alleen wat voor deze gebruiker en deze week geldt */
+/* mijn week: dezelfde berekening als Deze week (weekStatus); alleen wat voor deze gebruiker en deze week geldt.
+   Links de voortgang per onderdeel, rechts alleen wat daar niet al staat (geen dubbele informatie). */
 function tdWeekCard(d, ctx){
   if(ctx.period!=='program') return '';
-  const wi = weekIndexFor(d), ws = weekStatus(wi), items = [];
-  if(ws.coach.target!=null) items.push(['Hardlopen', ws.coach.done, ws.coach.target]);
-  if(ws.strengthA.applicable) items.push(['Kracht A', ws.strengthA.done?1:0, 1]);
-  if(ws.strengthB.applicable) items.push(['Kracht B', ws.strengthB.done?1:0, 1]);
-  if(ws.longWalk.applicable) items.push(['Lange wandeling', ws.longWalk.done?1:0, 1]);
-  if(routinesShown()) items.push(['Ochtendroutine', ws.routine.done, 7]);
-  const bar = ([k,a,b]) => `<div class="td-wk"><div class="td-wk-top"><span>${esc(k)}</span><b>${a} / ${b}</b></div><div class="td-bar" role="img" aria-label="${esc(k)}: ${a} van ${b}"><i style="width:${Math.min(100, Math.round(100*a/(b||1)))}%"></i></div></div>`;
+  const wi = weekIndexFor(d), ws = weekStatus(wi), cfg = weekConfig(wi), items = [], notes = [];
+  if(ws.coach.target!=null) items.push([TDI.run, 'Hardlopen', ws.coach.done, ws.coach.target, '']);
+  if(ws.strengthA.applicable) items.push([TDI.dumb, 'Kracht A', ws.strengthA.done?1:0, 1, 'k']);
+  if(ws.strengthB.applicable) items.push([TDI.dumb, 'Kracht B', ws.strengthB.done?1:0, 1, 'k']);
+  if(ws.longWalk.applicable) items.push([TDI.walk, 'Lange wandeling', ws.longWalk.done?1:0, 1, 'w']);
+  if(routinesShown()) items.push([TDI.sun, 'Ochtendroutine', ws.routine.done, 7, 'r']);
+  if(cfg.consolidation) notes.push('Geen nieuwe oefening deze week');
+  else if(ws.learning && ws.learning.target>0 && ws.learning.focusExercise) notes.push('Leermoment: '+exName(ws.learning.focusExercise));
+  if(!ws.longWalk.applicable) notes.push('Lange wandeling: niet deze week');
+  if(!ws.strengthA.applicable && !ws.strengthB.applicable) notes.push('Kracht A/B: nog niet aan de orde');
+  const bar = ([ico,k,a,b,c]) => `<div class="td-wkrow"><span class="td-wk-ico ${c}">${TD_ICO(ico)}</span><span class="td-wk-k">${esc(k)}</span><div class="td-bar" role="img" aria-label="${esc(k)}: ${a} van ${b}"><i class="${c ? 'td-bar-'+c : ''}" style="width:${Math.min(100, Math.round(100*a/(b||1)))}%"></i></div><b>${a} / ${b}</b></div>`;
   return `<section class="td-card td-week" aria-labelledby="tdWeekH">
-    <div class="td-card-head"><h3 id="tdWeekH">Mijn week</h3><span class="td-sub">${esc(ctx.title)}</span></div>
-    ${items.length ? `<div class="td-wks">${items.map(bar).join('')}</div>` : '<div class="td-sub">Deze week staat er niets gepland.</div>'}
-    <div class="td-actions"><button class="btn sm" data-view="week">Bekijk weekoverzicht</button></div>
+    <div class="td-card-head"><h3 id="tdWeekH" class="td-h-ico">${TD_ICO(TDI.bars)}Mijn week</h3><span class="td-sub">${esc(ctx.title)}</span></div>
+    <div class="td-week-grid"><div class="td-week-rows">${items.length ? items.map(bar).join('') : '<div class="td-sub">Deze week staat er niets gepland.</div>'}</div>
+      <div class="td-week-side">${notes.length ? `<div class="td-label">Ook deze week</div><ul class="td-notes">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+        <button class="btn td-btn-soft td-btn-wide" data-view="week">Bekijk weekoverzicht ${TD_ICO(TDI.chev)}</button></div></div>
   </section>`;
 }
 /* lijniconen (zelfde stijl als het designsysteem); altijd naast tekst, nooit alleen */
@@ -2625,6 +2706,17 @@ const TDI = {
   pen:   '<path d="M4 20h4L19 9l-4-4L4 16z"></path><path d="m13.5 6.5 4 4"></path>',
   check: '<rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="m8.5 12.5 2.5 2.5 4.5-5"></path>',
   chev:  '<path d="m9 6 6 6-6 6"></path>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M12 8.5l1.2 2.3 2.3 1.2-2.3 1.2L12 15.5l-1.2-2.3L8.5 12l2.3-1.2z"></path>',
+  bed:   '<path d="M3 18V7M3 14h18v4M21 14v-2.5A2.5 2.5 0 0 0 18.5 9H11v5"></path><circle cx="7" cy="11" r="1.6"></circle>',
+  list:  '<rect x="5" y="4" width="14" height="17" rx="2.5"></rect><path d="M9 4.5h6M8.5 11l1.5 1.5 3-3M8.5 16.5h7"></path>',
+  pain:  '<path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3M18.4 5.6l-2.1 2.1M21 12h-3"></path><circle cx="12" cy="14" r="5"></circle>',
+  stiff: '<path d="M4 12h3M17 12h3M7 8v8M17 8v8M7 12h10"></path>',
+  moon:  '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path>',
+  dumb:  '<rect x="2.5" y="9" width="3" height="6" rx="1"></rect><rect x="5.5" y="6.5" width="3" height="11" rx="1"></rect><rect x="15.5" y="6.5" width="3" height="11" rx="1"></rect><rect x="18.5" y="9" width="3" height="6" rx="1"></rect><path d="M8.5 12h7"></path>',
+  walk:  '<circle cx="13" cy="4.5" r="1.8"></circle><path d="M10 21l2-6 2.5 2V21M8.5 12l2-4h3l2 4.5M12 15l1-7"></path>',
+  target:'<circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="4.5"></circle><circle cx="12" cy="12" r="1"></circle>',
+  layers:'<path d="m12 3 9 5-9 5-9-5z"></path><path d="m3 12.5 9 5 9-5M3 17l9 5 9-5"></path>',
+  sun:   '<circle cx="12" cy="12" r="4"></circle><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"></path>',
 };
 function tdNextCard(st){
   const s = st.next, head = `<h3 id="tdNextH" class="td-h-ico">${TD_ICO(TDI.run)}Volgende training</h3>`;
@@ -2649,7 +2741,6 @@ function tdQuickCard(st){
   const row = (attr, ico, label) => `<button class="td-quick" ${attr}>${TD_ICO(ico)}<span>${label}</span>${TD_ICO(TDI.chev, 'td-chev')}</button>`;
   const acts = [row('data-td-open="tdOther"', TDI.run, 'Activiteit registreren')];
   const ses = st.planned || st.next; if(ses) acts.push(row(`data-run-open="${ses.id}"`, TDI.cal, 'Training aanpassen'));
-  if(routinesShown()) acts.push(row('data-td-open="routineCard"', TDI.pen, 'Ochtendroutine in detail'));
   return `<section class="td-card td-quickcard" aria-labelledby="tdQuickH"><h3 id="tdQuickH" class="td-h-ico">${TD_ICO(TDI.bolt)}Snelle acties</h3><div class="td-quicklist">${acts.join('')}</div></section>`;
 }
 const TD_HERO = `<svg class="td-hero-art" aria-hidden="true" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMax slice"><rect width="600" height="200" fill="#EEF5F8"></rect><circle cx="440" cy="78" r="30" fill="#FBEFD5"></circle><path d="M0 136 C90 100 170 116 260 108 C360 98 440 78 600 92 V200 H0 Z" fill="#DCEBE4"></path><path d="M0 160 C110 136 210 148 320 142 C420 136 500 124 600 132 V200 H0 Z" fill="#C7E0D2"></path><path d="M250 200 C300 172 360 160 420 150 C470 143 520 141 600 144" fill="none" stroke="#F2EDE2" stroke-width="9" stroke-linecap="round"></path><path d="M0 184 C140 170 260 176 380 172 C470 170 540 164 600 167 V200 H0 Z" fill="#A9D0B8"></path></svg><div class="td-hero-photo" aria-hidden="true"></div>`;   // foto over de tekening; ontbreekt het bestand, dan blijft de tekening
@@ -2657,7 +2748,9 @@ function todayWideHTML(d, ctx, parts){
   const st = todayState(d, ctx), isFuture = d > todayISO(), hr = new Date().getHours();
   const greet = st.isToday ? (hr < 12 ? 'Goedemorgen' : hr < 18 ? 'Goedemiddag' : 'Goedenavond') : (isFuture ? 'Vooruitkijken' : 'Terugkijken');
   const dateTxt = fmt(d,{weekday:'long',day:'numeric',month:'long'});
-  let h = `<div class="td">
+  // sfeerbeeld past bij de dag: training → pad, herstel oranje/rood → nevel, verder ochtend (vóór 12 uur) of rust
+  const sfeer = (st.planned || st.done) ? 'training' : (!st.und && (st.status==='orange' || st.status==='red')) ? 'herstel' : (st.isToday && hr < 12) ? 'ochtend' : 'rust';
+  let h = `<div class="td sf-${sfeer}">
     <section class="td-hero">${TD_HERO}<div class="td-hero-fade"></div>
       <div class="td-hero-text"><div class="td-eyebrow">${esc(ctx.title)}${ctx.subtitle && ctx.period!=='program' ? ' · '+esc(ctx.subtitle) : ''}</div>
         <h2 class="td-greet">${greet}</h2><div class="td-date">${esc(dateTxt.charAt(0).toUpperCase()+dateTxt.slice(1))}</div></div>
@@ -2838,7 +2931,8 @@ function weekWideHTML(wi, W){
   if(kr.length) cards.push({ k:'kracht', t:'Kracht', a:kr.filter(x=>x.done).length, b:kr.length, u:kr.length===1 ? 'training' : 'trainingen' });
   if(ws.longWalk.applicable) cards.push({ k:'walk', t:'Lange wandeling', a:ws.longWalk.done?1:0, b:1, u:'deze week' });
   if(showR) cards.push({ k:'routine', t:'Ochtendroutine', a:ws.routine.done, b:7, u:'dagen' });
-  const cardHTML = c => `<div class="td-card wk-prog"><div class="wk-prog-t"><span class="wk-ico wk-${c.k}" aria-hidden="true"></span>${esc(c.t)}</div>
+  const WKI = { run:TDI.run, kracht:TDI.dumb, walk:TDI.walk, routine:TDI.sun };
+  const cardHTML = c => `<div class="td-card wk-prog wk-tint-${c.k}"><div class="wk-prog-t">${TD_ICO(WKI[c.k], 'wk-ic-'+c.k)}${esc(c.t)}</div>
     <div class="wk-prog-v"><b>${c.a} / ${c.b}</b> <span>${esc(c.u)}</span></div>
     <div class="td-bar" role="img" aria-label="${esc(c.t)}: ${c.a} van ${c.b}"><i class="wk-bar-${c.k}" style="width:${Math.min(100, Math.round(100*c.a/(c.b||1)))}%"></i></div></div>`;
   const [cs, ctext] = weekCoachLine(wi, ws, ds);
@@ -2870,42 +2964,44 @@ function weekWideHTML(wi, W){
     const shown = acts.slice(0,2), more = acts.length - shown.length;
     return `<a href="#" class="wk-day st-${st}" data-open-day="${dt}" aria-label="${esc(fmt(dt,{weekday:'long',day:'numeric',month:'long'}))}: ${esc(S[st])}${acts.length ? ', '+esc(acts.map(a=>a.t).join(', ')) : ''}. ${esc(hText)}">
       <div class="wk-day-h"><span>${esc(label)}</span>${st==='done' ? '<i class="wk-mark ok" aria-hidden="true">✓</i>' : st==='attention' ? '<i class="wk-mark warn" aria-hidden="true">!</i>' : ''}</div>
-      ${shown.map(a=>`<div class="wk-act"><b>${esc(a.t)}</b><span>${esc(a.m)}</span></div>`).join('')}${more>0 ? `<div class="wk-more">+${more} meer</div>` : ''}
-      ${routine ? '<div class="wk-routine">Ochtendroutine ✓</div>' : ''}
-      <span class="wk-pill st-${st}">${esc(S[st])}</span>
+      ${shown.map(a=>`<div class="wk-act">${TD_ICO(/^Kracht/.test(a.t) ? TDI.dumb : /wandeling/i.test(a.t) ? TDI.walk : /Leermoment/.test(a.t) ? TDI.list : TDI.run, 'wk-act-ic')}<b>${esc(a.t)}</b><span>${esc(a.m)}</span></div>`).join('')}${more>0 ? `<div class="wk-more">+${more} meer</div>` : ''}
+      ${!acts.length ? '<div class="wk-act wk-rest"><span class="wk-dash" aria-hidden="true">—</span><b>Rustdag</b></div>' : ''}
+      ${routine ? `<div class="wk-routine">${TD_ICO(TDI.sun)}Ochtendroutine</div>` : ''}
+      ${st==='rest' ? '<span class="wk-pill-gap"></span>' : `<span class="wk-pill st-${st}">${st==='done' ? '✓ ' : ''}${esc(S[st])}</span>`}
       <span class="wk-h st-${hs||'none'}"><i aria-hidden="true"></i>${esc(hText)}</span></a>`;
   };
-  const sum = (title, right, ico) => `<summary class="wk-sum"><span class="wk-sum-ico" aria-hidden="true">${ico}</span><span class="wk-sum-t">${title}</span><span class="wk-sum-r">${right}</span></summary>`;
+  const sum = (title, right, ico) => `<summary class="wk-sum"><span class="wk-sum-ico">${TD_ICO(ico)}</span><span class="wk-sum-t">${title}</span><span class="wk-sum-r">${right}</span>${TD_ICO(TDI.chev, 'wk-sum-chev')}</summary>`;
   const goalSum = [ws.coach.target!=null ? `${ws.coach.done} van ${ws.coach.target} hardlooptrainingen` : null, kr.length ? `kracht ${kr.filter(x=>x.done).length} van ${kr.length}` : null,
     ws.longWalk.applicable ? (ws.longWalk.done ? 'lange wandeling gedaan' : 'lange wandeling nog te doen') : null, showR ? `ochtendroutine ${ws.routine.done} van 7` : null].filter(Boolean).join(' · ');
   const inner = s => s ? s.replace(/^<details class="acc"><summary>[\s\S]*?<\/summary>/, '').replace(/<\/details>\s*$/, '') : '';
   const weekOpts = Array.from({length:blockWeeks()},(_,i)=>{ const d2 = weekDates(i); return `<option value="${i}" ${i===wi?'selected':''}>Week ${i+1} · ${esc(fmt(d2[0],{day:'numeric',month:'short'}))} – ${esc(fmt(d2[6],{day:'numeric',month:'short'}))}</option>`; }).join('');
-  return `<div class="td wk">
+  return `<div class="td wk sf-rust">
     <section class="td-hero wk-hero">${TD_HERO}<div class="td-hero-fade"></div>
       <div class="td-hero-text"><span class="wk-pillweek">WEEK ${wi+1} VAN ${blockWeeks()}</span>
         <h2 class="td-greet">Week ${wi+1} — ${esc(phaseLabel)}</h2>
-        <div class="td-date">${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))}</div>
+        <div class="td-date wk-date">${TD_ICO(TDI.cal)}${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))}</div>
         ${cfg.learningGoal ? `<p class="wk-goal">${esc(cfg.learningGoal)}</p>` : ''}</div>
     </section>
     <div class="wk-top">
       ${cards.length ? `<div class="wk-progs" style="grid-template-columns:repeat(${Math.min(3, cards.length)},minmax(0,1fr))">${cards.slice(0,3).map(cardHTML).join('')}</div>` : ''}
-      <section class="td-card td-coach st-${cs} wk-coach" aria-labelledby="wkCoachH"><span class="td-label" id="wkCoachH">Atempo Coach</span><p class="td-coach-text" style="margin-top:6px">${esc(ctext)}</p>${evLine}</section>
+      <section class="td-card td-coach st-${cs} wk-coach" aria-labelledby="wkCoachH"><div class="td-coach-top"><span class="td-coach-title" id="wkCoachH">${TD_ICO(TDI.spark, 'td-spark')}Atempo Coach</span></div>
+        <div class="td-coach-body">${cs==='green' ? `<span class="wk-okdot" aria-hidden="true">✓</span>` : `<span class="td-dot st-${cs}" aria-hidden="true"></span>`}<div><p class="td-coach-text">${esc(ctext)}</p>${evLine}</div></div></section>
     </div>
     <section aria-labelledby="wkPlanH">
       <div class="wk-plan-h"><h3 id="wkPlanH">Weekplanning</h3>
         <div class="wk-nav no-print">
-          <button class="btn sm" data-week="${Math.max(0, wi-1)}" aria-label="Vorige week" ${wi===0?'disabled':''}>←</button>
+          <button class="btn sm" data-week="${Math.max(0, wi-1)}" aria-label="Vorige week" ${wi===0?'disabled':''}>${TD_ICO('<path d="m15 6-6 6 6 6"></path>')}</button>
           <label class="td-hidden-sr" for="wkSel">Kies een week</label><select id="wkSel" data-week-select>${weekOpts}</select>
-          <button class="btn sm" data-week="${Math.min(blockWeeks()-1, wi+1)}" aria-label="Volgende week" ${wi===blockWeeks()-1?'disabled':''}>→</button>
+          <button class="btn sm" data-week="${Math.min(blockWeeks()-1, wi+1)}" aria-label="Volgende week" ${wi===blockWeeks()-1?'disabled':''}>${TD_ICO(TDI.chev)}</button>
         </div></div>
       <div class="wk-days">${ds.map(day).join('')}</div>
       <p class="td-sub">Tik op een dag om hem te openen. Onderaan elke dag staat je herstel, los van de training. Hardlooptrainingen plan je onder <a href="#" data-view="running">Hardlopen</a>.</p>
     </section>
     ${conflicts.length ? `<div class="td-card wk-warn"><b>Aandachtspunten</b>${conflicts.map(c=>`<div class="td-note st-orange">${esc(c)}</div>`).join('')}<p class="td-sub">Signalering, geen blokkade. Jij beslist.</p></div>` : ''}
     <div class="wk-acc">
-      <details class="td-card wk-det">${sum('Weekdoelen', esc(goalSum), '◎')}<div class="wk-det-b"><div class="week-track">${goalRows}</div>${inner(parts.voorstel)}</div></details>
-      <details class="td-card wk-det">${sum('Trainingstijd deze week', esc(mins.doneTotal+' min uitgevoerd'), '▥')}<div class="wk-det-b">${inner(parts.tijd)}</div></details>
-      <details class="td-card wk-det">${sum('Blokinstellingen', esc(blockWeeks()+' weken · start '+fmt(blockStart(),{day:'numeric',month:'long'})), '≡')}<div class="wk-det-b">${inner(parts.blok)}</div></details>
+      <details class="td-card wk-det">${sum('Weekdoelen', esc(goalSum), TDI.target)}<div class="wk-det-b"><div class="week-track">${goalRows}</div>${inner(parts.voorstel)}</div></details>
+      <details class="td-card wk-det">${sum('Trainingstijd deze week', esc(mins.doneTotal+' min uitgevoerd'), TDI.bars)}<div class="wk-det-b">${inner(parts.tijd)}</div></details>
+      <details class="td-card wk-det">${sum('Blokinstellingen', esc(blockWeeks()+' weken · start '+fmt(blockStart(),{day:'numeric',month:'long'})), TDI.layers)}<div class="wk-det-b">${inner(parts.blok)}</div></details>
     </div>
   </div>`;
 }
