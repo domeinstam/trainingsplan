@@ -484,7 +484,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.8.3";
+const APP_VERSION = "block2-2.8.4";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1265,6 +1265,8 @@ function runChangeSessionLevel(sesId, tplId){      // sessie wordt een verse kop
 }
 
 /* ---------- koppeling met de rest van de app (alleen LEZEN van hardloopresultaten) ---------- */
+/* VO₂-max die je zelf van je horloge overneemt bij een afgeronde training (Na de training); gaat voor op andere bronnen */
+const runOwnVo2 = s => (s && s.status==='done' && s.post) ? num(s.post.vo2max) : null;
 /* Eén samengestelde lijst voor weergave: historische Coach-runs + uitgevoerde trainingen uit dit programma.
    Programma-runs bestaan hier alleen als afgeleide rijen (gelezen uit Garmin) — er wordt niets gekopieerd of dubbel opgeslagen. */
 function allRunRecords(){
@@ -1276,7 +1278,7 @@ function allRunRecords(){
     const r = runResultOf(s); if(!r || r.missing || (r.durationMin==null && r.distanceKm==null)) continue;      // zonder meetwaarden geen run met lege waarden
     if(s.garminExternalId && base.some(c=>c.garminExternalId===s.garminExternalId)) continue;     // nooit dubbel tellen
     extra.push({ id:'p:'+s.id, date:s.date, done:true, distanceKm:r.distanceKm ?? null, totalMin:r.durationMin ?? null, avgPace:r.avgPace || null,
-      avgHr:r.avgHr ?? null, maxHr:r.maxHr ?? null, vo2max:r.vo2max ?? null, continuousMin:null, rpe:(s.post && num(s.post.rpe)!=null) ? num(s.post.rpe) : null,
+      avgHr:r.avgHr ?? null, maxHr:r.maxHr ?? null, vo2max:runOwnVo2(s) ?? r.vo2max ?? null, continuousMin:null, rpe:(s.post && num(s.post.rpe)!=null) ? num(s.post.rpe) : null,
       garminExternalId:s.garminExternalId || null, _program:true });
   }
   return extra.length ? base.concat(extra).sort((a,b)=>a.date.localeCompare(b.date)) : base;
@@ -1539,6 +1541,8 @@ function vo2Points(){
   const m = {};
   allRunRecords().filter(r=>r.done===true).forEach(r=>{ const v = num(r.vo2max); if(v!=null && r.date) m[r.date] = { x:r.date, y:v, src:'run' }; });
   Object.keys(state.garmin.daily).forEach(k=>{ const v = num(state.garmin.daily[k].vo2max); if(v!=null) m[k] = { x:k, y:v, src:'garmin' }; });
+  // zelf overgenomen van het horloge bij een afgeronde training: gaat voor op een dagwaarde van dezelfde dag
+  ((state.runningProgram && state.runningProgram.sessions) || []).forEach(s=>{ const v = typeof runOwnVo2==='function' ? runOwnVo2(s) : null; if(v!=null && s.date) m[s.date] = { x:s.date, y:v, src:'eigen' }; });
   return Object.values(m).sort((a,b)=>a.x.localeCompare(b.x));
 }
 function latestVo2Point(){ const p = vo2Points(); return p.length ? p[p.length-1] : null; }
@@ -1549,7 +1553,7 @@ function vo2StaleNote(){
   if(!lp) return '';
   const days = Math.round((parseDate(todayISO()) - parseDate(lp.x))/86400000);
   if(days <= 7) return '';
-  return `Laatste VO₂-max-waarde is van ${fmt(lp.x,{day:'numeric',month:'long'})}${imp?` (laatste Garmin-import ${new Date(imp).toLocaleDateString('nl-NL',{day:'numeric',month:'long'})})`:''}. Nieuwe waarden komen binnen via Intervals.icu (Data & backup › Garmin via Intervals.icu) of een Garmin-export.`;
+  return `Laatste VO₂-max-waarde is van ${fmt(lp.x,{day:'numeric',month:'long'})}${imp?` (laatste Garmin-import ${new Date(imp).toLocaleDateString('nl-NL',{day:'numeric',month:'long'})})`:''}. Geeft je horloge een nieuwe waarde, vul die dan in bij de training (Hardlopen › de training › Na de training › VO₂-max), of lees een Garmin-export in.`;
 }
 
 /* per-oefening krachtgeschiedenis — ALLEEN echte trainingssessies (geen leermomenten) */
@@ -5254,7 +5258,9 @@ function runPostForm(s){
       ${runSel('Pijn tijdens hardlopen (0–10)', base+'painDuring', p.painDuring, runNumOpts(0,10))}
       ${runSel('Pijn nam toe tijdens training?', base+'painIncreased', runBoolStr(p.painIncreased), runYesNo)}
       ${runSel('Looppatroon veranderde?', base+'gaitChanged', runBoolStr(p.gaitChanged), runYesNo)}
-    </div>${runInp('Bijzonderheden', base+'note', p.note, { ph:'optioneel' })}`;
+    </div><div class="form-grid cols-2">
+      ${runInp('VO₂-max (horloge)', base+'vo2max', p.vo2max, { type:'number', inputmode:'decimal', ph:'alleen bij een nieuwe waarde' })}
+      ${runInp('Bijzonderheden', base+'note', p.note, { ph:'optioneel' })}</div>`;
 }
 
 /* ---------- resultaat van één training ---------- */
@@ -5499,6 +5505,7 @@ function runSet(parts, raw){
     if(f==='rpe' || f==='painDuring'){ const lo = f==='painDuring'?0:1; if(raw===''){ delete o[f]; } else { const n = numIn(raw,lo,10); if(n===undefined) return bad('Waarde tussen '+lo+' en 10.'); o[f] = n; } }
     else if(f==='painIncreased' || f==='gaitChanged'){ const b = runBool(raw); if(b===null) delete o[f]; else o[f] = b; }
     else if(f==='note') o.note = String(raw);
+    else if(f==='vo2max'){ if(String(raw).trim()===''){ delete o.vo2max; } else { const n = numIn(raw,20,95); if(n===undefined) return bad('VO₂-max: een getal tussen 20 en 95.'); o.vo2max = Math.round(n*10)/10; } }
     return;
   }
   if(k==='set' && parts[1]==='planWeeksAhead'){ const n = numIn(raw,1,8); if(n===undefined) return bad('Weken: 1 t/m 8.'); rp.settings.planWeeksAhead = Math.round(n); }
