@@ -302,6 +302,22 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .wk-det[open] .wk-sum-chev{transform:rotate(90deg)}
 .wk-nav .btn{display:flex;align-items:center;justify-content:center;width:40px;height:38px;padding:0}
 .wk-nav .btn .td-ico{color:var(--td-text)}
+/* Ochtendcheck in de kaart Mijn herstel: één vraag per regel, label links, invulveld rechts */
+.td-recovery #ocCard{margin-top:12px}
+.td-recovery #ocCard>summary .tny{display:none}
+.td-recovery #ocCard .form-grid{display:flex;flex-direction:column;gap:0}
+.td-recovery #ocCard .field{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--td-line)}
+.td-recovery #ocCard .field:last-child{border-bottom:0}
+.td-recovery #ocCard .field label{margin:0;font-size:14px;font-weight:600;color:var(--td-text,#24423A);flex:1;min-width:0}
+.td-recovery #ocCard .field input,.td-recovery #ocCard .field select{width:92px;flex:0 0 92px;min-height:40px;padding:8px 10px;text-align:center}
+.td-recovery #ocCard .field select{text-align:left}
+.td-recovery #ocCard .field.wide{flex-direction:column;align-items:stretch;border-bottom:0}
+.td-recovery #ocCard .field.wide label{margin-bottom:6px}
+.td-recovery #ocCard .field.wide textarea{width:100%}
+.td-recovery #ocCard .acc .acc{margin-top:10px}
+.td-recovery #ocCard h4{margin:14px 0 8px;font-size:14px}
+.td-recovery #ocCard .recovery-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+.td-recovery #ocCard .recovery-strip .rc span{font-size:11.5px}
 .td-section{margin:4px 0 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--td-sub)}
 .td-side-regs details.acc,.td-regs .card{margin-bottom:10px}
 .wk-pillweek{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--td-act);background:#E6F0F7;padding:5px 11px;border-radius:999px}
@@ -744,7 +760,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.11.4";
+const APP_VERSION = "block2-2.11.5";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
