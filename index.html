@@ -1158,7 +1158,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.20.0";
+const APP_VERSION = "block2-2.20.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1840,6 +1840,8 @@ function runNextOf(s){
 function runOutcome(s){
   const th = RP().settings.thresholds;
   const n = runNextOf(s);
+  if(runPostComplete(s.post) && !n && addDays(s.date,1) > todayISO())
+    return { state:'incomplete', pending:true, text:'Morgen telt je Dagcheck mee.' };
   if(!runPostComplete(s.post) || !n){
     const miss = []; if(!runPostComplete(s.post)) miss.push('de vragen na de training'); if(!n) miss.push('de Dagcheck van de dag erna (pijn linkerbeen)');
     return { state:'incomplete', text:'Nog niet compleet: '+miss.join(' en ')+'.' };
@@ -1897,7 +1899,8 @@ function runReadiness(date){
   else {
     const oc = runOutcome(last);
     const ago = Math.round((parseDate(date)-parseDate(last.date))/86400000);
-    if(oc.state==='incomplete') missing.push('Evaluatie van de vorige training ('+fmt(last.date,{day:'numeric',month:'long'})+') ontbreekt: '+oc.text);
+    if(oc.pending) missing.push('Vorige training ('+fmt(last.date,{day:'numeric',month:'long'})+'): vragen ingevuld, morgen telt je Dagcheck mee');
+    else if(oc.state==='incomplete') missing.push('Evaluatie van de vorige training ('+fmt(last.date,{day:'numeric',month:'long'})+') ontbreekt: '+oc.text);
     else if(oc.state==='bad'){ R('Vorige training ('+fmt(last.date,{day:'numeric',month:'long'})+'): '+oc.text.replace('Niet goed verdragen: ','')); }
     else if(oc.state==='mixed') O('Vorige training: '+oc.text);
     if(ago>th.staleDays) O('Laatste training is '+ago+' dagen geleden (meer dan '+th.staleDays+') — voorzichtig herstarten');
@@ -6800,13 +6803,14 @@ const RUN_ICO = {
   clip:  '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9zM8.5 11.5l1.3 1.3 2.2-2.3M8.5 16.5l1.3 1.3 2.2-2.3M14 12h2.5M14 17h2.5"/>',
   info:  '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   tick:  '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  prog:  '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/><path d="m8.5 15 2 2 4-4"/>',   // zelfde als Trainingsprogramma in het menu
 };
 function renderRunning(){
   RUI.tab = 'overview';
   let html = `<div class="rv3"><header class="pagehead rv-hero"><div class="rv-hero-photo" aria-hidden="true"></div><div class="rv-hero-shade" aria-hidden="true"></div>
     <div class="rv-hero-text"><div class="eyebrow">Persoonlijk programma</div><h2>${TD_ICO(TDI.run,'rv-hero-ico')}Hardlopen</h2><p>Jouw hardloopprogramma, afgestemd op jouw niveau en herstel.</p></div></header>`;
   html += runSyncBar();
-  html += runViewOverview() + `<div class="rv-foot">${runLevelsHTML()}<button class="btn rv-prog no-print" data-view="program">${TD_ICO(TDI.cal)}Naar het trainingsprogramma<span class="rv-arrow" aria-hidden="true">→</span></button></div></div>`;
+  html += runViewOverview() + `<div class="rv-foot">${runLevelsHTML()}<button class="btn rv-prog no-print" data-view="program">${TD_ICO(RUN_ICO.prog)}Naar het trainingsprogramma<span class="rv-arrow" aria-hidden="true">→</span></button></div></div>`;
   setViewHTML('#view-running', html);
 }
 /* compacte Garmin-status: een melding van zojuist, anders de opgeslagen stand van de geplande trainingen.
@@ -7000,13 +7004,13 @@ function runViewOverview(){
   /* evaluatie: pas na twee uitgevoerde trainingen */
   const ev = runEvaluation();
   if(ev.doneCount>=2){
-    const up = /uitbreiden/i.test(ev.advice);
+    const up = /uitbreiden/i.test(ev.advice), noUp = rd.shown!=='green' || /herstel afwachten|verminderen/i.test(ev.advice);
     h += `<div class="card rv-eval"><div class="rv-eval-head">${TD_ICO(RUN_ICO.clip,'rv-eval-ico')}<h3>Evaluatie</h3></div><div class="rv-eval-body">
       <p class="rv-advice"><b>${esc(ev.advice)}</b></p><ul class="small">${ev.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
       ${up ? '<div class="tny muted">Je hebt aanhoudende klachten aan het linkerbovenbeen (lies). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>' : ''}
       <div class="small">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
-      <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
-      ${ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
+      <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl && !noUp?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
+      ${ev.nextTpl && noUp ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Niveau verhogen kan weer als je herstel groen is en je vorige training goed ging.</div>` : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
   }
 
   /* runs die nog bij geen training horen */
