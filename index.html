@@ -424,12 +424,24 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .rt-card .rt-lvl.is-paused{opacity:.7}
 .rt-card .rt-form{margin:0;background:transparent;border:0;padding:4px 0}
 .rt-exl{margin:4px 0 8px;padding:0;list-style:none;counter-reset:x}
-.rt-exl li{display:grid;grid-template-columns:minmax(0,1fr) 92px auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #E2EDF2}
-.rt-exl select{min-height:34px;padding:4px 6px}
-.rt-exb{display:flex;gap:4px}
-.rt-exb .btn{min-width:32px;padding:4px 6px}
+/* oefeningen van een routine: dezelfde rijen als de dagen in het Trainingsprogramma; verslepen om de volgorde te wijzigen */
+.rt-exl li,.rt-ghost{display:grid;grid-template-columns:30px minmax(0,1fr) 96px 36px;gap:10px;align-items:center;padding:8px 10px 8px 6px;margin:5px 0;border:1px solid var(--line);border-radius:12px;background:var(--card);min-height:48px;cursor:grab;user-select:none;-webkit-user-select:none;list-style:none}
+.rt-exl li .rt-exn,.rt-ghost .rt-exn{min-width:0;line-height:1.3}
+.rt-exl li .rt-exn small,.rt-ghost .rt-exn small{display:block;font-size:12px;color:var(--muted)}
+.rt-exl select{min-height:36px;padding:4px 6px}
+.rt-grip{border:0;background:none;color:#8AA3B5;cursor:grab;touch-action:none;min-width:30px;min-height:40px;padding:0;border-radius:8px;display:grid;place-items:center}
+.rt-grip:hover,.rt-grip:focus-visible{color:var(--green);background:#F0F8FB}
+.rt-grip svg{width:18px;height:18px}
+.rt-x{border:0;background:none;color:#9B3B2E;min-width:36px;min-height:36px;border-radius:8px;cursor:pointer;font-size:15px}
+.rt-x:hover{background:#FBEDEA}
+.rt-exl li.run-dragging{opacity:.35}
+.rt-exl li.rt-before{box-shadow:inset 0 3px 0 var(--green)}
+.rt-exl li.rt-after{box-shadow:inset 0 -3px 0 var(--green)}
+.rt-ghost select{min-height:36px;width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px 10px;font:inherit;color:inherit}
+.rt-ghost{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;margin:0;box-sizing:border-box;border-color:var(--green);box-shadow:0 10px 26px rgba(8,44,84,.18);cursor:grabbing}
 .rt-exadd{max-width:420px}
-@media(max-width:620px){.rt-exl li{grid-template-columns:minmax(0,1fr) 84px;}.rt-exl li .tny{grid-column:1}.rt-exb{grid-column:2;justify-content:flex-end}}
+#extraMoveCard .rt-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,320px));gap:12px}
+@media(max-width:620px){.rt-exl li,.rt-ghost{grid-template-columns:26px minmax(0,1fr) 84px 34px;gap:6px}}
 #view-program .prog-chips{display:inline-flex;flex-wrap:wrap;gap:5px;vertical-align:middle}
 #view-program .pc{border-radius:7px;padding:2px 8px;font-size:12.5px;font-weight:600;background:#FFF4DE;color:#7A5810;border:1px solid transparent;white-space:nowrap}
 #view-program .pc.str{background:#EEE8F6;color:#4E3A6E}
@@ -990,7 +1002,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.17.4";
+const APP_VERSION = "block2-2.18.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1303,7 +1315,7 @@ function defaultExercises(){
     mistakes:['Standbeen buigen','Met de romp wegdraaien','Wiebelend doordrukken'],
     search:'E3 Rehab single leg balance reach', evidence:['ROM']},
 
-   {id:'r-hamstringsit', session:'routine', name:'Zittende hamstringrek', kind:'routine',
+   {id:'r-hamstringsit', session:'routine', name:'Zittende hamstringrek', kind:'routine', unit:'sec',
     fn:'Statische achterketen-mobiliteit.', why:'Onderdeel van de bestaande routine.',
     muscles:'Hamstrings, kuit, lage rug.',
     technique:'Eén been recht vooruit, ander been gebogen ertegen. Tenen vastpakken, tweede hand over de uitgestrekte hand. Huidig: ±1:40 per zijde.',
@@ -2595,8 +2607,8 @@ function renderToday(){
       ${tech && tech!=='vertrouwd' ? `<br>Techniek ${esc(focusEx.name)} tot nu toe: <b>${esc(tech)}</b> — rustig blijven oefenen.` : ''}
     </div></div>`;
   }
-  html += `<div class="seg"><div class="lines">
-      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling — optioneel, naar behoefte</label>
+  if(extraMove() || checks.eveningWalk) html += `<div class="seg"><div class="lines">
+      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(extraMove() || 'Extra beweging')} — optioneel, naar behoefte</label>
       ${checks.eveningWalk ? `<div style="margin-top:6px;max-width:160px">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}
     </div></div>`;
   html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Routines instellen' : '="new">+ Routine toevoegen'}</a></div>`;
@@ -2791,6 +2803,24 @@ function routineList(){
   return used ? [ { id:'spiritual', name:'Meditatie · contemplatie · gebed', moment:'ochtend', minutes:null, perWeek:7, paused:false },
                   { id:'routine',   name:'Routine',                           moment:'ochtend', minutes:null, perWeek:7, paused:false } ] : [];
 }
+/* extra beweging: één aanbevolen activiteit naar keuze (bv. wandelen of fietsen), telt niet mee als taak.
+   Opslag blijft dezelfde als de oude wandeling (checks.eveningWalk, eveningWalkMin), zodat eerdere dagen precies blijven.
+   Niets gekozen = niet tonen; wie de wandeling al gebruikte, krijgt 'Wandeling' als startwaarde. */
+const EXTRA_MOVES = ['Wandeling','Fietsen','Zwemmen'];
+function extraMove(){
+  if(CB.extraMove && typeof CB.extraMove==='object') return CB.extraMove.label ? String(CB.extraMove.label) : null;
+  const used = Object.values(CB.dailyLogs||{}).some(l=> l && ((l.checks && l.checks.eveningWalk) || num(l.eveningWalkMin)));
+  return used ? 'Wandeling' : null;
+}
+function extraMoveCardHTML(){
+  const cur = extraMove(), other = cur && !EXTRA_MOVES.includes(cur);
+  return `<div class="card" id="extraMoveCard"><h3>Extra beweging</h3>
+    <p class="small muted" style="margin-top:0">Komt bij Mijn taken als aanbevolen, naar behoefte. Telt niet mee als taak.</p>
+    <div class="rt-two"><div class="field"><label for="exMoveSel">Activiteit</label><select id="exMoveSel" data-exmove-sel>
+      <option value="" ${!cur?'selected':''}>Geen</option>${EXTRA_MOVES.map(x=>`<option value="${x}" ${cur===x?'selected':''}>${x}</option>`).join('')}<option value="__other" ${other || ui.exMoveOther ? 'selected' : ''}>Iets anders…</option></select></div>
+    ${other || ui.exMoveOther ? `<div class="field"><label for="exMoveTxt">Naam</label><input id="exMoveTxt" type="text" maxlength="40" value="${other ? esc(cur) : ''}" placeholder="bijv. Hond uitlaten, Roeien" data-exmove-txt></div>` : ''}</div></div>`;
+}
+function extraMoveSet(label){ CB.extraMove = { label: label ? String(label).trim().slice(0,40) || null : null }; ui.exMoveOther = false; saveState(); renderCurrent(); }
 function routinesActive(){ const o = Object.fromEntries(RT_MOMENTS.map(([k],i)=>[k,i])); return routineList().filter(r=>!r.paused).map((r,i)=>[r,i]).sort((a,b)=> ((o[a[0].moment]??0)-(o[b[0].moment]??0)) || a[1]-b[1]).map(x=>x[0]); }
 function routinesShown(){ return routinesActive().length > 0; }
 function routineDetailShown(){ return routinesActive().some(r=> r.id==='routine'); }
@@ -2816,7 +2846,7 @@ function rtExercises(r){
   return xs.filter(x=> rtEx(x.exId));
 }
 /* seconden alleen als het doel echt in seconden is (side plank, suitcase carry); bird dog is herhalingen per kant met een korte hold */
-function rtIsSec(ex){ if(ex && ex.custom) return ex.unit==='sec'; return !!(ex && ex.kind==='time' && ex.range && String(ex.dose||'').replace(/ /g,'').includes(ex.range[0]+'–'+ex.range[1]+'sec')); }
+function rtIsSec(ex){ if(ex && (ex.custom || ex.unit)) return ex.unit==='sec'; return !!(ex && ex.kind==='time' && ex.range && String(ex.dose||'').replace(/ /g,'').includes(ex.range[0]+'–'+ex.range[1]+'sec')); }
 function rtDose(x){ const ex = rtEx(x.exId), n = num(x.sets)||2; if(!ex || !ex.range) return `${n} ${n===1?'set':'sets'}${rtIsSec(ex) ? ' · sec' : ''}`; return `${n}×${ex.range.join('–')}${rtIsSec(ex) ? ' s' : ''}`; }
 function rtSession(r, d){ return CB.strengthSessions.find(s=> s.session==='R' && s.routineId===r.id && s.date===d) || null; }
 function routineMarkDone(d, r){ const l = ensureLog(d); l.checks = l.checks || {};
@@ -2862,17 +2892,17 @@ function routinesCardHTML(){
       <div class="rt-two"><div class="field"><label for="rtMin">Richttijd in minuten (optioneel)</label><input id="rtMin" type="number" inputmode="numeric" min="1" max="600" value="${d0.minutes!=null ? esc(d0.minutes) : ''}"></div>
         <div class="field"><label for="rtWeek">Hoe vaak per week</label><select id="rtWeek" ${days.length ? 'disabled' : ''}>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${(days.length || num(d0.perWeek) || 7)===n ? 'selected' : ''}>${n===7 ? 'elke dag' : n+'× per week'}</option>`).join('')}</select></div></div>
       ${`<div class="field"><label>Oefeningen <span class="tny muted">(uit Kracht › Oefeningen; wat je registreert komt in de Krachtlog)</span></label>
-        ${xs.length ? `<ol class="rt-exl">${xs.map((x,i)=>{ const ex = rtEx(x.exId); return ex ? `<li><span class="rt-exn">${esc(ex.name)}${ex.lr ? ' <span class="tny muted">L/R</span>' : ''}</span>
+        ${xs.length ? `<ol class="rt-exl" aria-label="Oefeningen; versleep om de volgorde te wijzigen">${xs.map((x,i)=>{ const ex = rtEx(x.exId); if(!ex) return ''; const sub = [ex.lr ? 'links en rechts' : '', ex.range ? esc(ex.range.join('–'))+' '+(rtIsSec(ex) ? 'sec' : 'reps') : ''].filter(Boolean).join(' · ');
+          return `<li data-rt-i="${i}"><button type="button" class="rt-grip" data-rt-grip="${i}" aria-label="${esc(ex.name)} verplaatsen (pijl omhoog of omlaag)" title="Versleep om te verplaatsen"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></button>
+          <span class="rt-exn">${esc(ex.name)}${sub ? `<small>${sub}</small>` : ''}</span>
           <select data-rt-ex-sets="${i}" aria-label="Sets ${esc(ex.name)}">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(num(x.sets)||2)===n?'selected':''}>${n} ${n===1?'set':'sets'}</option>`).join('')}</select>
-          <span class="tny muted">${ex.range ? '× '+esc(ex.range.join('–'))+' '+(rtIsSec(ex) ? 'sec' : 'reps') : esc(exGroup(ex))}</span>
-          <span class="rt-exb"><button type="button" class="btn sm" data-rt-ex-move="${i}|-1" aria-label="Hoger" ${i===0?'disabled':''}>↑</button><button type="button" class="btn sm" data-rt-ex-move="${i}|1" aria-label="Lager" ${i===xs.length-1?'disabled':''}>↓</button><button type="button" class="btn sm rt-del" data-rt-ex-del="${i}" aria-label="Weghalen">✕</button></span></li>` : ''; }).join('')}</ol>` : '<p class="tny muted" style="margin:0">Nog geen oefeningen: dan is het een routine om af te vinken.</p>'}
+          <button type="button" class="rt-x" data-rt-ex-del="${i}" aria-label="${esc(ex.name)} weghalen" title="Weghalen">✕</button></li>`; }).join('')}</ol>` : '<p class="tny muted" style="margin:0">Nog geen oefeningen: dan is het een routine om af te vinken.</p>'}
         <select class="rt-exadd" data-rt-ex-add aria-label="Oefening toevoegen"><option value="">+ Oefening toevoegen…</option>${['Kracht A','Kracht B','Ochtendroutine','Eigen oefening'].map(g=>{ const xs2 = lib.filter(ex=> exGroup(ex)===g); return xs2.length ? `<optgroup label="${g==='Eigen oefening' ? 'Eigen oefeningen' : g}">${xs2.map(ex=>`<option value="${esc(ex.id)}">${esc(ex.name)}${ex.range ? ' · '+esc(ex.range.join('–'))+' '+(rtIsSec(ex)?'sec':'reps') : ex.custom ? ' · '+(ex.unit==='sec'?'sec':'reps') : ''}${ex.lr?' · L/R':''}</option>`).join('')}</optgroup>` : ''; }).join('')}<option value="__new">+ Eigen oefening maken…</option></select>
         ${ui.rtNewEx ? `<div class="rt-newex" id="rtNewEx"><div class="field"><label for="rtNxName">Naam eigen oefening</label><input id="rtNxName" type="text" maxlength="60" placeholder="bijv. Plank, Lunges, Stretch kuit"></div>
           <div class="rt-newex-row"><label><input type="radio" name="rtNxUnit" value="reps" checked> herhalingen</label><label><input type="radio" name="rtNxUnit" value="sec"> seconden</label><label><input type="checkbox" id="rtNxLr"> links en rechts</label></div>
           <div class="rt-actions" style="margin-top:6px"><button type="button" class="btn sm primary" data-rt-nx-save>Toevoegen</button><button type="button" class="btn sm" data-rt-nx-cancel>Annuleren</button><span class="tny muted">Komt ook bij Kracht › Oefeningen en in de Krachtlog.</span></div></div>` : ''}</div>`}
-      ${r ? `<label class="rt-pause"><input type="checkbox" id="rtPause" ${d0.paused ? 'checked' : ''}> Pauzeren <span class="tny muted">— even niet op Vandaag; wat je deed blijft bewaard</span></label>` : ''}
+      ${r ? `<label class="rt-pause"><input type="checkbox" id="rtPause" ${d0.paused ? 'checked' : ''}> Pauzeren <span class="tny muted">— staat tijdelijk niet op Vandaag</span></label>` : ''}
       <div class="rt-actions"><button class="btn primary" data-rt-save="${r ? esc(r.id) : 'new'}">Opslaan</button><button class="btn" data-rt-cancel>Annuleren</button>${r ? `<button class="btn rt-del" data-rt-del="${esc(r.id)}">Verwijderen</button>` : ''}</div>
-      <div class="tny muted">Wat je al deed, verandert niet mee.</div>
     </div>`; };
   const row = r => ed===r.id ? `<div class="run-level rt-ed editing">${form(r)}</div>` : `<div class="run-level rt-lvl ${r.paused ? 'is-paused' : ''}"><div class="run-level-top"><b>${esc(r.name)}</b>${r.paused ? ' <span class="rt-pill">Gepauzeerd</span>' : ''}</div>
       <div class="small">${esc(sub(r))}</div><div class="run-actions"><button class="btn sm" data-rt-edit="${esc(r.id)}">Aanpassen</button></div></div>`;
@@ -2904,27 +2934,28 @@ function progDayRoutines(d){
   if(d > today) return `<span class="pc rt" title="${esc(names)}"><span class="pc-l">Routines</span></span>`;
   return `<span class="pc rt ${n===rs.length ? 'done' : d < today && !n ? 'missed' : ''}" title="${esc(names)}"><span class="pc-l">Routines </span>${n}/${rs.length}${n===rs.length ? ' ✓' : ''}</span>`;
 }
-/* registratie van een routine met oefeningen: zelfde velden als de Krachtlog, komt daar ook terecht (sessie 'R') */
+/* registratie van een routine met oefeningen: alleen het aantal (gewicht alleen bij een echte krachtoefening uit Kracht);
+   geen RIR of techniek. Komt in de Krachtlog terecht (sessie 'R'). */
 function rtRegHTML(r, d){
   const s = rtSession(r, d), xs = rtExercises(r);
   const inp = (exId, f, label, val, ph) => `<div class="field"><label>${label}</label><input type="${f==='tech'?'text':'text'}" inputmode="decimal" data-rtr="${esc(exId)}|${f}" value="${val==null?'':esc(val)}" placeholder="${esc(ph||'')}"></div>`;
   return `<div class="rt-reg" id="rtReg">${xs.map(x=>{ const ex = rtEx(x.exId), e = (s && s.entries && s.entries[ex.id]) || {}, prev = strengthHistory(ex.id).filter(h=> h.date < d).pop(), pe = prev && prev.e;
-      const ph = Array(Math.max(1, num(x.sets)||1)).fill('10').join(', '), tm = ex.kind!=='strength', wl = tm ? 'Gewicht (opt.)' : 'Gewicht (kg)', rl = rtIsSec(ex) ? 'Sec per set' : ex.kind==='strength' ? 'Reps per set' : 'Aantal per set';
+      const ph = Array(Math.max(1, num(x.sets)||1)).fill(rtIsSec(ex) ? '60' : '10').join(', '), kg = ex.kind==='strength', wl = 'Gewicht (kg)', rl = rtIsSec(ex) ? 'Sec per set' : ex.kind==='strength' ? 'Reps per set' : 'Aantal per set';
       const prevTxt = pe ? 'vorige: '+[ex.lr ? [pe.weightL!=null&&pe.weightL!==''?nl(pe.weightL)+' kg L':null, pe.setRepsL||null, pe.weightR!=null&&pe.weightR!==''?nl(pe.weightR)+' kg R':null, pe.setRepsR||null] : [pe.weight!=null&&pe.weight!==''?nl(pe.weight)+' kg':null, pe.setReps||null]].flat().filter(Boolean).join(' · ') : '';
       return `<div class="rt-reg-ex"><div class="rt-reg-h"><b>${esc(ex.name)}</b> <span class="tny muted">${esc(rtDose(x))}${ex.lr ? ' · links en rechts' : ''}${prevTxt ? ' · '+esc(prevTxt) : ''}</span></div>
-        <div class="rt-reg-f">${ex.lr ? inp(ex.id,'weightL',wl+' L',e.weightL) + inp(ex.id,'setRepsL',rl+' L',e.setRepsL,(pe&&pe.setRepsL)||ph) + inp(ex.id,'weightR',wl+' R',e.weightR) + inp(ex.id,'setRepsR',rl+' R',e.setRepsR,(pe&&pe.setRepsR)||ph)
-                                   : inp(ex.id,'weight',wl,e.weight) + inp(ex.id,'setReps',rl,e.setReps,(pe&&pe.setReps)||ph)}
-          ${inp(ex.id,'rir','RIR',e.rir,'0–5')}
-          <div class="field"><label>Techniek</label><select data-rtr="${esc(ex.id)}|tech"><option value="">—</option><option value="goed" ${e.tech==='goed'?'selected':''}>goed</option><option value="minder" ${e.tech==='minder'?'selected':''}>minder goed</option></select></div></div></div>`; }).join('')}
+        <div class="rt-reg-f">${ex.lr ? (kg ? inp(ex.id,'weightL',wl+' L',e.weightL) : '') + inp(ex.id,'setRepsL',rl+' L',e.setRepsL,(pe&&pe.setRepsL)||ph) + (kg ? inp(ex.id,'weightR',wl+' R',e.weightR) : '') + inp(ex.id,'setRepsR',rl+' R',e.setRepsR,(pe&&pe.setRepsR)||ph)
+                                   : (kg ? inp(ex.id,'weight',wl,e.weight) : '') + inp(ex.id,'setReps',rl,e.setReps,(pe&&pe.setReps)||ph)}</div></div>`; }).join('')}
     <div class="rt-actions"><button class="btn primary" data-rt-reg-save="${esc(r.id)}">${s ? 'Opslaan' : 'Afgerond — opslaan'}</button><button class="btn" data-rt-reg-cancel>Annuleren</button><span class="tny muted">Komt ook in de Krachtlog.</span></div></div>`;
 }
 function routineRegSave(id){
   const r = routineList().find(x=>x.id===id); if(!r) return;
-  const d = ui.date || todayISO(), entries = {};
-  document.querySelectorAll('#rtReg [data-rtr]').forEach(el=>{ const [exId, f] = el.dataset.rtr.split('|'), v = String(el.value||'').trim(); if(v==='') return;
-    (entries[exId] = entries[exId] || {})[f] = (f==='tech' || /^setReps/.test(f)) ? v : (num(v) ?? v); });
-  Object.values(entries).forEach(e=>{ const sr = e.setReps || e.setRepsL; if(sr) e.sets = String(sr).split(/[,;\s]+/).filter(Boolean).length; });
-  let s = rtSession(r, d);
+  const d = ui.date || todayISO(), old = rtSession(r, d);
+  /* wat eerder is vastgelegd en niet op het formulier staat (bv. gewicht, RIR of techniek van vroeger) blijft bewaard */
+  const entries = old && old.entries ? JSON.parse(JSON.stringify(old.entries)) : {};
+  document.querySelectorAll('#rtReg [data-rtr]').forEach(el=>{ const [exId, f] = el.dataset.rtr.split('|'), v = String(el.value||'').trim(), e = entries[exId] = entries[exId] || {};
+    if(v==='') delete e[f]; else e[f] = /^setReps/.test(f) ? v : (num(v) ?? v); });
+  Object.keys(entries).forEach(k=>{ const e = entries[k], sr = e.setReps || e.setRepsL; if(sr) e.sets = String(sr).split(/[,;\s]+/).filter(Boolean).length; else delete e.sets; if(!Object.keys(e).length) delete entries[k]; });
+  let s = old;
   if(!s){ s = { id:'s'+Date.now().toString(36), date:d, session:'R', routineId:r.id, routineName:r.name, entries:{}, note:'', durationMin:null }; CB.strengthSessions.push(s); CB.strengthSessions.sort((x,y)=>x.date.localeCompare(y.date)); }
   s.entries = entries; s.routineName = r.name; s.updatedAt = new Date().toISOString();
   routineMarkDone(d, r); ui.rtReg = null; saveState(); renderCurrent();
@@ -2951,6 +2982,7 @@ function renderRoutines(){
   } else h += all.length ? `<p class="small">Alles staat voor vandaag afgevinkt.</p>` : `<p class="small">Er is nog geen routine. Stel er een samen uit oefeningen, of maak een routine om af te vinken.</p><div class="run-actions"><button class="btn sm primary" data-rt-edit="new">+ Nieuwe routine</button></div>`;
   h += `</div>`;
   h += `<div class="card" id="rtSettings"><h3>Mijn routines</h3>${routinesCardHTML()}</div>`;
+  h += extraMoveCardHTML();
   setViewHTML('#view-routines', h);
 }
 /* registreren van een routine met oefeningen, op Vandaag (komt in de Krachtlog) */
@@ -2963,6 +2995,66 @@ function rtDraftStart(id){
   const r = id==='new' ? null : routineList().find(x=>x.id===id);
   ui.rtEdit = id; ui.rtDraft = r ? { ...r, minutes: routineMinutes(r), days: [...(routineDays(r)||[])], exercises: rtExercises(r).map(x=>({ ...x })) } : { name:'', moment:'ochtend', minutes:null, perWeek:7, days:[], exercises:[], paused:false };
 }
+/* volgorde van de oefeningen: verslepen (muis: meteen; telefoon: aan het greepje, of even vasthouden), of met het toetsenbord
+   op het greepje pijl omhoog/omlaag. Zelfde gevoel als het verslepen van trainingen in het Trainingsprogramma. */
+function rtExMove(i, to){
+  rtReadForm(); const xs = ui.rtDraft && ui.rtDraft.exercises; if(!xs || !xs[i]) return false;
+  const t = Math.max(0, Math.min(xs.length, to)), j = t > i ? t-1 : t; if(j===i) return false;
+  const [m] = xs.splice(i, 1); xs.splice(j, 0, m); renderCurrent(); return j;
+}
+const RT_DRAG = { i:null, active:false, ghost:null, to:null, timer:null, eat:false };
+const rtRows = () => [...document.querySelectorAll('#rtForm .rt-exl li[data-rt-i]')];
+function rtDragStart(){
+  const D = RT_DRAG, li = rtRows().find(x=> Number(x.dataset.rtI)===D.i); if(!li){ D.i = null; return; }
+  const r = li.getBoundingClientRect(); D.active = true; D.dx = D.x0 - r.left; D.dy = D.y0 - r.top;
+  const g = document.createElement('div'); g.className = 'rt-ghost'; g.innerHTML = li.innerHTML;
+  g.querySelectorAll('select').forEach((x,k)=>{ x.removeAttribute('data-rt-ex-sets'); x.value = li.querySelectorAll('select')[k].value; });
+  g.querySelectorAll('[data-rt-ex-del],[data-rt-grip]').forEach(x=>{ x.removeAttribute('data-rt-ex-del'); x.removeAttribute('data-rt-grip'); });
+  g.style.width = r.width+'px'; g.style.transform = `translate(${r.left}px, ${r.top}px)`; document.body.appendChild(g); D.ghost = g; li.classList.add('run-dragging');
+  try { if(D.touch && navigator.vibrate) navigator.vibrate(12); } catch(e){}
+}
+function rtDragMove(x, y){
+  const D = RT_DRAG; D.ghost.style.transform = `translate(${x - D.dx}px, ${y - D.dy}px)`;
+  const rows = rtRows(); rows.forEach(li=> li.classList.remove('rt-before','rt-after'));
+  let to = rows.length; for(const li of rows){ const r = li.getBoundingClientRect(); if(y < r.top + r.height/2){ to = Number(li.dataset.rtI); break; } }
+  D.to = (to===D.i || to===D.i+1) ? null : to;
+  if(D.to!=null){ if(to < rows.length) rows[to].classList.add('rt-before'); else rows[rows.length-1].classList.add('rt-after'); }
+  if(y < 80) window.scrollBy(0, -14); else if(y > innerHeight - 80) window.scrollBy(0, 14);
+}
+function rtDragEnd(drop){
+  const D = RT_DRAG; clearTimeout(D.timer);
+  if(D.active){
+    if(D.ghost) D.ghost.remove(); rtRows().forEach(li=> li.classList.remove('rt-before','rt-after','run-dragging'));
+    D.eat = true; setTimeout(()=>{ D.eat = false; }, 400);
+    if(drop && D.to!=null){ const i = D.i, to = D.to; Object.assign(D, { i:null, active:false, ghost:null, to:null }); rtExMove(i, to); return; }
+  }
+  Object.assign(D, { i:null, active:false, ghost:null, to:null });
+}
+document.addEventListener('pointerdown', e=>{
+  const li = e.target.closest && e.target.closest('#rtForm .rt-exl li[data-rt-i]'); if(!li || e.button>0) return;
+  const grip = e.target.closest('[data-rt-grip]'); if(!grip && e.target.closest('select,button,input')) return;
+  const D = RT_DRAG; D.i = Number(li.dataset.rtI); D.x0 = e.clientX; D.y0 = e.clientY; D.active = false; D.touch = e.pointerType!=='mouse';
+  if(D.touch && grip){ e.preventDefault(); rtDragStart(); }
+  else if(D.touch) D.timer = setTimeout(rtDragStart, 380);
+});
+document.addEventListener('pointermove', e=>{
+  const D = RT_DRAG; if(D.i==null) return;
+  if(!D.active){
+    const moved = Math.hypot(e.clientX-D.x0, e.clientY-D.y0);
+    if(D.touch){ if(moved>10){ clearTimeout(D.timer); D.i = null; } return; }          // eerst bewegen = gewoon scrollen
+    if(moved<6) return; rtDragStart(); if(!D.active) return;
+  }
+  e.preventDefault(); rtDragMove(e.clientX, e.clientY);
+}, { passive:false });
+document.addEventListener('touchmove', e=>{ if(RT_DRAG.active) e.preventDefault(); }, { passive:false });
+document.addEventListener('pointerup', ()=>{ if(RT_DRAG.i!=null) rtDragEnd(true); });
+document.addEventListener('pointercancel', ()=>{ if(RT_DRAG.i!=null) rtDragEnd(false); });
+document.addEventListener('click', e=>{ if(RT_DRAG.eat && e.target.closest && e.target.closest('#rtForm .rt-exl')){ e.preventDefault(); e.stopPropagation(); RT_DRAG.eat = false; } }, true);
+document.addEventListener('keydown', e=>{
+  const g = e.target.closest && e.target.closest('#rtForm [data-rt-grip]'); if(!g || (e.key!=='ArrowUp' && e.key!=='ArrowDown')) return;
+  e.preventDefault(); const i = Number(g.dataset.rtGrip), j = rtExMove(i, e.key==='ArrowUp' ? i-1 : i+2);
+  if(j!==false){ const n = document.querySelector(`#rtForm [data-rt-grip="${j}"]`); if(n) n.focus(); }
+});
 function rtReadForm(){
   const dr = ui.rtDraft; if(!dr) return;
   const n = document.getElementById('rtName'); if(n) dr.name = n.value;
@@ -3115,7 +3207,7 @@ function tdTasks(st, ctx){
   if(other) out.push({ done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   routineToday(d, l).forEach(r=> out.push({ done:routineDoneOn(l, r), check:true, html: routineCheckHTML(r, l, 'td-subcheck', true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"` } : {}) }));
-  out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
+  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
 function tdTaskCard(st, ctx){
@@ -3351,7 +3443,7 @@ function renderWeek(){
 
   html += parts.tijd = `<details class="acc"><summary>Trainingstijd deze week</summary><div class="acc-body">
     <div class="table-wrap"><table class="data"><thead><tr><th>Categorie</th><th class="num">Gepland</th><th class="num">Uitgevoerd</th></tr></thead><tbody>
-    ${Object.keys(mins.done).map(k=>`<tr><td>${esc(k)}${k==='ochtendroutine'?` <span class="tny muted">(${mins.routineDays}/7 dagen)</span>`:''}</td><td class="num">${mins.plan[k]==null?'—':mins.plan[k]+' min'}</td><td class="num">${mins.done[k]?mins.done[k]+' min':'—'}</td></tr>`).join('')}
+    ${Object.keys(mins.done).map(k=>`<tr><td>${esc(k==='avondwandeling' ? (extraMove() || 'extra beweging').toLowerCase() : k)}${k==='ochtendroutine'?` <span class="tny muted">(${mins.routineDays}/7 dagen)</span>`:''}</td><td class="num">${mins.plan[k]==null?'—':mins.plan[k]+' min'}</td><td class="num">${mins.done[k]?mins.done[k]+' min':'—'}</td></tr>`).join('')}
     <tr class="group"><td>Uitgevoerd totaal</td><td class="num">—</td><td class="num">${mins.doneTotal} min</td></tr>
     </tbody></table></div>
     <p class="tny muted">Gepland is bewust vaak "—": hardloopduur komt uit je trainingen bij Hardlopen, krachtduur uit je eigen invoer, wandelingen uit de geregistreerde tijd. De <b>ochtendroutine wordt geteld in dagen</b> (${mins.routineDays}/7), niet in minuten — de ±${mins.routineTarget} min is een richttijd, geen meting. Alleen een handmatig ingevulde routineduur telt in de minuten.</p></div></details>`;
@@ -4487,7 +4579,7 @@ function renderProgress(){
   }
 
   html += `<details class="acc"><summary>Trainingstijd per week</summary><div class="acc-body">
-    <div class="table-wrap"><table class="data"><thead><tr><th>Week</th><th class="num">Hardlopen</th><th class="num">Leermomenten</th><th class="num">Kracht</th><th class="num">Ochtendroutine</th><th class="num">L. wandeling</th><th class="num">Wandeling</th><th class="num">Totaal uitgevoerd</th><th class="num" title="Uit geïmporteerde Garmin-activiteiten (los van de handmatige kolommen, niet opgeteld)">Garmin hardlopen</th><th class="num">Garmin wandelen</th><th class="num">Garmin overig</th></tr></thead><tbody>
+    <div class="table-wrap"><table class="data"><thead><tr><th>Week</th><th class="num">Hardlopen</th><th class="num">Leermomenten</th><th class="num">Kracht</th><th class="num">Ochtendroutine</th><th class="num">L. wandeling</th><th class="num">${esc(extraMove() || 'Extra beweging')}</th><th class="num">Totaal uitgevoerd</th><th class="num" title="Uit geïmporteerde Garmin-activiteiten (los van de handmatige kolommen, niet opgeteld)">Garmin hardlopen</th><th class="num">Garmin wandelen</th><th class="num">Garmin overig</th></tr></thead><tbody>
     ${Array.from({length:blockWeeks()},(_,i)=>{ const m=weekMinutes(i), gm=garminWeekMinutes(i); return `<tr><td>Week ${i+1}</td>
       <td class="num">${m.done.hardlopen}</td><td class="num">${m.done.leermomenten}</td><td class="num">${m.done.kracht}</td><td class="num">${m.done.ochtendroutine}</td><td class="num">${m.done['lange wandeling']}</td><td class="num">${m.done.avondwandeling}</td>
       <td class="num">${m.doneTotal} min</td><td class="num">${gm.run}</td><td class="num">${gm.walk}</td><td class="num">${gm.other}</td></tr>`; }).join('')}
@@ -5702,7 +5794,6 @@ document.addEventListener('click', e=>{
   const rte = e.target.closest('[data-rt-edit]'); if(rte){ e.preventDefault(); rtReadForm(); rtDraftStart(rte.dataset.rtEdit); renderCurrent(); setTimeout(()=>{ const n = document.getElementById('rtName'); if(n) n.focus(); }, 20); return; }
   const rtc = e.target.closest('[data-rt-cancel]'); if(rtc){ e.preventDefault(); ui.rtEdit = null; ui.rtDraft = null; ui.rtNewEx = false; renderCurrent(); return; }
   const rtdy = e.target.closest('[data-rt-day]'); if(rtdy){ e.preventDefault(); rtReadForm(); const ds = ui.rtDraft.days = ui.rtDraft.days || [], k = rtdy.dataset.rtDay; const i = ds.indexOf(k); if(i>=0) ds.splice(i,1); else ds.push(k); renderCurrent(); return; }
-  const rtmv = e.target.closest('[data-rt-ex-move]'); if(rtmv){ e.preventDefault(); rtReadForm(); const [i, dir] = rtmv.dataset.rtExMove.split('|').map(Number), xs = ui.rtDraft.exercises, j = i+dir; if(xs[j]){ [xs[i], xs[j]] = [xs[j], xs[i]]; } renderCurrent(); return; }
   const rtxd = e.target.closest('[data-rt-ex-del]'); if(rtxd){ e.preventDefault(); rtReadForm(); ui.rtDraft.exercises.splice(Number(rtxd.dataset.rtExDel), 1); renderCurrent(); return; }
   const rtnx = e.target.closest('[data-rt-nx-save]'); if(rtnx){ e.preventDefault(); const n = document.getElementById('rtNxName'), name = (n && n.value || '').trim();
     if(!name){ if(n){ n.focus(); n.setAttribute('aria-invalid','true'); } return; }
@@ -5763,6 +5854,8 @@ document.addEventListener('click', e=>{
 document.addEventListener('change', e=>{
   const el = e.target;
   if(el.matches && el.matches('[data-week-select]')){ ui.weekIdx = Number(el.value); renderWeek(); return; }
+  if(el.matches && el.matches('[data-exmove-sel]')){ if(el.value==='__other'){ ui.exMoveOther = true; renderCurrent(); setTimeout(()=>{ const t = document.getElementById('exMoveTxt'); if(t) t.focus(); }, 20); } else extraMoveSet(el.value); return; }
+  if(el.matches && el.matches('[data-exmove-txt]')){ const v = el.value.trim(); if(v) extraMoveSet(v); return; }
   if(el.dataset.bind){
     // als de focus intussen naar een ander gebonden veld is verplaatst: flush eerst
     // diens lopende (gedebouncede) invoer, zodat de herrender geen verse toets kwijtraakt
