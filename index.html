@@ -800,6 +800,7 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 .run-day.skipped,.run-day.cancelled{opacity:.7}
 .run-day-d{font-size:12px;font-weight:700;color:var(--muted)}
 .run-day-s{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.run-day-b>b{white-space:nowrap}                                       /* "Niveau A" breekt niet af en schuift niet onder de labels */
 .run-day-body{padding:0 12px 12px;animation:runOpen .18s ease-out}
 .run-chev{width:18px;height:18px;margin-left:4px;display:inline-block;background:no-repeat center/14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7872' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");transition:transform .18s}
 .run-day[open] .run-chev{transform:rotate(180deg)}
@@ -1053,7 +1054,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.19.0";
+const APP_VERSION = "block2-2.19.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2923,7 +2924,7 @@ function routineCheckHTML(r, l, subCls, withMoment){
   if(r.id==='spiritual') return `<label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> ${txt}</label>`;
   if(r.id==='routine'){
     const rv = l.routineDone || (checks.routine ? 'ja' : ''), on = rv==='ja' || rv==='deels';
-    return `<label><input type="checkbox" data-routine-check${on?' checked':''}> ${txt}</label>${on ? `<label class="${subCls}"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}`;
+    return `<label><input type="checkbox" data-routine-check${on?' checked':''}> ${txt}</label>${on && subCls ? `<label class="${subCls}"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}`;
   }
   return `<label><input type="checkbox" data-rt-check="${esc(r.id)}"${routineDoneOn(l, r)?' checked':''}> ${txt}</label>`;
 }
@@ -3361,7 +3362,7 @@ function tdActivityCard(st, isFuture){
     else if(status==='red') h += `<div class="td-note st-red">Rustig wandelen mag. Verzet de training naar een andere dag.</div>`;
     h += `<div class="td-actions"><button class="btn ${primary}" data-run-open="${planned.id}">${status==='red' && !isFuture ? 'Training verzetten' : 'Bekijk training'}</button></div>`;
   } else if(done){
-    const oc = runOutcome(done), needEval = oc.state==='incomplete';
+    const needEval = !runPostComplete(done.post);
     h += `<h3 id="tdTodayH" class="td-title">Hardlopen <span class="td-done">✓ afgerond</span></h3><div class="td-meta">${sesMeta(done)}</div>`;
     h += needEval ? `<div class="td-sub">Vul de vragen na de training in; dan kan de coach je opbouw beoordelen.</div><div class="td-actions"><button class="btn ${primary}" data-run-open="${done.id}">Training evalueren</button></div>`
                   : `<div class="td-actions"><button class="btn" data-run-open="${done.id}">Bekijken</button></div>`;
@@ -3379,10 +3380,11 @@ function tdTasks(st, ctx){
   /* de Dagcheck staat niet als taak: die zit al in de coach en bij Mijn herstel */
   if(planned) out.push({ done:false, html:`<button class="td-link" data-run-open="${planned.id}">Hardlooptraining · ${esc(planned.name.replace(/ – .*/, ''))}</button>` });
   if(done){ out.push({ done:true, html:'Hardlooptraining' });
-    if(runOutcome(done).state==='incomplete') out.push({ done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
+    out.push(runPostComplete(done.post) ? { done:true, html:'Training geëvalueerd' } : { done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
   if(other) out.push({ done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
-  routineToday(d, l).forEach(r=> out.push({ done:routineDoneOn(l, r), check:true, html: routineCheckHTML(r, l, 'td-subcheck', true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: d <= todayISO() ? r.id : null } : {}) }));
+  /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
+  routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
   const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
@@ -6936,7 +6938,7 @@ function runViewProgram(){
       const rcol = hasRt ? `<span class="run-day-r">${rchip}</span>` : '';
       ss.forEach((s, si)=>{
         const T = runTotals(s.steps);
-        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span>${si===0 ? rcol : hasRt ? '<span class="run-day-r"></span>' : ''}<span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span></span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${coachPill(s)}<span class="run-chev" aria-hidden="true"></span></span></summary>
+        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span>${si===0 ? rcol : hasRt ? '<span class="run-day-r"></span>' : ''}<span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span></span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${s.status==='planned' ? coachPill(s) : ''}<span class="run-chev" aria-hidden="true"></span></span></summary>
           <div class="run-day-body">${runSessionDetail(s)}</div></details>`;
       });
       if(!ss.length){
@@ -7179,7 +7181,7 @@ const COACH_EXT_RE = /^atempo-[A-Za-z0-9_-]{1,64}$/;
 function coachSet(){ const st = RP().settings; st.coach = { variant:'text', lastOkAt:null, lastError:null, athlete:null, test:null, ...(st.coach||{}) }; return st.coach; }
 const coachExtId = s => 'atempo-' + s.id;
 const coachInfo = s => (s && s.ext && s.ext.intervals) || null;
-const COACH_FORMAT = 2;      // 2 = elke stap los (geen herhaalblok); een nieuwe vorm stuurt alles één keer opnieuw
+const COACH_FORMAT = 3;      // 2 = elke stap los (geen herhaalblok); 3 = hartslag als % HR; een nieuwe vorm stuurt alles één keer opnieuw
 function coachHash(s){       // vingerafdruk van wat naar Garmin gaat: vorm, datum, naam, stappen en doelen
   const str = JSON.stringify([COACH_FORMAT, s.date, s.name, (s.steps||[]).map(x=>[x.t,x.sec,x.target||null]), s.target||null]);
   let h = 5381; for(let i=0;i<str.length;i++) h = ((h<<5) + h + str.charCodeAt(i)) >>> 0; return h.toString(36);
@@ -7188,6 +7190,7 @@ function coachHash(s){       // vingerafdruk van wat naar Garmin gaat: vorm, dat
 function coachState(s){
   const i = coachInfo(s); if(!i || i.status==='deleted') return 'local';
   if(i.status==='error') return 'error';
+  if(s.status!=='planned' || s.date<todayISO()) return 'sent';          // voorbij: blijft zoals het naar Garmin ging (een nieuwe vorm stuurt niets opnieuw)
   return i.hash===coachHash(s) ? 'sent' : 'changed';
 }
 
@@ -7336,11 +7339,14 @@ window.addEventListener('load', ()=>{ coachHandleRedirect().then(back=>{ if(coac
 
 /* Intervals.icu-workouttekst: elke stap op een eigen regel (geen herhaalblok), net als het FIT-bestand.
    Warmup/Cooldown als kopjes en de stapsoort per stap (intensity=…), zodat Intervals.icu die niet zelf uit een zone afleidt.
-   Een doel (hartslag of tempo) komt alleen mee als het is ingesteld: per stap, anders het trainingsdoel voor de hardloopstappen. */
+   Een doel (hartslag of tempo) komt alleen mee als het is ingesteld: per stap, anders het trainingsdoel voor de hardloopstappen.
+   Hartslag gaat als % van de maximale hartslag (bv. 65-75% HR): losse bpm-waarden leest Intervals.icu niet als doel, en dan
+   kwam er geen doel op het horloge. Intervals.icu rekent het percentage om met de maximale hartslag in je Intervals-instellingen. */
 function coachText(s){
   const dur = sec => { const m = Math.floor(sec/60), r = sec%60; return m && r ? m+'m'+r+'s' : m ? m+'m' : r+'s'; };
   const tgText = tg => { const a = num(tg && tg.low), b = num(tg && tg.high); if(!tg || !(a>0) || !(b>0)) return '';
-    if(tg.type==='hr') return ' '+Math.min(a,b)+'-'+Math.max(a,b)+'bpm HR';
+    if(tg.type==='hr'){ const mx = num(tg.hrMax) || num(s.target && s.target.hrMax) || (runHrMax() || {}).bpm; if(!(mx>0)) return '';
+      const pc = v => Math.round(v/mx*100); return ' '+pc(Math.min(a,b))+'-'+pc(Math.max(a,b))+'% HR'; }
     if(tg.type==='pace') return ' '+secToPace(Math.min(a,b))+'-'+secToPace(Math.max(a,b))+'/km Pace';
     return ''; };
   const kind = { warmup:'warmup', run:'active', walk:'recovery', cooldown:'cooldown' };
