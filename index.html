@@ -1158,7 +1158,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.20.1";
+const APP_VERSION = "block2-2.20.2";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -7010,7 +7010,7 @@ function runViewOverview(){
       ${up ? '<div class="tny muted">Je hebt aanhoudende klachten aan het linkerbovenbeen (lies). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>' : ''}
       <div class="small">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
       <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl && !noUp?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
-      ${ev.nextTpl && noUp ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Niveau verhogen kan weer als je herstel groen is en je vorige training goed ging.</div>` : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
+      ${ev.nextTpl && noUp ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Advies: wacht met een hoger niveau tot je herstel groen is en je vorige training goed ging.</div>` : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
   }
 
   /* runs die nog bij geen training horen */
