@@ -443,6 +443,14 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .rt-newex{border:1px dashed #A9CDBE;border-radius:12px;padding:10px 12px;margin-top:8px;background:#fff}
 .rt-newex-row{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;margin-top:8px}
 .rt-newex-row label{display:flex;align-items:center;gap:6px;margin:0}
+/* heuvels als rustige afsluiting onderaan elke pagina (computer breed, telefoon met dennen) */
+.page-hills{flex:0 0 auto;height:120px;margin-top:auto;background:url(achtergronden/heuvels_breed.webp) center bottom/cover no-repeat;pointer-events:none}
+.main .content{padding-bottom:28px}
+@media(max-width:860px){
+  .page-hills{height:120px;margin-bottom:62px;background-image:url(achtergronden/heuvels_mobiel.webp);background-size:cover;background-position:center bottom}
+  .main .content{padding-bottom:12px}
+}
+@media print{.page-hills{display:none}}
 .td-section{margin:4px 0 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--td-sub)}
 .td-side-regs details.acc,.td-regs .card{margin-bottom:10px}
 .wk-pillweek{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--td-act);background:#E6F0F7;padding:5px 11px;border-radius:999px}
@@ -884,6 +892,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
   <section class="view" id="view-data"></section>
   <div id="print-sheet"></div>
 </div>
+<div class="page-hills no-print" aria-hidden="true"></div>
 </main>
 </div>
 <nav class="mobile-tabs" id="mobileTabs">
@@ -903,7 +912,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.15.0";
+const APP_VERSION = "block2-2.15.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
