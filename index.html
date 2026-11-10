@@ -410,6 +410,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .rt-page .rt-when{font-size:13px;font-weight:800;color:var(--td-act,#1B5E4B);margin-top:6px}
 .rt-page .rt-big{font-size:18px;color:var(--td-ink)}
 .rt-page .rt-dot.off{border-color:transparent;background:#F1F4F2}
+.rt-reglink{display:inline-block;margin:0 0 6px 30px}
+.rt-regcard{margin-top:16px}
 .rt-reg{margin-top:10px;border-top:1px solid var(--td-line,#DDE9E3);padding-top:6px}
 .rt-reg-ex{padding:8px 0;border-bottom:1px solid #E4EFE9}
 .rt-reg-f{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:6px}
@@ -417,6 +419,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .rt-reg .field input,.rt-reg .field select{min-height:38px;padding:7px 9px}
 .rt-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .rt-card .run-level{margin-bottom:8px}
+.rt-card .rt-lvl{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:center}
+.rt-card .rt-lvl>.run-actions{grid-column:2;grid-row:1/3;margin:0}
 .rt-card .rt-lvl.is-paused{opacity:.7}
 .rt-card .rt-form{margin:0;background:transparent;border:0;padding:4px 0}
 .rt-exl{margin:4px 0 8px;padding:0;list-style:none;counter-reset:x}
@@ -760,6 +764,16 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 /* vandaag: gekleurde regel in plaats van een los label */
 .run-day.is-today{border-color:#E8C77A;background:#FFFBF0}
 .run-day.is-today .run-day-d{color:#8A6410}
+/* kalender met routines: vaste kolom voor het routineblokje, vóór hardlopen, zodat alles op één lijn staat */
+.run-cal.has-rt .run-day>summary,.run-cal.has-rt .run-day.rest{grid-template-columns:76px 118px minmax(0,1fr) auto}
+.run-day-r{display:flex;align-items:center;min-width:0}
+@media(max-width:560px){
+  .run-cal.has-rt .run-day>summary,.run-cal.has-rt .run-day.rest{grid-template-columns:60px 50px minmax(0,1fr) auto;gap:6px}
+  .run-day-r .pc{font-size:11.5px;padding:2px 6px;white-space:nowrap}
+  .run-day-r .pc-l{display:none}
+  .run-day-r .pc::before{content:"☼ "}
+  .run-day.rest .run-day-s .btn{padding:4px 8px;font-size:12px;min-height:32px}
+}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -884,7 +898,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.14.0";
+const APP_VERSION = "block2-2.14.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2466,7 +2480,7 @@ function renderToday(){
   /* ---- VANDAAG: één primaire actie, context-gedreven ---- */
   const rtAct = routineToday(d, l);
   html += `<div class="card"><div class="answer">` + RT_MOMENTS.filter(([k])=> rtAct.some(r=>r.moment===k)).map(([k,lab])=>
-    `<div class="seg"><h4>${lab}</h4><div class="lines">${rtAct.filter(r=>r.moment===k).map(r=> routineCheckHTML(r, l, 'tny muted rt-deels')).join('')}</div></div>`).join('');
+    `<div class="seg"><h4>${lab}</h4><div class="lines">${rtAct.filter(r=>r.moment===k).map(r=> routineCheckHTML(r, l, 'tny muted rt-deels') + (rtExercises(r).length ? `<a href="#" class="tny rt-reglink" data-rt-reg="${esc(r.id)}">Oefeningen registreren</a>` : '')).join('')}</div></div>`).join('');
   // openstaande weekdoelen — klein en secundair, nooit als primaire taak
   if((ctx.openGoals||[]).length){
     const tech = focusEx ? ws.learning.focusTech : null;
@@ -2479,8 +2493,9 @@ function renderToday(){
       <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling — optioneel, naar behoefte</label>
       ${checks.eveningWalk ? `<div style="margin-top:6px;max-width:160px">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}
     </div></div>`;
-  html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Naar Routines' : '="new">+ Routine toevoegen'}</a></div>`;
+  html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Routines instellen' : '="new">+ Routine toevoegen'}</a></div>`;
   html += `</div></div>`;
+  html += rtRegCard(d);
 
   /* ---- invoer hoort bij het Ochtend-blok: eerst de dagcheck, dan het routine-detail ---- */
   html += ochtendcheckCard();
@@ -2737,15 +2752,10 @@ function routinesCardHTML(){
       <div class="tny muted">Wat je al deed, verandert niet mee.</div>
     </div>`; };
   const row = r => ed===r.id ? `<div class="run-level rt-ed editing">${form(r)}</div>` : `<div class="run-level rt-lvl ${r.paused ? 'is-paused' : ''}"><div class="run-level-top"><b>${esc(r.name)}</b>${r.paused ? ' <span class="rt-pill">Gepauzeerd</span>' : ''}</div>
-      <div class="small">${esc(sub(r))}</div>${rtStripHTML(r)}<div class="run-actions"><button class="btn sm" data-rt-edit="${esc(r.id)}">Aanpassen</button></div></div>`;
+      <div class="small">${esc(sub(r))}</div><div class="run-actions"><button class="btn sm" data-rt-edit="${esc(r.id)}">Aanpassen</button></div></div>`;
   return `<div class="rt-card" id="myRoutines">
     ${all.map(row).join('') || '<p class="small muted">Je hebt nog geen routines. Stel er een samen uit oefeningen, of maak een routine om af te vinken (bijvoorbeeld meditatie).</p>'}
     ${ed==='new' ? `<div class="run-level rt-ed editing">${form(null)}</div>` : '<div class="run-actions"><button class="btn sm" data-rt-edit="new">+ Nieuwe routine</button></div>'}</div>`;
-}
-/* in het Trainingsprogramma, onder de niveaus: dezelfde opbouw */
-function progAfterLevels(){
-  const all = routineList(), act = all.filter(r=>!r.paused);
-  return `<details class="acc run-levels" id="progRoutines" ${ui.rtEdit || ui.progRtOpen ? 'open' : ''}><summary>Routines samenstellen <span class="tny muted">· ${all.length ? act.length+' actief' : 'nog geen'}</span></summary><div class="acc-body">${routinesCardHTML()}</div></details>`;
 }
 /* kalender van het Trainingsprogramma: wat er naast hardlopen op een dag staat, als kleine blokjes in één regel.
    Alleen kracht, lange wandeling en routines met vaste dagen; dagelijkse vinkjes (zoals meditatie) horen niet in de kalender. */
@@ -2760,12 +2770,16 @@ function progDayChips(d){
     if(cfg.strengthB && wp.strengthBDay===dk && !ws.strengthB.done) out.push(chip('str sugg', 'Kracht B'));
     if(isLongWalkWeek(wi) && wp.longWalkDay===dk && !ws.longWalk.done) out.push(chip('walk sugg', 'Lange wandeling'));
   }
-  const l = CB.dailyLogs[d];
-  routinesActive().filter(r=> (routineDays(r) && routineDays(r).length < 7 && routineDueOn(r, d) && d >= String(r.createdAt||'').slice(0,10)) || rtSession(r, d)).forEach(r=>{   // elke dag = vinkje, niet in de kalender
-    const on = routineDoneOn(l, r);
-    out.push(chip('rt '+(on ? 'done' : d < today ? 'missed' : ''), esc(r.name)+(on ? ' ✓' : '')));
-  });
   return out.join('');
+}
+/* alle routines van een dag samen als één blokje "Routines 1/3" (namen bij aanwijzen); toekomst: "Routines" */
+function progDayRoutines(d){
+  const today = todayISO(), l = CB.dailyLogs[d];
+  const rs = routinesActive().filter(r=> d >= String(r.createdAt||'').slice(0,10) && (routineDueOn(r, d) || !routineDays(r) || rtSession(r, d) || routineDoneOn(l, r)));
+  if(!rs.length) return '';
+  const n = rs.filter(r=> routineDoneOn(l, r)).length, names = rs.map(r=> r.name+(routineDoneOn(l, r) ? ' ✓' : '')).join(' · ');
+  if(d > today) return `<span class="pc rt" title="${esc(names)}"><span class="pc-l">Routines</span></span>`;
+  return `<span class="pc rt ${n===rs.length ? 'done' : d < today && !n ? 'missed' : ''}" title="${esc(names)}"><span class="pc-l">Routines </span>${n}/${rs.length}${n===rs.length ? ' ✓' : ''}</span>`;
 }
 /* registratie van een routine met oefeningen: zelfde velden als de Krachtlog, komt daar ook terecht (sessie 'R') */
 function rtRegHTML(r, d){
@@ -2783,7 +2797,7 @@ function rtRegHTML(r, d){
 }
 function routineRegSave(id){
   const r = routineList().find(x=>x.id===id); if(!r) return;
-  const d = todayISO(), entries = {};
+  const d = ui.date || todayISO(), entries = {};
   document.querySelectorAll('#rtReg [data-rtr]').forEach(el=>{ const [exId, f] = el.dataset.rtr.split('|'), v = String(el.value||'').trim(); if(v==='') return;
     (entries[exId] = entries[exId] || {})[f] = (f==='tech' || /^setReps/.test(f)) ? v : (num(v) ?? v); });
   Object.values(entries).forEach(e=>{ const sr = e.setReps || e.setRepsL; if(sr) e.sets = String(sr).split(/[,;\s]+/).filter(Boolean).length; });
@@ -2792,45 +2806,34 @@ function routineRegSave(id){
   s.entries = entries; s.routineName = r.name; s.updatedAt = new Date().toISOString();
   routineMarkDone(d, r); ui.rtReg = null; saveState(); renderCurrent();
 }
-/* pagina Routines: eenvoudig, zoals het overzicht bij Hardlopen. Plannen en samenstellen gebeurt in het Trainingsprogramma. */
+/* pagina Routines: zelfde opbouw als Hardlopen — Volgende routine (met een blokje per oefening), daaronder ingeklapt de routines om in te stellen.
+   Afvinken en registreren gebeurt op Vandaag. */
 function rtNext(){
-  const today = todayISO(), withEx = routinesActive().filter(r=> rtExercises(r).length);
-  for(let i=0;i<8;i++){ const d = addDays(today, i), l = CB.dailyLogs[d];
-    const r = withEx.find(r=> (i===0 ? routineShownOn(r, d, l) : routineDueOn(r, d)) && !routineDoneOn(l, r)); if(r) return { r, d }; }
-  return withEx.length ? { r:withEx[0], d:null } : null;
+  const today = todayISO(), act = routinesActive();
+  for(const pool of [act.filter(r=> rtExercises(r).length), act]){
+    for(let i=0;i<8;i++){ const d = addDays(today, i), l = CB.dailyLogs[d];
+      const r = pool.find(r=> (i===0 ? routineShownOn(r, d, l) : routineDueOn(r, d)) && !routineDoneOn(l, r)); if(r) return { r, d }; }
+  }
+  return null;
 }
 function renderRoutines(){
-  const d = ui.date = todayISO(), l = CB.dailyLogs[d] || {}, act = routineToday(d, l), wi = weekIndexFor(d), ds = weekDates(wi), wk = routineWeek(wi);
-  const dateTxt = fmt(d,{weekday:'long',day:'numeric',month:'long'}), nx = rtNext();
-  let next = '';
-  if(nx){ const { r } = nx, when = nx.d===d ? 'Vandaag' : nx.d===addDays(d,1) ? 'Morgen' : nx.d ? fmt(nx.d,{weekday:'long',day:'numeric',month:'long'}) : 'Nog niet gepland', xs = rtExercises(r), doneToday = !!rtSession(r, d);
-    next = `<section class="td-card rt-next" aria-labelledby="rtNextH"><div class="td-card-head"><h3 id="rtNextH" class="td-h-ico">${TD_ICO(TDI.dumb)}Volgende routine</h3>${doneToday ? '<span class="td-chip st-green">✓ vandaag gedaan</span>' : ''}</div>
-      <div class="rt-when">${esc(when.charAt(0).toUpperCase()+when.slice(1))}</div>
-      <div><b class="rt-big">${esc(r.name)}</b> <span class="small muted">· ${xs.length} ${xs.length===1?'oefening':'oefeningen'}${routineMinutes(r)!=null ? ' · ~'+routineMinutes(r)+' min' : ''}</span></div>
+  const today = ui.date = todayISO(), nx = rtNext(), all = routineList();
+  let h = `<div class="pagehead"><div class="eyebrow">Persoonlijk programma</div><h2>Routines</h2></div>`;
+  h += `<div class="card run-next rt-next"><div class="eyebrow">Volgende routine</div>`;
+  if(nx){ const { r, d } = nx, xs = rtExercises(r), when = d===today ? 'Vandaag' : d===addDays(today,1) ? 'Morgen' : fmt(d,{weekday:'long',day:'numeric',month:'long'});
+    h += `<div class="run-when">${esc(when.charAt(0).toUpperCase()+when.slice(1))}</div>
+      <div><b class="run-big">${esc(r.name)}</b> <span class="small muted">${[routineMinutes(r)!=null ? routineMinutes(r)+' min' : null, xs.length ? xs.length+(xs.length===1?' oefening':' oefeningen') : 'afvinken'].filter(Boolean).map(x=>'· '+esc(x)).join(' ')}</span></div>
       ${rtStripHTML(r)}
-      ${ui.rtReg===r.id ? rtRegHTML(r, d) : `<div class="td-actions">${nx.d===d || doneToday ? `<button class="btn primary" data-rt-reg="${esc(r.id)}">${doneToday ? 'Registratie bekijken' : 'Registreren'}</button>` : ''}<button class="btn" data-rt-manage="edit|${esc(r.id)}">Bekijken of aanpassen</button></div>`}
-    </section>`;
-  } else next = `<section class="td-card rt-next"><h3 class="td-h-ico">${TD_ICO(TDI.dumb)}Volgende routine</h3><p class="td-sub">Stel een routine samen uit oefeningen, net als een training.</p><div class="td-actions"><button class="btn primary" data-rt-manage="new">Routine samenstellen</button></div></section>`;
-  const today = act.length ? RT_MOMENTS.filter(([k])=> act.some(r=>r.moment===k)).map(([k,lab])=>
-      `<div class="rt-mom-h">${lab}</div><ul class="td-tasklist">${act.filter(r=>r.moment===k).map(r=>{ const on = routineDoneOn(l, r);
-        return `<li class="td-task has-check ${on?'is-done':''}"><div class="td-task-in">${routineCheckHTML(r, l, 'td-subcheck', false)}</div>${r.id==='routine' && routineDetailShown() ? `<button class="td-go" data-td-open="routineCard" aria-label="Detail registreren">${TD_ICO(TDI.chev)}</button>` : ''}</li>`; }).join('')}</ul>`).join('')
-    : `<p class="td-sub">Vandaag staat er geen routine op je programma.</p>`;
-  const n = act.filter(r=> routineDoneOn(l, r)).length;
-  const DL = ['ma','di','wo','do','vr','za','zo'];
-  const week = wk.length ? `<div class="rt-wk"><div class="rt-wk-row rt-wk-head"><span></span>${DL.map((x,i)=>`<span class="${ds[i]===d?'is-today':''}">${x}</span>`).join('')}<span></span></div>
-      ${wk.map(x=>`<div class="rt-wk-row"><span class="rt-wk-nm" title="${esc(x.r.name)}">${esc(x.r.name)}</span>${ds.map(dt=>{ const on = routineDoneOn(CB.dailyLogs[dt], x.r), fut = dt > d, due = routineDueOn(x.r, dt) || !routineDays(x.r);
-          return `<span class="rt-dot ${on?'on':''} ${fut?'fut':''} ${dt===d?'is-today':''} ${due?'':'off'}" role="img" aria-label="${esc(fmt(dt,{weekday:'long'}))}: ${on?'gedaan':!due?'niet gepland':fut?'nog niet':'niet gedaan'}">${on?'✓':''}</span>`; }).join('')}<b class="${x.done>=x.target?'ok':''}">${x.done} / ${x.target}</b></div>`).join('')}</div>`
-    : '<p class="td-sub">Zodra je een routine hebt, zie je hier per dag wat je deed.</p>';
-  setViewHTML('#view-routines', `<div class="td rt-page sf-ochtend">
-    <section class="td-hero">${TD_HERO}<div class="td-hero-fade"></div>
-      <div class="td-hero-text"><div class="td-eyebrow">Routines</div><h2 class="td-greet">Mijn routines</h2><div class="td-date">${esc(dateTxt.charAt(0).toUpperCase()+dateTxt.slice(1))}</div></div></section>
-    <div class="rt-cols">
-      ${next}
-      <section class="td-card" aria-labelledby="rtTodayH"><div class="td-card-head"><h3 id="rtTodayH" class="td-h-ico">${TD_ICO(TDI.sun)}Vandaag</h3>${act.length ? `<span class="td-count">${n} / ${act.length}</span>` : ''}</div>${today}</section>
-      <section class="td-card" aria-labelledby="rtWeekH"><div class="td-card-head"><h3 id="rtWeekH" class="td-h-ico">${TD_ICO(TDI.cal)}Deze week</h3><span class="td-sub">Week ${wi+1} · ${esc(fmt(ds[0],{day:'numeric',month:'short'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'short'}))}</span></div>${week}</section>
-      ${routineDetailShown() ? `<section class="td-rtwide" aria-label="Routine-detail">${routineDetailCard(d, true)}</section>` : ''}
-      ${progAfterLevels()}
-    </div></div>`);
+      <div class="run-actions"><button class="btn sm" data-rt-manage="edit|${esc(r.id)}">Bekijken of aanpassen</button></div>`;
+  } else h += all.length ? `<p class="small">Alles staat voor vandaag afgevinkt.</p>` : `<p class="small">Er is nog geen routine. Stel er een samen uit oefeningen, of maak een routine om af te vinken.</p><div class="run-actions"><button class="btn sm primary" data-rt-edit="new">+ Nieuwe routine</button></div>`;
+  h += `</div>`;
+  h += `<div class="card" id="rtSettings"><h3>Mijn routines</h3>${routinesCardHTML()}</div>`;
+  setViewHTML('#view-routines', h);
+}
+/* registreren van een routine met oefeningen, op Vandaag (komt in de Krachtlog) */
+function rtRegCard(d){
+  const r = ui.rtReg && routineList().find(x=>x.id===ui.rtReg); if(!r || !rtExercises(r).length) return '';
+  return `<section class="td-card rt-regcard" id="rtRegCard" aria-label="${esc(r.name)} registreren"><div class="td-card-head"><h3 class="td-h-ico">${TD_ICO(TDI.dumb)}${esc(r.name)}</h3><span class="td-sub">${rtExercises(r).length} oefeningen</span></div>${rtStripHTML(r)}${rtRegHTML(r, d)}</section>`;
 }
 /* concept tijdens het aanpassen (oefeningen toevoegen e.d. hertekent het formulier zonder getypte tekst kwijt te raken) */
 function rtDraftStart(id){
@@ -2859,7 +2862,7 @@ function routineSave(id){
   if(id!=='new') r.paused = !!dr.paused;
   const mn = num(dr.minutes);
   if(r.id==='routine'){ if(mn!=null && mn>0) CB.routineMinutesTarget = mn; r.minutes = null; } else r.minutes = mn!=null && mn>0 ? mn : null;
-  ui.rtEdit = null; ui.rtDraft = null; ui.progRtOpen = true; saveState(); renderCurrent();
+  ui.rtEdit = null; ui.rtDraft = null; saveState(); renderCurrent();
 }
 function routineDelete(id){
   const r = routineList().find(x=>x.id===id); if(!r) return;
@@ -2989,7 +2992,7 @@ function tdTasks(st, ctx){
     if(runOutcome(done).state==='incomplete') out.push({ done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
   if(other) out.push({ done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
-  routineToday(d, l).forEach(r=> out.push({ done:routineDoneOn(l, r), check:true, go: r.id==='routine' ? 'routineCard' : null, goAttr: 'data-rt-manage="detail"', html: routineCheckHTML(r, l, 'td-subcheck', true) }));
+  routineToday(d, l).forEach(r=> out.push({ done:routineDoneOn(l, r), check:true, html: routineCheckHTML(r, l, 'td-subcheck', true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"` } : {}) }));
   out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
@@ -3001,7 +3004,7 @@ function tdTaskCard(st, ctx){
     <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
     <ul class="td-tasklist">${first.map(row).join('')}</ul>
     ${rest.length ? `<details class="td-more"><summary>Alle taken (${tasks.length})</summary><ul class="td-tasklist">${rest.map(row).join('')}</ul></details>` : ''}
-    <div class="td-foot">${routinesShown() ? '<a href="#" class="td-rt-link" data-rt-manage>Naar Routines</a>' : '<a href="#" class="td-rt-link" data-rt-manage="new">+ Routine toevoegen</a>'}</div>
+    <div class="td-foot">${routinesShown() ? '<a href="#" class="td-rt-link" data-rt-manage>Routines instellen</a>' : '<a href="#" class="td-rt-link" data-rt-manage="new">+ Routine toevoegen</a>'}</div>
   </section>`;
 }
 function tdRecoveryCard(st, oc){
@@ -3114,6 +3117,7 @@ function todayWideHTML(d, ctx, parts){
   }
   h += tdCoachCard(st) + tdActivityCard(st, false)
      + `<div class="td-pair">${tdTaskCard(st, ctx)}${tdRecoveryCard(st, parts.oc)}</div>`
+     + rtRegCard(d)
      + tdWeekCard(d, ctx)
      + (parts.regs ? `<section class="td-regs" aria-label="Geregistreerd op deze dag"><h3 class="td-section">Geregistreerd op deze dag</h3>${parts.regs}</section>` : '');
   h += `</div><aside class="td-side" aria-label="Volgende en registraties">${tdNextCard(st)}${tdQuickCard(st)}
@@ -5547,17 +5551,17 @@ document.addEventListener('click', e=>{
   const tdo = e.target.closest('[data-td-open]'); if(tdo){ e.preventDefault(); const box = document.getElementById(tdo.dataset.tdOpen); const det = box && (box.tagName==='DETAILS' ? box : box.querySelector('details')); if(det){ det.open = true; setTimeout(()=>det.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
   /* routines: '' of 'detail' → pagina Routines; 'new' / 'edit|id' / 'program' → Trainingsprogramma › Routines */
   const rtm = e.target.closest('[data-rt-manage]'); if(rtm){ e.preventDefault(); const how = rtm.dataset.rtManage || '', [kind, rid] = how.split('|');
-    if(kind==='new' || kind==='edit' || kind==='program'){ if(kind==='new') rtDraftStart('new'); else if(kind==='edit' && rid) rtDraftStart(rid); else { ui.rtEdit = null; ui.rtDraft = null; } ui.progRtOpen = true; showView('routines');
-      setTimeout(()=>{ const c = document.getElementById(ui.rtEdit ? 'rtForm' : 'progRoutines'), n = document.getElementById('rtName'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); if(n) n.focus({ preventScroll:true }); }, 40); return; }
+    if(kind==='new') rtDraftStart('new'); else if(kind==='edit' && rid) rtDraftStart(rid); else { ui.rtEdit = null; ui.rtDraft = null; }
     showView('routines');
-    if(kind==='detail') setTimeout(()=>{ const rc = document.getElementById('routineCard'); if(rc){ rc.open = true; rc.scrollIntoView({ block:'start', behavior:'smooth' }); } }, 40);
+    if(ui.rtEdit) setTimeout(()=>{ const c = document.getElementById('rtForm'), n = document.getElementById('rtName'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); if(n) n.focus({ preventScroll:true }); }, 40);
     return; }
   const rte = e.target.closest('[data-rt-edit]'); if(rte){ e.preventDefault(); rtReadForm(); rtDraftStart(rte.dataset.rtEdit); renderCurrent(); setTimeout(()=>{ const n = document.getElementById('rtName'); if(n) n.focus(); }, 20); return; }
   const rtc = e.target.closest('[data-rt-cancel]'); if(rtc){ e.preventDefault(); ui.rtEdit = null; ui.rtDraft = null; renderCurrent(); return; }
   const rtdy = e.target.closest('[data-rt-day]'); if(rtdy){ e.preventDefault(); rtReadForm(); const ds = ui.rtDraft.days = ui.rtDraft.days || [], k = rtdy.dataset.rtDay; const i = ds.indexOf(k); if(i>=0) ds.splice(i,1); else ds.push(k); renderCurrent(); return; }
   const rtmv = e.target.closest('[data-rt-ex-move]'); if(rtmv){ e.preventDefault(); rtReadForm(); const [i, dir] = rtmv.dataset.rtExMove.split('|').map(Number), xs = ui.rtDraft.exercises, j = i+dir; if(xs[j]){ [xs[i], xs[j]] = [xs[j], xs[i]]; } renderCurrent(); return; }
   const rtxd = e.target.closest('[data-rt-ex-del]'); if(rtxd){ e.preventDefault(); rtReadForm(); ui.rtDraft.exercises.splice(Number(rtxd.dataset.rtExDel), 1); renderCurrent(); return; }
-  const rtrg = e.target.closest('[data-rt-reg]'); if(rtrg){ e.preventDefault(); ui.rtReg = rtrg.dataset.rtReg; renderCurrent(); return; }
+  const rtrg = e.target.closest('[data-rt-reg]'); if(rtrg){ e.preventDefault(); ui.rtReg = ui.rtReg===rtrg.dataset.rtReg ? null : rtrg.dataset.rtReg; if(ui.view!=='today'){ ui.date = todayISO(); showView('today'); } else renderCurrent();
+    setTimeout(()=>{ const c = document.getElementById('rtRegCard'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); }, 40); return; }
   const rtrs = e.target.closest('[data-rt-reg-save]'); if(rtrs){ e.preventDefault(); routineRegSave(rtrs.dataset.rtRegSave); return; }
   const rtrc = e.target.closest('[data-rt-reg-cancel]'); if(rtrc){ e.preventDefault(); ui.rtReg = null; renderCurrent(); return; }
   const rts = e.target.closest('[data-rt-save]'); if(rts){ e.preventDefault(); routineSave(rts.dataset.rtSave); return; }
@@ -6501,23 +6505,28 @@ function runViewProgram(){
   h += `<div class="card"><h3>Kalender</h3><p class="tny muted" style="margin-top:-4px">Hardlopen, kracht en routines per dag. Tip: houd een hardlooptraining vast en sleep hem naar een andere dag.</p>`;
   const ahead = rp.settings.planWeeksAhead || 2, sugg = new Set(runSuggestionDates(addDays(today,-7), ahead+1)), wk0 = runMonday(addDays(today,-7));
   h += `<div class="run-actions" style="margin:0 0 6px">${runBtn('pastToggle', RUI.showPast ? 'Vorige week verbergen' : 'Vorige week tonen', 'sm')}</div>`;
+  const hasRt = typeof progDayRoutines==='function' && typeof routinesActive==='function' && routinesActive().length > 0;
+  h += `<div class="run-cal ${hasRt ? 'has-rt' : ''}">`;
   for(let w=RUI.showPast ? 0 : 1; w<ahead+2; w++){      // vorige week alleen op verzoek
     const mon = addDays(wk0, w*7), sun = addDays(mon,6); let rows = '';
     for(let i=0;i<7;i++){
       const d = addDays(mon,i), ss = runSessionsOn(d), dl = esc(runDateShort(d)), td = d===today ? ' is-today' : '';
-      const chips = typeof progDayChips==='function' ? progDayChips(d) : '';   // kracht, lange wandeling en routines met vaste dagen: blokjes in dezelfde regel
+      const chips = typeof progDayChips==='function' ? progDayChips(d) : '';      // kracht en lange wandeling: blokjes achter de training
+      const rchip = hasRt ? progDayRoutines(d) : '';                                // alle routines van die dag: één blokje in een eigen kolom, vóór hardlopen
+      const rcol = hasRt ? `<span class="run-day-r">${rchip}</span>` : '';
       ss.forEach((s, si)=>{
         const T = runTotals(s.steps);
-        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span><span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span></span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${coachPill(s)}<span class="run-chev" aria-hidden="true"></span></span></summary>
+        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span>${si===0 ? rcol : hasRt ? '<span class="run-day-r"></span>' : ''}<span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span></span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${coachPill(s)}<span class="run-chev" aria-hidden="true"></span></span></summary>
           <div class="run-day-body">${runSessionDetail(s)}</div></details>`;
       });
       if(!ss.length){
         const canPlan = sugg.has(d) && d>=today;
-        rows += `<div class="run-day rest${td} ${chips?'has-chips':''}" data-day="${d}"><span class="run-day-d">${dl}</span><span class="run-day-b">${chips ? `<span class="prog-chips">${chips}</span>` : 'Rustdag'}${canPlan?` <span class="tny muted run-sugg">· voorstel ${esc(cur.name)}</span>`:''}</span><span class="run-day-s">${canPlan?runBtn('plan|'+d+'|'+cur.id,'+ Inplannen','sm'):''}</span></div>`;
+        rows += `<div class="run-day rest${td} ${chips?'has-chips':''}" data-day="${d}"><span class="run-day-d">${dl}</span>${rcol}<span class="run-day-b">${chips ? `<span class="prog-chips">${chips}</span>` : 'Rustdag'}${canPlan?` <span class="tny muted run-sugg">· voorstel ${esc(cur.name)}</span>`:''}</span><span class="run-day-s">${canPlan?runBtn('plan|'+d+'|'+cur.id,'+ Inplannen','sm'):''}</span></div>`;
       }
     }
     h += `<div class="run-week"><div class="run-week-h">Week ${runIsoWeek(mon)} · ${esc(fmt(mon,{day:'numeric',month:'short'}))} – ${esc(fmt(sun,{day:'numeric',month:'short'}))}</div>${rows}</div>`;
   }
+  h += `</div>`;   // run-cal
   const free = runSuggestionDates(today, ahead+1).filter(d=>d>=today).length;
   const toSync = rp.sessions.filter(s=> s.status==='planned' && s.date>=today && coachState(s)!=='sent').length, canSync = coachConnected() || coachCanConnect();
   h += `<div class="run-actions">${free ? runBtn('planAhead','Vul de voorstellen in ('+free+'× '+esc(cur.name)+')','sm primary') : ''}${canSync ? (RUI.coachBusy==='all' ? '<span class="tny muted">Bezig met synchroniseren…</span>' : runBtn('coachSync', 'Sync met Garmin'+(toSync ? ' ('+toSync+')' : ''), 'sm'+(toSync && !free ? ' primary' : ''))) : ''}${rp.settings.paused?runBtn('resume','Hervatten','sm'):runBtn('pause','Pauzeren','sm')}</div></div>`;
