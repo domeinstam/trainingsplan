@@ -438,6 +438,11 @@ details.regcard .rc-body{padding:14px 16px 16px}
 #view-program .pc.missed{background:#F1F4F2;color:var(--muted);font-weight:500}
 #view-program .run-day.rest.has-chips{color:var(--text)}
 #view-program .run-day-b .prog-chips{margin-left:6px}
+.sl-grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 8px}
+.sl-grp-h{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--green);margin-right:4px;min-width:110px}
+.rt-newex{border:1px dashed #A9CDBE;border-radius:12px;padding:10px 12px;margin-top:8px;background:#fff}
+.rt-newex-row{display:flex;flex-wrap:wrap;gap:14px;font-size:14px;margin-top:8px}
+.rt-newex-row label{display:flex;align-items:center;gap:6px;margin:0}
 .td-section{margin:4px 0 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--td-sub)}
 .td-side-regs details.acc,.td-regs .card{margin-bottom:10px}
 .wk-pillweek{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--td-act);background:#E6F0F7;padding:5px 11px;border-radius:999px}
@@ -898,7 +903,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.14.1";
+const APP_VERSION = "block2-2.15.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1201,7 +1206,7 @@ function defaultExercises(){
     mistakes:['Knieën stiekem buigen','Ballistisch ver voorbij het comfortabele bereik veren'],
     search:'Physiotutors standing forward bend', evidence:['ROM']},
 
-   {id:'r-slbalance', session:'routine', name:'Eenbenige balans + hamstringreik', kind:'routine',
+   {id:'r-slbalance', session:'routine', name:'Eenbenige balans + hamstringreik', kind:'routine', lr:true,
     fn:'Balans, proprioceptie, enkel-/voetstabiliteit, heupcontrole, hamstringmobiliteit.',
     why:'Rechts nu duidelijk minder stabiel dan links. Belangrijk aandachtspunt voor de vechtsportbasis.',
     muscles:'Enkel-/voetstabilisatoren, gluteus medius, hamstrings, romp.',
@@ -1243,7 +1248,7 @@ function defaultExercises(){
     dose:'≈13 herhalingen (huidig)', load:'—',
     progression:'Bereik behouden; niet forceren op aantal.', mistakes:['Met een ruk omhoog komen'], search:'Physiotutors toe touch', evidence:[]},
 
-   {id:'r-ohp', session:'routine', name:'Eenarmige kettlebell overhead press (routine)', kind:'routine',
+   {id:'r-ohp', session:'routine', name:'Eenarmige kettlebell overhead press (routine)', kind:'routine', lr:true,
     fn:'Schouder-/rompkracht boven het hoofd — laatste onderdeel van de ochtendroutine.',
     why:'Deze beweging zit al in je ochtendroutine (hoge reps, was ~23 links / 26 rechts). Overlapt met de OHP in Kracht B — kies één plek als hoofdprikkel, niet allebei zwaar.',
     muscles:'Deltoïd, triceps, bovenste trapezius, romp.',
@@ -2040,9 +2045,23 @@ function vo2StaleNote(){
 }
 
 /* per-oefening krachtgeschiedenis — ALLEEN echte trainingssessies (geen leermomenten) */
+/* eerdere registraties uit het ochtendroutine-detail (dailyLogs.routineDetail) als regels in de Krachtlog; alleen lezen, niets wordt gewijzigd */
+const LEGACY_RT_MAP = {
+  'r-pushups':    rd=> rd.pushupReps!=null && rd.pushupReps!=='' ? { setReps:String(rd.pushupReps), sets:1, tech:rd.pushupTech||'', rpeLast:rd.pushupRpe } : null,
+  'r-forwardbend':rd=> rd.forwardBendReps!=null && rd.forwardBendReps!=='' ? { setReps:String(rd.forwardBendReps), sets:1 } : null,
+  'r-slbalance':  rd=> (rd.balanceReachL!=null && rd.balanceReachL!=='') || (rd.balanceReachR!=null && rd.balanceReachR!=='') ? { setRepsL:String(rd.balanceReachL??''), setRepsR:String(rd.balanceReachR??'') } : null,
+  'r-legraise':   rd=> rd.legRaiseReps!=null && rd.legRaiseReps!=='' ? { setReps:String(rd.legRaiseReps), sets:1 } : null,
+  'r-toetouch':   rd=> rd.toeTouchReps!=null && rd.toeTouchReps!=='' ? { setReps:String(rd.toeTouchReps), sets:1 } : null,
+  'r-ohp':        rd=> (rd.ohpL!=null && rd.ohpL!=='') || (rd.ohpR!=null && rd.ohpR!=='') ? { weightL:9, setRepsL:String(rd.ohpL??''), weightR:9, setRepsR:String(rd.ohpR??'') } : null,
+};
+function legacyRoutineHistory(exId){
+  const f = LEGACY_RT_MAP[exId]; if(!f) return [];
+  return Object.entries(CB.dailyLogs||{}).map(([date, l])=>{ const e = l && l.routineDetail ? f(l.routineDetail) : null; return e ? { date, session:'O', note: l.routineDetail.note || '', e } : null; }).filter(Boolean);
+}
 function strengthHistory(exId){
   return CB.strengthSessions.filter(s=> s.entries && s.entries[exId])
     .map(s=>({ date:s.date, session:s.session, routineName:s.routineName, note:s.note, e:s.entries[exId] }))
+    .concat(legacyRoutineHistory(exId))
     .sort((a,b)=> a.date.localeCompare(b.date));
 }
 /* leermoment-geschiedenis per oefening (aparte collectie) */
@@ -2692,12 +2711,22 @@ function routineDueOn(r, d){ const ds = routineDays(r); return ds ? ds.includes(
 function routineShownOn(r, d, l){ return routineDueOn(r, d) || !routineDays(r) || routineDoneOn(l, r); }
 function routineToday(d, l){ return routinesActive().filter(r=> routineShownOn(r, d, l || CB.dailyLogs[d])); }
 /* oefeningen voor routines: de lijst van Kracht › Oefeningen (later uit te breiden) */
-function rtLibrary(){ return state.exercises.filter(x=> x.kind==='strength' || x.kind==='time'); }
-function rtEx(id){ return state.exercises.find(x=>x.id===id) || null; }
-function rtExercises(r){ return (Array.isArray(r.exercises) ? r.exercises : []).filter(x=> rtEx(x.exId)); }
+function rtCustom(){ return (Array.isArray(CB.customExercises) ? CB.customExercises : []).filter(x=> x && !x.deleted); }
+function rtLibrary(){ return [...state.exercises.filter(x=> x.kind==='strength' || x.kind==='time'), ...ROUTINE_ORDER.map(id=> state.exercises.find(x=>x.id===id)).filter(Boolean), ...rtCustom()]; }
+function rtEx(id){ return state.exercises.find(x=>x.id===id) || rtCustom().find(x=>x.id===id) || null; }
+function exGroup(ex){ return ex.custom ? 'Eigen oefening' : ex.session==='routine' ? 'Ochtendroutine' : ex.session==='A' || ex.session==='B' ? 'Kracht '+ex.session : ''; }
+function rtAddCustom(name, unit, lr){
+  const list = CB.customExercises = Array.isArray(CB.customExercises) ? CB.customExercises : [];
+  const ex = { id:'cx'+Date.now().toString(36), name:String(name).trim().slice(0,60), kind:'custom', custom:true, unit: unit==='sec' ? 'sec' : 'reps', lr:!!lr, session:'eigen', createdAt:new Date().toISOString() };
+  list.push(ex); return ex;
+}
+function rtExercises(r){
+  const xs = Array.isArray(r.exercises) ? r.exercises : r.id==='routine' ? ROUTINE_ORDER.map(id=>({ exId:id, sets:1 })) : [];
+  return xs.filter(x=> rtEx(x.exId));
+}
 /* seconden alleen als het doel echt in seconden is (side plank, suitcase carry); bird dog is herhalingen per kant met een korte hold */
-function rtIsSec(ex){ return !!(ex && ex.kind==='time' && ex.range && String(ex.dose||'').replace(/ /g,'').includes(ex.range[0]+'–'+ex.range[1]+'sec')); }
-function rtDose(x){ const ex = rtEx(x.exId), rg = ex && ex.range ? ex.range.join('–') : ''; return `${num(x.sets)||2}×${rg}${rtIsSec(ex) ? ' s' : ''}`; }
+function rtIsSec(ex){ if(ex && ex.custom) return ex.unit==='sec'; return !!(ex && ex.kind==='time' && ex.range && String(ex.dose||'').replace(/ /g,'').includes(ex.range[0]+'–'+ex.range[1]+'sec')); }
+function rtDose(x){ const ex = rtEx(x.exId), n = num(x.sets)||2; if(!ex || !ex.range) return `${n} ${n===1?'set':'sets'}${rtIsSec(ex) ? ' · sec' : ''}`; return `${n}×${ex.range.join('–')}${rtIsSec(ex) ? ' s' : ''}`; }
 function rtSession(r, d){ return CB.strengthSessions.find(s=> s.session==='R' && s.routineId===r.id && s.date===d) || null; }
 function routineMarkDone(d, r){ const l = ensureLog(d); l.checks = l.checks || {};
   if(r.id==='spiritual') l.checks.spiritual = true; else if(r.id==='routine'){ l.routineDone = l.routineDone==='deels' ? 'deels' : 'ja'; l.checks.routine = true; } else { l.routines = l.routines || {}; l.routines[r.id] = 'ja'; } }
@@ -2741,12 +2770,15 @@ function routinesCardHTML(){
       <div class="field"><label>Dagen <span class="tny muted">(optioneel; daar staat hij in het programma)</span></label><div class="run-chips">${DOW.map(k=>`<button type="button" class="btn sm ${days.includes(k)?'active':''}" data-rt-day="${k}" aria-pressed="${days.includes(k)}">${DL[k]}</button>`).join('')}</div></div>
       <div class="rt-two"><div class="field"><label for="rtMin">Richttijd in minuten (optioneel)</label><input id="rtMin" type="number" inputmode="numeric" min="1" max="600" value="${d0.minutes!=null ? esc(d0.minutes) : ''}"></div>
         <div class="field"><label for="rtWeek">Hoe vaak per week</label><select id="rtWeek" ${days.length ? 'disabled' : ''}>${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${(days.length || num(d0.perWeek) || 7)===n ? 'selected' : ''}>${n===7 ? 'elke dag' : n+'× per week'}</option>`).join('')}</select></div></div>
-      ${legacy ? '' : `<div class="field"><label>Oefeningen <span class="tny muted">(uit Kracht › Oefeningen; wat je registreert komt in de Krachtlog)</span></label>
+      ${`<div class="field"><label>Oefeningen <span class="tny muted">(uit Kracht › Oefeningen; wat je registreert komt in de Krachtlog)</span></label>
         ${xs.length ? `<ol class="rt-exl">${xs.map((x,i)=>{ const ex = rtEx(x.exId); return ex ? `<li><span class="rt-exn">${esc(ex.name)}${ex.lr ? ' <span class="tny muted">L/R</span>' : ''}</span>
           <select data-rt-ex-sets="${i}" aria-label="Sets ${esc(ex.name)}">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(num(x.sets)||2)===n?'selected':''}>${n} ${n===1?'set':'sets'}</option>`).join('')}</select>
-          <span class="tny muted">× ${esc(ex.range ? ex.range.join('–') : '')} ${rtIsSec(ex) ? 'sec' : 'reps'}</span>
+          <span class="tny muted">${ex.range ? '× '+esc(ex.range.join('–'))+' '+(rtIsSec(ex) ? 'sec' : 'reps') : esc(exGroup(ex))}</span>
           <span class="rt-exb"><button type="button" class="btn sm" data-rt-ex-move="${i}|-1" aria-label="Hoger" ${i===0?'disabled':''}>↑</button><button type="button" class="btn sm" data-rt-ex-move="${i}|1" aria-label="Lager" ${i===xs.length-1?'disabled':''}>↓</button><button type="button" class="btn sm rt-del" data-rt-ex-del="${i}" aria-label="Weghalen">✕</button></span></li>` : ''; }).join('')}</ol>` : '<p class="tny muted" style="margin:0">Nog geen oefeningen: dan is het een routine om af te vinken.</p>'}
-        ${lib.length ? `<select class="rt-exadd" data-rt-ex-add aria-label="Oefening toevoegen"><option value="">+ Oefening toevoegen…</option>${lib.map(ex=>`<option value="${esc(ex.id)}">${esc(ex.name)} · ${esc(ex.range ? ex.range.join('–') : '')} ${rtIsSec(ex)?'sec':'reps'}${ex.lr?' · L/R':''}</option>`).join('')}</select>` : ''}</div>`}
+        <select class="rt-exadd" data-rt-ex-add aria-label="Oefening toevoegen"><option value="">+ Oefening toevoegen…</option>${['Kracht A','Kracht B','Ochtendroutine','Eigen oefening'].map(g=>{ const xs2 = lib.filter(ex=> exGroup(ex)===g); return xs2.length ? `<optgroup label="${g==='Eigen oefening' ? 'Eigen oefeningen' : g}">${xs2.map(ex=>`<option value="${esc(ex.id)}">${esc(ex.name)}${ex.range ? ' · '+esc(ex.range.join('–'))+' '+(rtIsSec(ex)?'sec':'reps') : ex.custom ? ' · '+(ex.unit==='sec'?'sec':'reps') : ''}${ex.lr?' · L/R':''}</option>`).join('')}</optgroup>` : ''; }).join('')}<option value="__new">+ Eigen oefening maken…</option></select>
+        ${ui.rtNewEx ? `<div class="rt-newex" id="rtNewEx"><div class="field"><label for="rtNxName">Naam eigen oefening</label><input id="rtNxName" type="text" maxlength="60" placeholder="bijv. Plank, Lunges, Stretch kuit"></div>
+          <div class="rt-newex-row"><label><input type="radio" name="rtNxUnit" value="reps" checked> herhalingen</label><label><input type="radio" name="rtNxUnit" value="sec"> seconden</label><label><input type="checkbox" id="rtNxLr"> links en rechts</label></div>
+          <div class="rt-actions" style="margin-top:6px"><button type="button" class="btn sm primary" data-rt-nx-save>Toevoegen</button><button type="button" class="btn sm" data-rt-nx-cancel>Annuleren</button><span class="tny muted">Komt ook bij Kracht › Oefeningen en in de Krachtlog.</span></div></div>` : ''}</div>`}
       ${r ? `<label class="rt-pause"><input type="checkbox" id="rtPause" ${d0.paused ? 'checked' : ''}> Pauzeren <span class="tny muted">— even niet op Vandaag; wat je deed blijft bewaard</span></label>` : ''}
       <div class="rt-actions"><button class="btn primary" data-rt-save="${r ? esc(r.id) : 'new'}">Opslaan</button><button class="btn" data-rt-cancel>Annuleren</button>${r ? `<button class="btn rt-del" data-rt-del="${esc(r.id)}">Verwijderen</button>` : ''}</div>
       <div class="tny muted">Wat je al deed, verandert niet mee.</div>
@@ -2786,11 +2818,11 @@ function rtRegHTML(r, d){
   const s = rtSession(r, d), xs = rtExercises(r);
   const inp = (exId, f, label, val, ph) => `<div class="field"><label>${label}</label><input type="${f==='tech'?'text':'text'}" inputmode="decimal" data-rtr="${esc(exId)}|${f}" value="${val==null?'':esc(val)}" placeholder="${esc(ph||'')}"></div>`;
   return `<div class="rt-reg" id="rtReg">${xs.map(x=>{ const ex = rtEx(x.exId), e = (s && s.entries && s.entries[ex.id]) || {}, prev = strengthHistory(ex.id).filter(h=> h.date < d).pop(), pe = prev && prev.e;
-      const tm = ex.kind==='time', wl = tm ? 'Gewicht (opt.)' : 'Gewicht (kg)', rl = rtIsSec(ex) ? 'Sec per set' : 'Reps per set';
+      const ph = Array(Math.max(1, num(x.sets)||1)).fill('10').join(', '), tm = ex.kind!=='strength', wl = tm ? 'Gewicht (opt.)' : 'Gewicht (kg)', rl = rtIsSec(ex) ? 'Sec per set' : ex.kind==='strength' ? 'Reps per set' : 'Aantal per set';
       const prevTxt = pe ? 'vorige: '+[ex.lr ? [pe.weightL!=null&&pe.weightL!==''?nl(pe.weightL)+' kg L':null, pe.setRepsL||null, pe.weightR!=null&&pe.weightR!==''?nl(pe.weightR)+' kg R':null, pe.setRepsR||null] : [pe.weight!=null&&pe.weight!==''?nl(pe.weight)+' kg':null, pe.setReps||null]].flat().filter(Boolean).join(' · ') : '';
       return `<div class="rt-reg-ex"><div class="rt-reg-h"><b>${esc(ex.name)}</b> <span class="tny muted">${esc(rtDose(x))}${ex.lr ? ' · links en rechts' : ''}${prevTxt ? ' · '+esc(prevTxt) : ''}</span></div>
-        <div class="rt-reg-f">${ex.lr ? inp(ex.id,'weightL',wl+' L',e.weightL) + inp(ex.id,'setRepsL',rl+' L',e.setRepsL,'10, 10') + inp(ex.id,'weightR',wl+' R',e.weightR) + inp(ex.id,'setRepsR',rl+' R',e.setRepsR,'10, 10')
-                                   : inp(ex.id,'weight',wl,e.weight) + inp(ex.id,'setReps',rl,e.setReps,'10, 10')}
+        <div class="rt-reg-f">${ex.lr ? inp(ex.id,'weightL',wl+' L',e.weightL) + inp(ex.id,'setRepsL',rl+' L',e.setRepsL,(pe&&pe.setRepsL)||ph) + inp(ex.id,'weightR',wl+' R',e.weightR) + inp(ex.id,'setRepsR',rl+' R',e.setRepsR,(pe&&pe.setRepsR)||ph)
+                                   : inp(ex.id,'weight',wl,e.weight) + inp(ex.id,'setReps',rl,e.setReps,(pe&&pe.setReps)||ph)}
           ${inp(ex.id,'rir','RIR',e.rir,'0–5')}
           <div class="field"><label>Techniek</label><select data-rtr="${esc(ex.id)}|tech"><option value="">—</option><option value="goed" ${e.tech==='goed'?'selected':''}>goed</option><option value="minder" ${e.tech==='minder'?'selected':''}>minder goed</option></select></div></div></div>`; }).join('')}
     <div class="rt-actions"><button class="btn primary" data-rt-reg-save="${esc(r.id)}">${s ? 'Opslaan' : 'Afgerond — opslaan'}</button><button class="btn" data-rt-reg-cancel>Annuleren</button><span class="tny muted">Komt ook in de Krachtlog.</span></div></div>`;
@@ -2858,7 +2890,7 @@ function routineSave(id){
   if(!r){ r = { id:'rt'+Date.now().toString(36), createdAt:new Date().toISOString(), paused:false }; list.push(r); }
   const days = (dr.days||[]).filter(k=>DOW.includes(k)).sort((a,b)=>DOW.indexOf(a)-DOW.indexOf(b));
   Object.assign(r, { name, moment: RT_MOMENTS.some(x=>x[0]===dr.moment) ? dr.moment : 'ochtend', perWeek: days.length || Math.min(7, Math.max(1, num(dr.perWeek)||7)), days,
-    exercises: r.id==='routine' ? (r.exercises||[]) : (dr.exercises||[]).filter(x=>rtEx(x.exId)).map(x=>({ exId:x.exId, sets: Math.min(5, Math.max(1, num(x.sets)||2)) })), updatedAt:new Date().toISOString() });
+    exercises: (dr.exercises||[]).filter(x=>rtEx(x.exId)).map(x=>({ exId:x.exId, sets: Math.min(5, Math.max(1, num(x.sets)||2)) })), updatedAt:new Date().toISOString() });
   if(id!=='new') r.paused = !!dr.paused;
   const mn = num(dr.minutes);
   if(r.id==='routine'){ if(mn!=null && mn>0) CB.routineMinutesTarget = mn; r.minutes = null; } else r.minutes = mn!=null && mn>0 ? mn : null;
@@ -4430,13 +4462,13 @@ function asymBars(label,lB,rB,lW,rW,endLbl='W12'){
    VIEW: KRACHTLOG  (expliciete geschiedenis per oefening)
    =========================================================================== */
 function renderStrength(){
-  const exs = state.exercises.filter(x=>x.kind==='strength'||x.kind==='time');
+  const exs = rtLibrary();
   const ex = exs.find(x=>x.id===ui.strengthEx) || exs[0];
   let html = `<div class="pagehead"><div class="eyebrow">Expliciete geschiedenis</div><h2>Krachtlog</h2>
     <p>Per oefening: datum, gewicht, reps per set, RIR/RPE, techniek, links/rechts. Primair beoordeeld op gewicht × double-progressionregel — geen samengestelde score. De app adviseert; jij beslist.</p></div>`;
 
   html += `<div class="section-title no-print" style="margin-top:0"><div class="range-toggle">
-    ${exs.map(x=>`<button class="btn sm ${x.id===ex.id?'active':''}" data-strength-ex="${x.id}">${esc(x.name)}${x.session!=='routine'?' '+x.session:''}</button>`).join('')}
+    ${['Kracht A','Kracht B','Ochtendroutine','Eigen oefening'].map(g=>{ const xs = exs.filter(x=> exGroup(x)===g); return xs.length ? `<div class="sl-grp"><span class="sl-grp-h">${g==='Eigen oefening' ? 'Eigen oefeningen' : g}</span>${xs.map(x=>`<button class="btn sm ${x.id===ex.id?'active':''}" data-strength-ex="${x.id}">${esc(x.name)}</button>`).join('')}</div>` : ''; }).join('')}
   </div></div>`;
 
   const hist = strengthHistory(ex.id);
@@ -4446,10 +4478,11 @@ function renderStrength(){
   const stageTxt = { leren:'LEREN — techniek staat centraal, nog geen gewichtsprogressie-advies.',
     vertrouwd:'VERTROUWD — beweging zit er redelijk in; korte combi-sessies, nog conservatief, nog geen double progression.',
     trainen:'TRAINEN — double progression actief; de app geeft verzwaringsadvies.' }[stg];
-  html += `<div class="card"><h3>${esc(ex.name)} <span class="sub">Kracht ${ex.session} · doelrange ${ex.range?ex.range.join('–'):'—'} reps</span> <span class="stage-badge stage-${stg}">${stg}</span></h3>
-    <p class="tny muted">${esc(stageTxt)} ${ex.learnWeek?`Introductie in leerweek ${ex.learnWeek}.`:''}</p>
-    <p class="small"><b>Progressieregel:</b> ${esc(ex.progression)}</p>
-    ${adv.length?adv.map(a=>a.msg?`<div class="advice">✓ ${esc(a.msg)}</div>`:`<div class="tny muted">${esc(a.note)}</div>`).join(''):`<div class="tny muted">${stg==='trainen'?'Nog geen progressiecriterium bereikt (of te weinig sessies).':'Geen gewichtsprogressie-advies in deze fase — dat is de bedoeling.'}</div>`}
+  const isAB = ex.session==='A' || ex.session==='B';
+  html += `<div class="card"><h3>${esc(ex.name)} <span class="sub">${esc(exGroup(ex))}${ex.range ? ' · doelrange '+ex.range.join('–')+(rtIsSec(ex)?' sec':' reps') : ex.custom ? ' · '+(ex.unit==='sec'?'seconden':'herhalingen')+(ex.lr?' · links en rechts':'') : ''}</span>${isAB ? ` <span class="stage-badge stage-${stg}">${stg}</span>` : ''}</h3>
+    ${isAB ? `<p class="tny muted">${esc(stageTxt)} ${ex.learnWeek?`Introductie in leerweek ${ex.learnWeek}.`:''}</p>` : ''}
+    ${ex.progression ? `<p class="small"><b>Progressieregel:</b> ${esc(ex.progression)}</p>` : ''}
+    ${isAB ? adv.length?adv.map(a=>a.msg?`<div class="advice">✓ ${esc(a.msg)}</div>`:`<div class="tny muted">${esc(a.note)}</div>`).join(''):`<div class="tny muted">${stg==='trainen'?'Nog geen progressiecriterium bereikt (of te weinig sessies).':'Geen gewichtsprogressie-advies in deze fase — dat is de bedoeling.'}</div>` : ''}
     ${lh.length?`<h4>Leermomenten <span class="tny muted">○ tellen niet mee in de gewichtsgrafiek</span></h4>
       <div class="table-wrap"><table class="data"><thead><tr><th>Datum</th><th class="num">Duur</th><th class="num">Belasting</th><th>Techniek</th><th>Voelde</th><th>Notitie</th></tr></thead><tbody>
       ${lh.map(x=>`<tr><td>○ ${esc(fmt(x.date,{day:'2-digit',month:'2-digit',year:'2-digit'}))}</td><td class="num">${nl(x.durationMin)} min</td><td class="num">${x.loadKg!=null?nl(x.loadKg)+' kg':'lich.gew.'}</td><td>${esc(x.techniqueStatus||'')}</td><td>${esc(x.loadFeeling||'')}</td><td class="small">${esc(x.note||'')}</td></tr>`).join('')}
@@ -4461,12 +4494,12 @@ function renderStrength(){
     let detail = `<p class="tny muted no-print"><a href="#" data-view="progress">Grafiek bekijken → Voortgang › Trends › Kracht</a></p><h4>Volledige geschiedenis</h4><div class="table-wrap"><table class="data"><thead><tr><th>Datum</th><th>Bron</th>
       ${lr?'<th class="num">Gew. L</th><th>Reps/set L</th><th class="num">Gew. R</th><th>Reps/set R</th>':'<th class="num">Gewicht</th><th>Reps/set</th>'}
       <th class="num">RIR</th><th class="num">RPE</th><th>Techniek</th><th>Notitie</th></tr></thead><tbody>
-      ${hist.map(h=>{ const e=h.e; return `<tr><td>${esc(fmt(h.date,{day:'2-digit',month:'2-digit',year:'2-digit'}))}</td><td class="small">${esc(h.session==='R' ? 'Routine · '+(h.routineName||'') : 'Kracht '+h.session)}</td>
+      ${hist.map(h=>{ const e=h.e; return `<tr><td>${esc(fmt(h.date,{day:'2-digit',month:'2-digit',year:'2-digit'}))}</td><td class="small">${esc(h.session==='R' ? 'Routine · '+(h.routineName||'') : h.session==='O' ? 'Ochtendroutine' : 'Kracht '+h.session)}</td>
         ${lr?`<td class="num">${nl(e.weightL)}</td><td>${esc(e.setRepsL||'')}</td><td class="num">${nl(e.weightR)}</td><td>${esc(e.setRepsR||'')}</td>`
             :`<td class="num">${nl(e.weight)}</td><td>${esc(e.setReps||e.reps||'')}</td>`}
         <td class="num">${nl(e.rir)}</td><td class="num">${nl(e.rpeLast)}</td><td>${esc(e.tech||'')}</td><td class="small">${esc(h.note||'')}</td></tr>`; }).join('')}
     </tbody></table></div>`;
-    if(stg==='trainen'){
+    if(stg==='trainen' || !isAB){
       html += detail;
     } else {
       const last = hist[hist.length-1];
@@ -4474,7 +4507,7 @@ function renderStrength(){
         <details class="acc"><summary>Volledige geschiedenis bekijken</summary><div class="acc-body">${detail}</div></details>`;
     }
   } else {
-    html += `<p class="muted">Nog geen sessies gelogd voor deze oefening. Log ze op het Vandaag-scherm — kies "+ Kracht ${ex.session==='routine'?'A of B':ex.session}".</p>`;
+    html += `<p class="muted">Nog geen sessies gelogd voor deze oefening. ${isAB ? `Log ze op het Vandaag-scherm — kies "+ Kracht ${ex.session}".` : 'Zet hem in een routine (Routines › Aanpassen) en registreer op Vandaag.'}</p>`;
   }
   html += `</div>`;
   setViewHTML('#view-strength', html);
@@ -5556,10 +5589,15 @@ document.addEventListener('click', e=>{
     if(ui.rtEdit) setTimeout(()=>{ const c = document.getElementById('rtForm'), n = document.getElementById('rtName'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); if(n) n.focus({ preventScroll:true }); }, 40);
     return; }
   const rte = e.target.closest('[data-rt-edit]'); if(rte){ e.preventDefault(); rtReadForm(); rtDraftStart(rte.dataset.rtEdit); renderCurrent(); setTimeout(()=>{ const n = document.getElementById('rtName'); if(n) n.focus(); }, 20); return; }
-  const rtc = e.target.closest('[data-rt-cancel]'); if(rtc){ e.preventDefault(); ui.rtEdit = null; ui.rtDraft = null; renderCurrent(); return; }
+  const rtc = e.target.closest('[data-rt-cancel]'); if(rtc){ e.preventDefault(); ui.rtEdit = null; ui.rtDraft = null; ui.rtNewEx = false; renderCurrent(); return; }
   const rtdy = e.target.closest('[data-rt-day]'); if(rtdy){ e.preventDefault(); rtReadForm(); const ds = ui.rtDraft.days = ui.rtDraft.days || [], k = rtdy.dataset.rtDay; const i = ds.indexOf(k); if(i>=0) ds.splice(i,1); else ds.push(k); renderCurrent(); return; }
   const rtmv = e.target.closest('[data-rt-ex-move]'); if(rtmv){ e.preventDefault(); rtReadForm(); const [i, dir] = rtmv.dataset.rtExMove.split('|').map(Number), xs = ui.rtDraft.exercises, j = i+dir; if(xs[j]){ [xs[i], xs[j]] = [xs[j], xs[i]]; } renderCurrent(); return; }
   const rtxd = e.target.closest('[data-rt-ex-del]'); if(rtxd){ e.preventDefault(); rtReadForm(); ui.rtDraft.exercises.splice(Number(rtxd.dataset.rtExDel), 1); renderCurrent(); return; }
+  const rtnx = e.target.closest('[data-rt-nx-save]'); if(rtnx){ e.preventDefault(); const n = document.getElementById('rtNxName'), name = (n && n.value || '').trim();
+    if(!name){ if(n){ n.focus(); n.setAttribute('aria-invalid','true'); } return; }
+    rtReadForm(); const unit = (document.querySelector('input[name="rtNxUnit"]:checked')||{}).value, ex = rtAddCustom(name, unit, document.getElementById('rtNxLr') && document.getElementById('rtNxLr').checked);
+    if(ui.rtDraft) ui.rtDraft.exercises.push({ exId:ex.id, sets:1 }); ui.rtNewEx = false; saveState(); renderCurrent(); return; }
+  const rtnc = e.target.closest('[data-rt-nx-cancel]'); if(rtnc){ e.preventDefault(); rtReadForm(); ui.rtNewEx = false; renderCurrent(); return; }
   const rtrg = e.target.closest('[data-rt-reg]'); if(rtrg){ e.preventDefault(); ui.rtReg = ui.rtReg===rtrg.dataset.rtReg ? null : rtrg.dataset.rtReg; if(ui.view!=='today'){ ui.date = todayISO(); showView('today'); } else renderCurrent();
     setTimeout(()=>{ const c = document.getElementById('rtRegCard'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); }, 40); return; }
   const rtrs = e.target.closest('[data-rt-reg-save]'); if(rtrs){ e.preventDefault(); routineRegSave(rtrs.dataset.rtRegSave); return; }
@@ -5642,7 +5680,8 @@ document.addEventListener('change', e=>{
     (l.checks = l.checks || {}).routine = true;
     saveState(); renderCurrent(); return;
   }
-  if(el.hasAttribute('data-rt-ex-add')){ if(el.value && ui.rtDraft){ rtReadForm(); ui.rtDraft.exercises.push({ exId:el.value, sets:2 }); renderCurrent(); } return; }
+  if(el.hasAttribute('data-rt-ex-add')){ if(el.value==='__new'){ rtReadForm(); ui.rtNewEx = true; renderCurrent(); setTimeout(()=>{ const n = document.getElementById('rtNxName'); if(n) n.focus(); }, 20); return; }
+    if(el.value && ui.rtDraft){ rtReadForm(); ui.rtDraft.exercises.push({ exId:el.value, sets: (rtEx(el.value)||{}).kind==='strength' || (rtEx(el.value)||{}).kind==='time' ? 2 : 1 }); renderCurrent(); } return; }
   if(el.dataset.rtExSets!=null && ui.rtDraft){ const x = ui.rtDraft.exercises[Number(el.dataset.rtExSets)]; if(x) x.sets = num(el.value)||2; return; }
   if(el.dataset.rtCheck){
     const l = ensureLog(ui.date); l.routines = l.routines || {};
