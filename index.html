@@ -263,6 +263,10 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.prof-add .field{margin:0;flex:0 1 280px}
 .prof-old{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;align-items:center}.prof-old span{display:inline-flex;align-items:center;gap:4px}
 .prof-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:6px}.prof-x:hover{background:#F0F4F6;color:var(--ink)}
+.prof-inj-n{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.prof-since{display:inline-flex;align-items:center;gap:6px;margin:0}
+.prof-since input{width:auto;min-height:38px;padding:7px 12px;font:inherit;font-size:14px;color:var(--ink);border:1px solid #CBD8E0;border-radius:10px;background:var(--card,#fff)}   /* zelfde stijl als de andere velden */
+.prof-since input:focus{outline:2px solid var(--green2,#028C99);outline-offset:1px;border-color:transparent}
+.prof-since{font-size:13px;color:var(--muted)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
@@ -367,18 +371,18 @@ body.rtp-open{overflow:hidden}
 .td-recovery #ocCard{margin-top:12px}
 .td-recovery #ocCard>summary .tny{display:none}
 .td-recovery #ocCard .form-grid{display:flex;flex-direction:column;gap:0}
-.td-recovery #ocCard .field{flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--td-line)}
+.td-recovery #ocCard .field{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--td-line)}   /* label links, veld rechts vanaf het midden */
 .td-recovery #ocCard .field:last-child{border-bottom:0}
 .td-recovery #ocCard .field label{margin:0;font-size:14px;font-weight:600;color:var(--td-text,#24423A);flex:1;min-width:0}
-.td-recovery #ocCard .field input,.td-recovery #ocCard .field select{width:92px;flex:0 0 92px;min-height:40px;padding:8px 10px;text-align:center}
+.td-recovery #ocCard .field input,.td-recovery #ocCard .field select{width:100%;min-height:40px;padding:8px 10px;text-align:center}
 .td-recovery #ocCard .field select{text-align:left}
-.td-recovery #ocCard .field.wide{flex-direction:column;align-items:stretch;border-bottom:0}
+.td-recovery #ocCard .field.wide{display:flex;flex-direction:column;align-items:stretch;border-bottom:0}
 .td-recovery #ocCard .field.wide label{margin-bottom:6px}
-.pq-seg{display:inline-flex;border:1px solid var(--td-line,#D9E5EA);border-radius:10px;overflow:hidden;flex:0 0 auto}
+.pq-seg{display:flex;border:1px solid var(--td-line,#D9E5EA);border-radius:10px;overflow:hidden}.pq-seg .pq-b{flex:1}
 .pq-b{border:0;background:#fff;padding:8px 16px;font-weight:700;font-size:14px;color:var(--td-text,#24423A);cursor:pointer;min-height:40px}
 .pq-b+.pq-b{border-left:1px solid var(--td-line,#D9E5EA)}.pq-b.on{background:var(--green,#04717C);color:#fff}
-.td-recovery #ocCard .field.pq-wide{flex-direction:column;align-items:stretch;gap:6px}
-.td-recovery #ocCard .field.pq-wide select,.td-recovery #ocCard .field.pq-wide input{width:100%;flex:1 1 auto;text-align:left}
+.td-recovery #ocCard .field.pq-wide select,.td-recovery #ocCard .field.pq-wide input{text-align:left}
+.td-recovery #ocCard .field.pq-scale-f{display:flex;flex-direction:column;align-items:stretch;gap:6px}   /* 1–10 over de volle breedte */
 .pq-scale{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
 .pq-n{border:1px solid var(--td-line,#D9E5EA);background:#fff;border-radius:8px;min-height:36px;font-weight:700;font-size:13.5px;color:var(--td-text,#24423A);cursor:pointer;padding:0}
 .pq-n.on{background:#E8892B;border-color:#E8892B;color:#fff}
@@ -1185,7 +1189,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.21.5";
+const APP_VERSION = "block2-2.21.6";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2855,8 +2859,14 @@ function renderToday(){
       ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
     </div>
     ${injuryAskHTML(d)}
-    <p class="tny muted" style="margin-top:6px">Dit voedt het <b>Dagadvies</b> bovenaan en je status bij Hardlopen.</p>
-    <details class="acc"><summary>Meer — slaap, HRV/RHR, notities</summary><div class="acc-body">
+    ${ocMoreFields()}
+  </div></details>`;
+  }
+  /* slaap, HRV/RHR, notities en herstelbeeld: eigen kaart (computer: onder Snelle acties) */
+  /* slaap, HRV/RHR, notities en herstelbeeld: ingeklapt in de Dagcheck (zoals vóór 2.21.6) */
+  function ocMoreFields(){
+  const g = state.garmin.daily[d];
+  return `<details class="acc"><summary>Meer — slaap, HRV/RHR, notities</summary><div class="acc-body">
       ${g ? `<p class="tny" style="color:var(--green)">✓ Garmin beschikbaar voor deze dag — HRV ${nl(g.nightHrv)} ms · RHR ${nl(g.restingHr)} · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
       <div class="form-grid cols-4">
         ${fInput('HRV nacht (ms)','currentBlock.dailyLogs.'+d+'.hrv', l.hrv,'number','inputmode="numeric"')}
@@ -2871,7 +2881,7 @@ function renderToday(){
           .map(([lab,k,u])=>{ const r=recent7(k); return `<div class="rc"><b>${r.value==null?'—':nl(round(r.value, k==='sleepHours'?1:0))}</b><span>${lab} ${u}<br>${r.n}/7</span></div>`; }).join('')}
       </div>
     </div></details>
-  </div></details>`;
+`;
   }
 
   /* ---- compacte cijferstrip: alleen relevant zodra het programma loopt ---- */
@@ -3064,7 +3074,7 @@ function painFieldsHTML(d, l){
     h += `<div class="field pq-wide"><label for="pqWhere">Waar?</label><select id="pqWhere" data-pain-area="${esc(d)}"><option value="">Kies een plek…</option>${opts.map(o=>`<option ${o===a && !other?'selected':''}>${esc(o)}</option>`).join('')}<option value="__other" ${other?'selected':''}>Anders…</option></select></div>`;
     if(other) h += `<div class="field pq-wide"><label for="pqOther">Welke plek?</label><input id="pqOther" type="text" data-pain-area-txt="${esc(d)}" value="${esc(a && !opts.includes(a) ? a : '')}" maxlength="40" placeholder="bv. linkerbeen"></div>`;
     const pv = num(l.pain);
-    h += `<div class="field pq-wide"><label id="pqHow">Hoe erg? <span class="tny muted">1 = licht, 10 = heel erg</span></label><div class="pq-scale" role="group" aria-labelledby="pqHow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="pq-n ${pv===n?'on':''}" data-pain-n="${esc(d)}|${n}" aria-pressed="${pv===n}">${n}</button>`).join('')}</div></div>`;
+    h += `<div class="field pq-wide pq-scale-f"><label id="pqHow">Hoe erg? <span class="tny muted">1 = licht, 10 = heel erg</span></label><div class="pq-scale" role="group" aria-labelledby="pqHow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="pq-n ${pv===n?'on':''}" data-pain-n="${esc(d)}|${n}" aria-pressed="${pv===n}">${n}</button>`).join('')}</div></div>`;
   }
   return h;
 }
@@ -3091,7 +3101,7 @@ function profileCardHTML(){
     </div>
     ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
     <h4 style="margin:14px 0 6px">Blessures</h4>
-    ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span><b>${esc(x.area)}</b> <span class="tny muted">sinds ${esc(fmt(x.since,{day:'numeric',month:'long'}))}</span></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
+    ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span class="prof-inj-n"><b>${esc(x.area)}</b> <label class="tny muted prof-since">sinds <input type="date" data-inj-since="${esc(x.id)}" value="${esc(x.since||'')}" min="1900-01-01" max="${todayISO()}" aria-label="${esc(x.area)}: sinds wanneer"></label></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
       : ''}
     <div class="prof-add"><div class="field"><select data-inj-add-sel aria-label="Blessure toevoegen"><option value="">+ ${act.length ? 'Nog een blessure' : 'Blessure'} toevoegen…</option>${PAIN_AREAS.filter(o=> !act.some(x=>x.area.toLowerCase()===o.toLowerCase())).map(o=>`<option>${esc(o)}</option>`).join('')}<option value="__other">Anders…</option></select></div>
       ${ui.injOther ? `<div class="field"><input type="text" data-inj-add-txt maxlength="40" placeholder="bv. linkerbeen" aria-label="Plek van de blessure"></div>` : ''}</div>
@@ -6190,6 +6200,8 @@ document.addEventListener('change', e=>{
       if(/^\d{4}-\d{2}-\d{2}$/.test(v) && y>=1900 && v<=todayISO()) p.birthDate = v; else if(!v) delete p.birthDate; else return; }
     else if(k==='name'){ if(v) p.name = v.slice(0,40); else delete p.name; }
     saveState(); renderCurrent(); return; }
+  if(el.matches && el.matches('[data-inj-since]')){ const v = el.value, x = (profileW().injuries||[]).find(y=>y.id===el.dataset.injSince);
+    if(x && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0,4))>=1900 && v<=todayISO()){ x.since = v; saveState(); } return; }   // tussenstanden tijdens typen: niet opslaan
   if(el.matches && el.matches('[data-inj-add-sel]')){ if(el.value==='__other'){ ui.injOther = true; renderCurrent(); setTimeout(()=>{ const t = document.querySelector('[data-inj-add-txt]'); if(t) t.focus(); }, 20); return; }
     if(el.value){ injuryAdd(el.value); ui.injOther = false; saveState(); renderCurrent(); } return; }
   if(el.matches && el.matches('[data-inj-add-txt]')){ const v = el.value.trim(); if(v){ injuryAdd(v); ui.injOther = false; saveState(); renderCurrent(); } return; }
