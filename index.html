@@ -844,7 +844,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.13.0";
+const APP_VERSION = "block2-2.13.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2749,7 +2749,7 @@ function todayCoachBlock(d, ctx){
   // 2. vandaag
   if(planned){
     h += todaySessionLine(planned);
-    if(status==='orange') h += `<div class="act">Doe hem op Herstel of Rustig, of korter. Niet opschalen.</div>`;
+    if(status==='orange') h += `<div class="act">Loop hem op Herstel of Rustig, of maak hem korter.</div>`;
     if(status==='red') h += `<div class="act">Rustig wandelen mag. Verzet de training naar een andere dag.</div>`;
   } else if(done){
     h += `<div class="tc-train">✓ Gedaan: <b>${esc(done.name)}</b></div>`;
@@ -2783,7 +2783,7 @@ function tdCoachCard(st){
   let head, text;
   if(st.und){ head = 'Hoe voel je je vandaag?'; text = st.isToday ? 'Vul de Dagcheck in, dan weet de coach of trainen vandaag verstandig is.' : 'Voor deze dag is geen herstel vastgelegd.'; }
   else if(s==='red'){ head = train ? 'Vandaag geen hardlooptraining' : 'Herstel gaat voor vandaag'; text = train ? 'Je herstel vraagt om rust. Rustig wandelen mag; verzet je training naar een andere dag.' : 'Neem de tijd om te herstellen. Rustig wandelen mag.'; }
-  else if(s==='orange'){ head = 'Rustig aan vandaag'; text = train ? 'Doe je training op Herstel of Rustig, of korter. Niet opschalen.' : 'Je herstel vraagt aandacht. Vandaag staat een rustdag op je programma.'; }
+  else if(s==='orange'){ head = 'Rustig aan vandaag'; text = train ? 'Loop je training op Herstel of Rustig, of maak hem korter.' : 'Je herstel vraagt aandacht. Vandaag staat een rustdag op je programma.'; }
   else { head = train ? 'Je kunt vandaag trainen' : 'Goed hersteld'; text = train ? 'Je herstel ziet er goed uit.' : 'Vandaag staat een rustdag op je programma.'; }
   return `<section class="td-card td-coach st-${s}" aria-labelledby="tdCoachH">
     <div class="td-coach-top"><span class="td-coach-title">${TD_ICO(TDI.spark, 'td-spark')}Atempo Coach</span>${tdChip(s)}</div>
@@ -2807,7 +2807,7 @@ function tdActivityCard(st, isFuture){
   if(planned){
     h += `<h3 id="tdTodayH" class="td-title">Hardlopen</h3><div class="td-meta">${sesMeta(planned)}</div><div class="td-sub">${esc(runShortStructure(planned.steps))}</div>`;
     if(isFuture) h += `<div class="td-sub">Registreren kan op de dag zelf.</div>`;
-    else if(status==='orange') h += `<div class="td-note st-orange">Doe hem op Herstel of Rustig, of korter.</div>`;
+    else if(status==='orange') h += `<div class="td-note st-orange">Rustig aan vandaag: loop hem op Herstel of Rustig, of maak hem korter.</div>`;
     else if(status==='red') h += `<div class="td-note st-red">Rustig wandelen mag. Verzet de training naar een andere dag.</div>`;
     h += `<div class="td-actions"><button class="btn ${primary}" data-run-open="${planned.id}">${status==='red' && !isFuture ? 'Training verzetten' : 'Bekijk training'}</button></div>`;
   } else if(done){
