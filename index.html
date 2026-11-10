@@ -1054,7 +1054,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.19.2";
+const APP_VERSION = "block2-2.19.3";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2660,7 +2660,7 @@ function renderToday(){
     </div></div>`;
   }
   if(extraMove() || checks.eveningWalk) html += `<div class="seg"><div class="lines">
-      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(extraMove() || 'Extra beweging')} — optioneel, naar behoefte</label>
+      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(extraMove() || 'Extra beweging')} — optioneel</label>
       ${checks.eveningWalk ? `<div style="margin-top:6px;max-width:160px">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}
     </div></div>`;
   html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Routines instellen' : '="new">+ Routine toevoegen'}</a></div>`;
@@ -2866,7 +2866,7 @@ function extraMove(){
 function extraMoveCardHTML(){
   const cur = extraMove(), other = cur && !EXTRA_MOVES.includes(cur);
   return `<div class="card" id="extraMoveCard"><h3>Extra beweging</h3>
-    <p class="small muted" style="margin-top:0">Komt bij Mijn taken als aanbevolen, naar behoefte. Telt niet mee als taak.</p>
+    <p class="small muted" style="margin-top:0">Komt bij Mijn taken als optioneel. Telt niet mee als taak.</p>
     <div class="rt-two"><div class="field"><label for="exMoveSel">Activiteit</label><select id="exMoveSel" data-exmove-sel>
       <option value="" ${!cur?'selected':''}>Geen</option>${EXTRA_MOVES.map(x=>`<option value="${x}" ${cur===x?'selected':''}>${x}</option>`).join('')}<option value="__other" ${other || ui.exMoveOther ? 'selected' : ''}>Iets anders…</option></select></div>
     ${other || ui.exMoveOther ? `<div class="field"><label for="exMoveTxt">Naam</label><input id="exMoveTxt" type="text" maxlength="40" value="${other ? esc(cur) : ''}" placeholder="bijv. Hond uitlaten, Roeien" data-exmove-txt></div>` : ''}</div></div>`;
@@ -3384,7 +3384,7 @@ function tdTasks(st, ctx){
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
   routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
-  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
+  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">optioneel</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
 function tdTaskCard(st, ctx){
@@ -3566,7 +3566,7 @@ function renderWeek(){
     goalRows += `<div class="row"><span class="k">Kracht A / B</span><span class="v na">nog niet aan de orde — eerst leren</span></div>`;
   goalRows += `<div class="row"><span class="k">Lange wandeling</span><span class="v ${ws.longWalk.applicable?cl(ws.longWalk.done):'na'}">${ws.longWalk.applicable?(ws.longWalk.done?'✓ gedaan':'nog te doen'):'niet deze week (om de week)'}</span></div>`;
   ws.routines.forEach(x=>{ goalRows += `<div class="row"><span class="k">${esc(x.r.name)}</span><span class="v">${x.done} / ${x.target} ${x.target===1 ? 'dag' : 'dagen'}</span></div>`; });
-  goalRows += `<div class="row"><span class="k">Wandeling</span><span class="v na">optioneel / naar behoefte</span></div>`;
+  goalRows += `<div class="row"><span class="k">Wandeling</span><span class="v na">optioneel</span></div>`;
 
   html += `<div class="card"><h3>Weekdoelen</h3><div class="week-track">${goalRows}</div>
   <p class="tny muted" style="margin-top:8px">${cfg.phase==='leren'||cfg.phase==='consolideren'||cfg.phase==='uitbreiden'
