@@ -892,6 +892,19 @@ body{background:var(--paper)}
   .wk-day .wk-h{font-size:11.5px}
 }
 @media(max-width:380px){ .wk-progs{grid-template-columns:minmax(0,1fr)!important} }
+/* computer (breed): kaarten links en rechts in rijen, zodat ze op dezelfde lijn beginnen en eindigen
+   rij 1: Coach over de volle breedte · rij 2: Vandaag | Volgende training · rij 3: Mijn taken + Mijn herstel | Snelle acties */
+@media(min-width:1280px){
+  .td-grid{row-gap:16px;column-gap:18px;align-items:stretch}
+  .td-grid>.td-main,.td-grid>.td-side{display:contents}
+  .td-grid>.td-main>*{grid-column:1}
+  .td-grid>.td-side>*{grid-column:2}
+  .td-grid>.td-main>.td-coach{grid-row:1;grid-column:1 / -1}
+  .td-grid>.td-main>.td-today{grid-row:2}.td-grid>.td-side>.td-next{grid-row:2}
+  .td-grid>.td-main>.td-pair{grid-row:3}.td-grid>.td-side>.td-quickcard{grid-row:3}
+  .td-grid>.td-side>.td-side-regs{grid-row:4;align-self:start}
+  .td-grid>.td-main>.td-today:only-child,.td-grid>.td-side>.td-next:only-child{grid-row:1}   /* dag in de toekomst: alleen Vandaag naast Volgende training */
+}
 /* beelden: computer = brede berglandschappen in de kop, eigen beeld in de kaart; telefoon = eigen beeld in de kop (staand past daar) */
 .td .td-today-art{background-position:center 35%}
 @media(max-width:860px){
@@ -977,7 +990,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.17.1";
+const APP_VERSION = "block2-2.17.3";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2939,7 +2952,7 @@ function renderRoutines(){
 /* registreren van een routine met oefeningen, op Vandaag (komt in de Krachtlog) */
 function rtRegCard(d){
   const r = ui.rtReg && routineList().find(x=>x.id===ui.rtReg); if(!r || !rtExercises(r).length) return '';
-  return `<section class="td-card rt-regcard" id="rtRegCard" aria-label="${esc(r.name)} registreren"><div class="td-card-head"><h3 class="td-h-ico">${TD_ICO(TDI.dumb)}${esc(r.name)}</h3><span class="td-sub">${rtExercises(r).length} oefeningen</span></div>${rtStripHTML(r)}${rtRegHTML(r, d)}</section>`;
+  return `<section class="td-card rt-regcard" id="rtRegCard" aria-label="${esc(r.name)} registreren"><div class="td-card-head"><h3 class="td-h-ico">${TD_ICO(TDI.dumb)}${esc(r.name)}</h3><span class="td-sub">${rtExercises(r).length} oefeningen</span></div>${rtRegHTML(r, d)}</section>`;
 }
 /* concept tijdens het aanpassen (oefeningen toevoegen e.d. hertekent het formulier zonder getypte tekst kwijt te raken) */
 function rtDraftStart(id){
