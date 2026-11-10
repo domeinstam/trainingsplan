@@ -257,6 +257,10 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td-task input[type=checkbox]:checked{background:var(--td-pos);border-color:var(--td-pos)}
 /* optionele taak (extra beweging): geen lijn erboven, wel een gestippeld rondje; telt niet mee in de teller */
 .td-task:has(+ .td-task.is-opt){border-bottom:0}
+.inj-ask{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin:10px 0 4px;padding:10px 12px;border-radius:12px;background:#FFF6EC;border:1px solid #F3D9BC;font-size:14px}
+.inj-ask-b{display:flex;gap:8px;flex-wrap:wrap}
+.prof-inj{list-style:none;margin:0 0 8px;padding:0}.prof-inj li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #EDF2F5}
+.prof-add{display:flex;gap:8px;flex-wrap:wrap}.prof-add select,.prof-add input{max-width:260px}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
@@ -1161,7 +1165,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.20.3";
+const APP_VERSION = "block2-2.21.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1731,7 +1735,7 @@ const runHrSet = () => RP().settings.hr || {};
 const runHrZone = k => RUN_HR_ZONES.find(z=>z[0]===k) || null;
 function runHrMax(h){                                                // { bpm, basis:'eigen'|'leeftijd' } of null
   h = h || runHrSet();
-  const own = num(h.ownMax), age = num(h.age);
+  const own = num(h.ownMax), pa = typeof profileAge==='function' ? profileAge() : null, age = pa!=null ? pa : num(h.age);   // leeftijd uit Mijn profiel gaat voor
   if(h.useOwn && own>=RUN_HR_OWN[0] && own<=RUN_HR_OWN[1]) return { bpm:Math.round(own), basis:'eigen' };
   if(age>=RUN_HR_AGE[0] && age<=RUN_HR_AGE[1]) return { bpm:runHrRound(208 - 0.7*age), basis:'leeftijd' };
   return null;
@@ -1809,7 +1813,7 @@ function runResultOf(s){
 }
 
 /* ---------- registratie: voor / na / volgende ochtend ---------- */
-/* gegevens van een dag voor de herstelstatus, uit de Dagcheck (dailyLogs): energie, pijn linkerbeen,
+/* gegevens van een dag voor de herstelstatus, uit de Dagcheck (dailyLogs): energie, pijn (en waar),
    klachten bij wandelen of traplopen en je eigen beoordeling van Vandaag. Oude antwoorden die vroeger bij
    Hardlopen zijn ingevuld (checks) blijven gelden voor de dagen waarop de Dagcheck ze niet heeft. */
 function runPre(date){
@@ -1819,6 +1823,7 @@ function runPre(date){
   const m = { ...(c||{}) };
   if(e!=null){ m.energy = e; m.energyFrom = 'dagcheck'; }
   if(num(m.painLeft)==null && p!=null) m.painLeft = p;
+  if(l && typeof painWord==='function') m.painWord = painWord(l);              // 'pijn' of 'pijn knie' — alleen voor de tekst
   if(ws!=null && typeof m.painWalking!=='boolean'){ m.painWalking = ws; m.painStairs = ws; m.walkStairs = ws; }
   if(own) m.own = own;
   return m;
@@ -1828,7 +1833,7 @@ const runBoolStr = v => v===true ? 'ja' : v===false ? 'nee' : '';
 function runPreComplete(c){ return !!c && num(c.energy)!=null && num(c.painLeft)!=null && typeof c.painWalking==='boolean' && typeof c.painStairs==='boolean'; }
 const runPostComplete = p => !!p && num(p.rpe)!=null && num(p.painDuring)!=null && typeof p.painIncreased==='boolean' && typeof p.gaitChanged==='boolean';
 const runNextComplete = n => !!n && !!n.trend && num(n.energy)!=null;
-/* de ochtend na een training: een oud ingevuld formulier geldt; anders vergelijkt de app de pijn linkerbeen uit de
+/* de ochtend na een training: een oud ingevuld formulier geldt; anders vergelijkt de app de pijn uit de
    Dagcheck van de dag erna met die van de trainingsdag (hoger = klachten toegenomen) */
 function runNextOf(s){
   if(runNextComplete(s.next)) return s.next;
@@ -1846,7 +1851,7 @@ function runOutcome(s){
   if(runPostComplete(s.post) && !n && addDays(s.date,1) > todayISO())
     return { state:'incomplete', pending:true, text:'Morgen telt je Dagcheck mee.' };
   if(!runPostComplete(s.post) || !n){
-    const miss = []; if(!runPostComplete(s.post)) miss.push('de vragen na de training'); if(!n) miss.push('de Dagcheck van de dag erna (pijn linkerbeen)');
+    const miss = []; if(!runPostComplete(s.post)) miss.push('de vragen na de training'); if(!n) miss.push('de Dagcheck van de dag erna (pijn)');
     return { state:'incomplete', text:'Nog niet compleet: '+miss.join(' en ')+'.' };
   }
   const bad = [], p = s.post;
@@ -1876,14 +1881,15 @@ function runReadiness(date){
   const R = t => { red = true; reasons.push({ sev:'red', text:t }); };
   const O = t => { orange = true; reasons.push({ sev:'orange', text:t }); };
   const L = t => { light++; reasons.push({ sev:'light', text:t }); };
-  if(!runPreComplete(pre)){ missing.push('Dagcheck van vandaag is nog niet compleet (energie, pijn linkerbeen, wandelen/traplopen)'); }
+  if(!runPreComplete(pre)){ missing.push('Dagcheck van vandaag is nog niet compleet (energie, pijn, wandelen/traplopen)'); }
   if(pre){
     // één gecombineerde vraag uit de Dagcheck (wandelen of traplopen) telt als oranje; de oude losse vraag 'wandelen' blijft rood
     if(pre.walkStairs===true) O('Klachten bij wandelen of traplopen');
     else { if(pre.painWalking===true) R('Klachten tijdens normaal wandelen'); if(pre.painStairs===true) O('Klachten bij traplopen'); }
-    if(num(pre.painLeft)!=null && pre.painLeft>=th.painRed) R('Pijn linkerbeen '+pre.painLeft+'/10 (rood vanaf '+th.painRed+')');
+    const pw = pre.painWord || 'pijn', Pw = pw.charAt(0).toUpperCase()+pw.slice(1);
+    if(num(pre.painLeft)!=null && pre.painLeft>=th.painRed) R(Pw+' '+pre.painLeft+'/10 (rood vanaf '+th.painRed+')');
     if(num(pre.energy)!=null && pre.energy<=th.energyRed) R('Zeer lage energie ('+pre.energy+'/10; rood bij '+th.energyRed+' of lager)');
-    if(num(pre.painLeft)!=null && pre.painLeft>=th.painOrange && pre.painLeft<th.painRed) O('Nog klachten aan het linkerbeen ('+pre.painLeft+'/10; groen alleen bij '+th.greenPainMax+')');
+    if(num(pre.painLeft)!=null && pre.painLeft>=th.painOrange && pre.painLeft<th.painRed) { O('Nog '+pw+' ('+pre.painLeft+'/10; groen alleen bij '+th.greenPainMax+')'); Object.assign(reasons[reasons.length-1], { pain:true, pw }); }
     if(num(pre.energy)!=null && pre.energy>th.energyRed && pre.energy<=th.energyOrange) O('Beperkte energie ('+pre.energy+'/10; oranje bij '+th.energyOrange+' of lager)');
     if(num(pre.painLeft)!=null && pre.painLeft>=4) strong++;
     if(num(pre.energy)!=null && pre.energy<=3) strong++;
@@ -1930,7 +1936,7 @@ function runStatusHeadline(rd){
   const first = rd.reasons.find(r=>r.sev==='red') || rd.reasons.find(r=>r.sev==='orange');
   if(rd.auto==='red') return (first ? first.text+' — ' : '')+'vandaag niet hardlopen.';
   if(rd.auto==='orange'){
-    if(first && /linkerbeen/.test(first.text)) return 'Nog klachten aan linkerbeen – niet automatisch opbouwen.';
+    if(first && first.pain) return 'Nog '+(first.pw || 'pijn')+' – niet automatisch opbouwen.';
     return (first ? first.text+' — ' : 'Gegevens ontbreken — ')+'niveau niet verhogen.';
   }
   return 'Geen waarschuwingen. Opbouwen blijft jouw keuze.';
@@ -2172,6 +2178,7 @@ function mergeState(base, savedRaw){
     };
   }
   m.runningProgram = runNormalize(saved.runningProgram);
+  if(saved.profile && typeof saved.profile==='object' && !Array.isArray(saved.profile)) m.profile = saved.profile;   // Mijn profiel (per gebruiker)
   return m;
 }
 function loadState(){
@@ -2818,16 +2825,17 @@ function renderToday(){
   const g = state.garmin.daily[d];
   // korte stand in de kop, zodat je ook ingeklapt ziet wat er al staat
   const ocBits = [ l.energy!=null&&l.energy!=='' ? 'energie '+l.energy : null, l.stiffness!=null&&l.stiffness!=='' ? 'stijfheid '+l.stiffness : null,
-                   l.pain!=null&&l.pain!=='' ? 'pijn linkerbeen '+l.pain : null, l.walkStairs==='ja' ? 'klachten bij wandelen/traplopen' : null, l.weightKg!=null&&l.weightKg!=='' ? nl(l.weightKg)+' kg' : null ].filter(Boolean);
+                   painQ(l)==='nee' ? 'geen pijn' : num(l.pain)>0 ? painWord(l)+' '+l.pain : null, l.walkStairs==='ja' ? 'klachten bij wandelen/traplopen' : null, l.weightKg!=null&&l.weightKg!=='' ? nl(l.weightKg)+' kg' : null ].filter(Boolean);
   return `<details class="acc" id="ocCard"><summary>Dagcheck <span class="tny muted" style="font-weight:400">· ${ocBits.length ? esc(ocBits.join(' · ')) : 'nog niet ingevuld'}</span></summary><div class="acc-body">
     <div class="form-grid cols-4">
       ${fInput('Energie 1–10','currentBlock.dailyLogs.'+d+'.energy', l.energy,'number','inputmode="numeric" min="1" max="10"')}
       ${fInput('Spierpijn/stijfheid 0–10','currentBlock.dailyLogs.'+d+'.stiffness', l.stiffness,'number','inputmode="numeric" min="0" max="10"')}
-      ${fInput('Pijn linkerbeen 0–10','currentBlock.dailyLogs.'+d+'.pain', l.pain,'number','inputmode="numeric" min="0" max="10"')}
+      ${painFieldsHTML(d, l)}
       ${fSelect('Klachten bij wandelen of traplopen?','currentBlock.dailyLogs.'+d+'.walkStairs', l.walkStairs, [['','—'],['nee','nee'],['ja','ja']])}
       ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
     </div>
-    <p class="tny muted" style="margin-top:6px">Dit voedt het <b>Dagadvies</b> bovenaan en je status bij Hardlopen. Een geregistreerde 0 (geen pijn) is een geldige waarde.</p>
+    ${injuryAskHTML(d)}
+    <p class="tny muted" style="margin-top:6px">Dit voedt het <b>Dagadvies</b> bovenaan en je status bij Hardlopen.</p>
     <details class="acc"><summary>Meer — slaap, HRV/RHR, notities</summary><div class="acc-body">
       ${g ? `<p class="tny" style="color:var(--green)">✓ Garmin beschikbaar voor deze dag — HRV ${nl(g.nightHrv)} ms · RHR ${nl(g.restingHr)} · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
       <div class="form-grid cols-4">
@@ -2991,6 +2999,68 @@ function routinePerWeek(r){ const ds = routineDays(r); return ds ? ds.length : M
 /* staat de routine op deze dag op het programma? vaste dagen, of elke dag; "x per week" zonder dagen = vrij te kiezen */
 function routineDueOn(r, d){ const ds = routineDays(r); return ds ? ds.includes(dowKey(d)) : routinePerWeek(r)>=7; }
 function routineShownOn(r, d, l){ return routineDueOn(r, d) || !routineDays(r) || routineDoneOn(l, r); }
+/* ===== Mijn profiel (per gebruiker, state.profile): naam, geboortedatum (→ leeftijd), startgewicht, blessures =====
+   Niets persoonlijks in de code: iedere gebruiker vult dit zelf in. Pijn vraagt de Dagcheck alleen bij 'ja' (waar en hoe erg);
+   komt dezelfde plek vaker terug (3× in 14 dagen), dan vraagt de app of het een blessure is — nooit vanzelf. */
+const PAIN_AREAS = ['Knie','Enkel','Voet of achilles','Kuit','Scheenbeen','Hamstring','Bovenbeen of lies','Heup','Rug','Schouder'];
+function profile(){ return (state.profile && typeof state.profile==='object') ? state.profile : {}; }
+function profileW(){ if(!state.profile || typeof state.profile!=='object' || Array.isArray(state.profile)) state.profile = {}; return state.profile; }
+function profileAge(at){
+  const b = profile().birthDate; if(!/^\d{4}-\d{2}-\d{2}$/.test(b||'')) return null;
+  const t = at || todayISO(); let a = +t.slice(0,4) - +b.slice(0,4); if(t.slice(5) < b.slice(5)) a--;
+  return a>=0 && a<120 ? a : null;
+}
+function injuriesActive(){ return (profile().injuries||[]).filter(x=> x && x.status==='actief' && x.area); }
+function painQ(l){ l = l || {}; if(l.painAny==='ja' || l.painAny==='nee') return l.painAny; const p = num(l.pain); return p==null ? '' : p>0 ? 'ja' : 'nee'; }
+/* plek van de pijn op een dag: wat die dag is ingevuld; anders je enige actieve blessure (oude dagen hadden nog geen plek) */
+function painAreaOf(l){ if(l && l.painArea) return l.painArea; const a = injuriesActive(); return a.length===1 ? a[0].area : ''; }
+const painWord = l => { const a = painAreaOf(l); return a ? 'pijn '+a.toLowerCase() : 'pijn'; };
+function injurySuggest(d){
+  d = d || todayISO(); const cnt = {};
+  for(let i=0;i<14;i++){ const l = CB.dailyLogs[addDays(d,-i)]; if(l && num(l.pain)>0 && l.painArea) cnt[l.painArea] = (cnt[l.painArea]||0)+1; }
+  const act = injuriesActive().map(x=>x.area.toLowerCase()), asked = profile().injuryAsked || {};
+  return Object.keys(cnt).find(a=> cnt[a]>=3 && !act.includes(a.toLowerCase()) && !(asked[a] && asked[a] > addDays(d,-14))) || null;
+}
+function injuryAdd(area, since){
+  area = String(area||'').trim().slice(0,40); if(!area) return;
+  const p = profileW(); p.injuries = Array.isArray(p.injuries) ? p.injuries : [];
+  if(p.injuries.some(x=> x.status==='actief' && x.area.toLowerCase()===area.toLowerCase())) return;
+  p.injuries.push({ id:'inj'+Date.now().toString(36), area, since: since || todayISO(), status:'actief' });
+}
+function injuryHealed(id){ const x = (profileW().injuries||[]).find(y=>y.id===id); if(x){ x.status = 'hersteld'; x.healedAt = todayISO(); } }
+function painFieldsHTML(d, l){
+  const q = painQ(l), a = l.painArea || '', opts = [...new Set([...injuriesActive().map(x=>x.area), ...PAIN_AREAS])], other = (a && !opts.includes(a)) || ui.painOther===d;
+  let h = `<div class="field"><label>Pijn?</label><select data-pain-q="${esc(d)}"><option value="" ${!q?'selected':''}>—</option><option value="nee" ${q==='nee'?'selected':''}>nee</option><option value="ja" ${q==='ja'?'selected':''}>ja</option></select></div>`;
+  if(q==='ja'){
+    h += `<div class="field"><label>Waar?</label><select data-pain-area="${esc(d)}"><option value="">— kies —</option>${opts.map(o=>`<option ${o===a && !other?'selected':''}>${esc(o)}</option>`).join('')}<option value="__other" ${other?'selected':''}>Anders…</option></select></div>`;
+    if(other) h += `<div class="field"><label>Welke plek?</label><input type="text" data-pain-area-txt="${esc(d)}" value="${esc(a && !opts.includes(a) ? a : '')}" maxlength="40" placeholder="bv. linkerbeen"></div>`;
+    h += fInput('Hoe erg? 1–10','currentBlock.dailyLogs.'+d+'.pain', num(l.pain)>0 ? l.pain : '','number','inputmode="numeric" min="1" max="10"');
+  }
+  return h;
+}
+function injuryAskHTML(d){
+  const a = injurySuggest(d); if(!a) return '';
+  return `<div class="inj-ask" role="status"><span>Je gaf de afgelopen twee weken vaker pijn aan: <b>${esc(a.toLowerCase())}</b>. Is dit een blessure?</span>
+    <span class="inj-ask-b"><button class="btn sm primary" data-inj-yes="${esc(a)}">Ja, als blessure bewaren</button><button class="btn sm" data-inj-no="${esc(a)}">Nee</button></span></div>`;
+}
+function profileCardHTML(){
+  const p = profile(), age = profileAge(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld');
+  return `<div class="card prof-card" id="profileCard"><h3>Mijn profiel</h3>
+    <p class="small muted" style="margin-top:0">Alleen voor jou. Atempo gebruikt dit voor je leeftijd (hartslag), je startgewicht en je blessures.</p>
+    <div class="form-grid cols-3">
+      <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
+      <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" max="${todayISO()}"></div>
+      <div class="field"><label for="profW">Startgewicht (kg)</label><input id="profW" type="number" data-prof="startWeightKg" value="${esc(p.startWeightKg ?? '')}" inputmode="decimal" step="0.1" min="30" max="250"></div>
+    </div>
+    ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
+    <h4 style="margin:14px 0 6px">Blessures</h4>
+    ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span><b>${esc(x.area)}</b> <span class="tny muted">sinds ${esc(fmt(x.since,{day:'numeric',month:'long'}))}</span></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
+      : '<p class="small muted" style="margin:0 0 6px">Geen blessure. Geef je in de Dagcheck vaker pijn op dezelfde plek aan, dan vraagt Atempo of het een blessure is.</p>'}
+    <div class="prof-add"><select data-inj-add-sel aria-label="Blessure toevoegen"><option value="">+ Blessure toevoegen…</option>${PAIN_AREAS.map(o=>`<option>${esc(o)}</option>`).join('')}<option value="__other">Anders…</option></select>
+      ${ui.injOther ? `<input type="text" data-inj-add-txt maxlength="40" placeholder="bv. linkerbeen" aria-label="Plek van de blessure">` : ''}</div>
+    ${old.length ? `<p class="tny muted" style="margin-top:8px">Eerder: ${old.map(x=>esc(x.area)+(x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':'')).join(' · ')}</p>` : ''}
+  </div>`;
+}
 function routineToday(d, l){ return routinesActive().filter(r=> routineShownOn(r, d, l || CB.dailyLogs[d])); }
 /* oefeningen voor routines: de lijst van Kracht › Oefeningen (later uit te breiden) */
 function rtCustom(){ return (Array.isArray(CB.customExercises) ? CB.customExercises : []).filter(x=> x && !x.deleted); }
@@ -3066,7 +3136,7 @@ function routinesCardHTML(){
       <div class="rt-actions"><button class="btn primary" data-rt-save="${r ? esc(r.id) : 'new'}">Opslaan</button><button class="btn" data-rt-cancel>Annuleren</button>${r ? `<button class="btn rt-del" data-rt-del="${esc(r.id)}">Verwijderen</button>` : ''}</div>
     </div>`; };
   const row = r => ed===r.id ? `<div class="run-level rt-ed editing">${form(r)}</div>` : `<div class="run-level rt-lvl ${r.paused ? 'is-paused' : ''}"><div class="run-level-top"><b>${esc(r.name)}</b>${r.paused ? ' <span class="rt-pill">Gepauzeerd</span>' : ''}</div>
-      <div class="small">${esc(sub(r))}</div><div class="run-actions"><button class="btn sm" data-rt-edit="${esc(r.id)}">Aanpassen</button></div></div>`;
+      <div class="small">${esc(sub(r))}</div>${rtStripHTML(r)}<div class="run-actions"><button class="btn sm" data-rt-edit="${esc(r.id)}">Aanpassen</button></div></div>`;
   return `<div class="rt-card" id="myRoutines">
     ${all.map(row).join('') || '<p class="small muted">Je hebt nog geen routines. Stel er een samen uit oefeningen, of maak een routine om af te vinken (bijvoorbeeld meditatie).</p>'}
     ${ed==='new' ? `<div class="run-level rt-ed editing">${form(null)}</div>` : '<div class="run-actions"><button class="btn sm" data-rt-edit="new">+ Nieuwe routine</button></div>'}</div>`;
@@ -3258,15 +3328,8 @@ function rtNext(){
 }
 function renderRoutines(){
   const today = ui.date = todayISO(), nx = rtNext(), all = routineList();
+  /* geen apart blok 'Volgende routine' meer (Rens, 10 nov): een routine doe je dagelijks; de oefeningenstrook staat bij elke routine in het overzicht */
   let h = `<div class="pagehead"><div class="eyebrow">Persoonlijk programma</div><h2>Routines</h2></div>`;
-  h += `<div class="card run-next rt-next"><div class="eyebrow">Volgende routine</div>`;
-  if(nx){ const { r, d } = nx, xs = rtExercises(r), when = d===today ? 'Vandaag' : d===addDays(today,1) ? 'Morgen' : fmt(d,{weekday:'long',day:'numeric',month:'long'});
-    h += `<div class="run-when">${esc(when.charAt(0).toUpperCase()+when.slice(1))}</div>
-      <div><b class="run-big">${esc(r.name)}</b> <span class="small muted">${[routineMinutes(r)!=null ? routineMinutes(r)+' min' : null, xs.length ? xs.length+(xs.length===1?' oefening':' oefeningen') : 'afvinken'].filter(Boolean).map(x=>'· '+esc(x)).join(' ')}</span></div>
-      ${rtStripHTML(r)}
-      <div class="run-actions"><button class="btn sm" data-rt-manage="edit|${esc(r.id)}">Bekijken of aanpassen</button></div>`;
-  } else h += all.length ? `<p class="small">Alles staat voor vandaag afgevinkt.</p>` : `<p class="small">Er is nog geen routine. Stel er een samen uit oefeningen, of maak een routine om af te vinken.</p><div class="run-actions"><button class="btn sm primary" data-rt-edit="new">+ Nieuwe routine</button></div>`;
-  h += `</div>`;
   h += `<div class="card" id="rtSettings"><h3>Mijn routines</h3>${routinesCardHTML()}</div>`;
   h += extraMoveCardHTML();
   setViewHTML('#view-routines', h);
@@ -3590,7 +3653,7 @@ function tdQuickCard(st){
 const TD_HERO = `<svg class="td-hero-art" aria-hidden="true" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMax slice"><rect width="600" height="200" fill="#EEF5F8"></rect><circle cx="440" cy="78" r="30" fill="#FBEFD5"></circle><path d="M0 136 C90 100 170 116 260 108 C360 98 440 78 600 92 V200 H0 Z" fill="#DCEBE4"></path><path d="M0 160 C110 136 210 148 320 142 C420 136 500 124 600 132 V200 H0 Z" fill="#C7E0D2"></path><path d="M250 200 C300 172 360 160 420 150 C470 143 520 141 600 144" fill="none" stroke="#F2EDE2" stroke-width="9" stroke-linecap="round"></path><path d="M0 184 C140 170 260 176 380 172 C470 170 540 164 600 167 V200 H0 Z" fill="#A9D0B8"></path></svg><div class="td-hero-photo" aria-hidden="true"></div>`;   // foto over de tekening; ontbreekt het bestand, dan blijft de tekening
 function todayWideHTML(d, ctx, parts){
   const st = todayState(d, ctx), isFuture = d > todayISO(), hr = new Date().getHours();
-  const greet = st.isToday ? (hr < 12 ? 'Goedemorgen' : hr < 18 ? 'Goedemiddag' : 'Goedenavond') : (isFuture ? 'Vooruitkijken' : 'Terugkijken');
+  const greet = st.isToday ? (hr < 12 ? 'Goedemorgen' : hr < 18 ? 'Goedemiddag' : 'Goedenavond') + (profile().name ? ', '+String(profile().name).trim() : '') : (isFuture ? 'Vooruitkijken' : 'Terugkijken');
   const dateTxt = fmt(d,{weekday:'long',day:'numeric',month:'long'});
   // sfeerbeeld past bij de dag: training → pad, herstel oranje/rood → nevel, verder ochtend (vóór 12 uur) of rust
   // kop en kaart Vandaag krijgen elk een eigen beeld (nooit twee keer hetzelfde)
@@ -6033,12 +6096,14 @@ function renderMore(){
   const row = (attr, ico, t, s) => `<button class="more-row" ${attr}>${TD_ICO(ico)}<span><b>${t}</b><small>${s}</small></span>${TD_ICO(TDI.chev, 'more-chev')}</button>`;
   setViewHTML('#view-more', `<div class="pagehead"><div class="eyebrow">Atempo</div><h2>Meer</h2><p class="small muted">Alles wat je niet iedere dag nodig hebt.</p></div>
     <div class="card more-list">
+      ${row('data-more-prof', TDI.heart, 'Mijn profiel', 'Naam, geboortedatum, startgewicht en blessures')}
       ${row('data-view="data"', TDI.check, 'Gegevens, back-up en synchronisatie', 'Back-up maken of terugzetten, je account, de cloud')}
       ${row('data-view="data"', TDI.run, 'Garmin en Intervals.icu', 'Koppeling en trainingen naar je horloge')}
       ${row('data-view="garmin"', TDI.bars, 'Garmin-gegevens laden', 'Export van Garmin Connect inlezen')}
       ${row('data-view="method"', TDI.list, 'Uitleg', 'Hoe Atempo werkt en waarom')}
       <a class="more-row" href="privacy.html" target="_blank" rel="noopener">${TD_ICO(TDI.heart)}<span><b>Privacy</b><small>Wat er met je gegevens gebeurt</small></span>${TD_ICO(TDI.chev, 'more-chev')}</a>
     </div>
+    ${ui.moreProf ? profileCardHTML() : ''}
     <p class="tny muted" style="text-align:center;margin-top:12px">Atempo · ${esc(APP_VERSION.replace('block2-','versie '))}</p>`);
 }
 function renderCurrent(){
@@ -6147,6 +6212,25 @@ document.addEventListener('change', e=>{
   if(el.matches && el.matches('[data-week-select]')){ ui.weekIdx = Number(el.value); renderWeek(); return; }
   if(el.matches && el.matches('[data-exmove-sel]')){ if(el.value==='__other'){ ui.exMoveOther = true; renderCurrent(); setTimeout(()=>{ const t = document.getElementById('exMoveTxt'); if(t) t.focus(); }, 20); } else extraMoveSet(el.value); return; }
   if(el.matches && el.matches('[data-exmove-txt]')){ const v = el.value.trim(); if(v) extraMoveSet(v); return; }
+  /* Dagcheck pijn en Mijn profiel */
+  const ocKeep = () => { saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; };
+  if(el.matches && el.matches('[data-pain-q]')){ const d = el.dataset.painQ, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}), v = el.value; ui.painOther = null;
+    if(v==='nee'){ l.painAny = 'nee'; l.pain = 0; delete l.painArea; }
+    else if(v==='ja'){ l.painAny = 'ja'; if(!(num(l.pain)>0)) l.pain = ''; const inj = injuriesActive(); if(!l.painArea && inj.length===1) l.painArea = inj[0].area; }
+    else { delete l.painAny; l.pain = ''; delete l.painArea; }
+    ocKeep(); return; }
+  if(el.matches && el.matches('[data-pain-area]')){ const d = el.dataset.painArea, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {});
+    if(el.value==='__other'){ ui.painOther = d; ocKeep(); setTimeout(()=>{ const t = document.querySelector('[data-pain-area-txt]'); if(t) t.focus(); }, 20); return; }
+    ui.painOther = null; if(el.value) l.painArea = el.value; else delete l.painArea; ocKeep(); return; }
+  if(el.matches && el.matches('[data-pain-area-txt]')){ const d = el.dataset.painAreaTxt, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}), v = el.value.trim().slice(0,40); if(v) l.painArea = v; ocKeep(); return; }
+  if(el.matches && el.matches('[data-prof]')){ const k = el.dataset.prof, p = profileW(), v = el.value.trim();
+    if(k==='startWeightKg'){ const n = num(v); if(n!=null && n>=30 && n<=250) p.startWeightKg = Math.round(n*10)/10; else if(!v) delete p.startWeightKg; }
+    else if(k==='birthDate'){ if(/^\d{4}-\d{2}-\d{2}$/.test(v) && v<=todayISO()) p.birthDate = v; else if(!v) delete p.birthDate; }
+    else if(k==='name'){ if(v) p.name = v.slice(0,40); else delete p.name; }
+    saveState(); renderCurrent(); return; }
+  if(el.matches && el.matches('[data-inj-add-sel]')){ if(el.value==='__other'){ ui.injOther = true; renderCurrent(); setTimeout(()=>{ const t = document.querySelector('[data-inj-add-txt]'); if(t) t.focus(); }, 20); return; }
+    if(el.value){ injuryAdd(el.value); ui.injOther = false; saveState(); renderCurrent(); } return; }
+  if(el.matches && el.matches('[data-inj-add-txt]')){ const v = el.value.trim(); if(v){ injuryAdd(v); ui.injOther = false; saveState(); renderCurrent(); } return; }
   if(el.dataset.bind){
     // als de focus intussen naar een ander gebonden veld is verplaatst: flush eerst
     // diens lopende (gedebouncede) invoer, zodat de herrender geen verse toets kwijtraakt
@@ -6947,7 +7031,7 @@ function runStatusSources(rd, pre){
   const oc = [];
   if(pre){
     if(num(pre.energy)!=null) oc.push('energie '+pre.energy);
-    if(num(pre.painLeft)!=null) oc.push('pijn linkerbeen '+pre.painLeft);
+    if(num(pre.painLeft)!=null) oc.push(pre.painLeft>0 ? (pre.painWord||'pijn')+' '+pre.painLeft : 'geen pijn');
     if(typeof pre.painWalking==='boolean') oc.push(pre.painWalking || pre.painStairs ? 'klachten bij wandelen/traplopen' : 'geen klachten bij wandelen/traplopen');
   }
   const ico = { 'Dagcheck vandaag':TDI.cal, 'Vorige training':TDI.run, 'Jouw beoordeling':TDI.heart };
@@ -7003,7 +7087,7 @@ function runViewOverview(){
     <details class="acc"><summary>Waarom?</summary><div class="acc-body">
       ${rd.reasons.length?`<ul class="small">${rd.reasons.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>`:''}
       ${rd.missing.length?`<div class="tny muted">Ontbrekend: ${rd.missing.map(esc).join('; ')}.</div>`:''}
-      ${!rd.reasons.length && !rd.missing.length?'<div class="small muted">Geen aandachtspunten. Groen geldt bij pijn linkerbeen 0, energie boven 5, weinig spierpijn of stijfheid en geen klachten bij wandelen of traplopen.</div>':''}
+      ${!rd.reasons.length && !rd.missing.length?'<div class="small muted">Geen aandachtspunten. Groen geldt bij geen pijn, energie boven 5, weinig spierpijn of stijfheid en geen klachten bij wandelen of traplopen.</div>':''}
       <div class="tny muted">Ondersteunend advies, geen medische beoordeling.</div>
     </div></details></div>`;
 
@@ -7013,7 +7097,7 @@ function runViewOverview(){
     const up = /uitbreiden/i.test(ev.advice), noUp = rd.shown!=='green' || /herstel afwachten|verminderen/i.test(ev.advice);
     h += `<div class="card rv-eval"><div class="rv-eval-head">${TD_ICO(RUN_ICO.clip,'rv-eval-ico')}<h3>Evaluatie</h3></div><div class="rv-eval-body">
       <p class="rv-advice"><b>${esc(ev.advice)}</b></p><ul class="small">${ev.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
-      ${up ? '<div class="tny muted">Je hebt aanhoudende klachten aan het linkerbovenbeen (lies). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>' : ''}
+      ${up && injuriesActive().length ? `<div class="tny muted">Je hebt een blessure (${esc(injuriesActive().map(x=>x.area.toLowerCase()).join(', '))}). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>` : ''}
       <div class="small">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
       <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl && !noUp?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
       ${ev.nextTpl && noUp ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Advies: wacht met een hoger niveau tot je herstel groen is en je vorige training goed ging.</div>` : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
@@ -7104,9 +7188,9 @@ function runViewProgram(){
 /* Instellingen › Mijn hartslag: leeftijd, de maximale hartslag (geschat of eigen) en de bevestiging na een wijziging */
 function runHrSettingsHTML(){
   const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
-  const ageOld = mx && mx.basis==='leeftijd' && h.ageSetAt && (Date.now()-Date.parse(h.ageSetAt)) > 365*86400000;
+  const ageOld = profileAge()==null && mx && mx.basis==='leeftijd' && h.ageSetAt && (Date.now()-Date.parse(h.ageSetAt)) > 365*86400000;
   return `<div class="small run-hrset"><b>Mijn hartslag</b></div>
-    <div class="form-grid cols-4">${runInp('Leeftijd', '__run.set.hrAge', h.age, { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1] })}
+    <div class="form-grid cols-4">${profileAge()!=null ? `<div class="field"><label>Leeftijd</label><div class="small" style="padding:8px 0">${profileAge()} jaar <span class="muted">(uit Mijn profiel)</span></div></div>` : runInp('Leeftijd', '__run.set.hrAge', h.age, { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1] })}
       ${h.useOwn ? runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] }) : ''}</div>
     <div class="small">${mx ? `Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span>` : '<span class="muted">Vul je leeftijd in om met een hartslagdoel te trainen.</span>'}</div>
     ${ageOld ? `<div class="small">Klopt je leeftijd (${esc(h.age)}) nog? ${runBtn('hrAgeOk','Ja, klopt','sm')}</div>` : ''}
@@ -7229,6 +7313,12 @@ document.addEventListener('click', e=>{
   const ro = e.target.closest && e.target.closest('[data-run-open]'); if(ro){ e.preventDefault(); RUI.msg = ''; RUI.tab = 'program'; if(ro.dataset.runOpen){ RUI.openId = ro.dataset.runOpen; RUI.scrollTo = ro.dataset.runOpen; } showView('program'); return; }
   const ra = e.target.closest && e.target.closest('[data-run-open-act]'); if(ra){ e.preventDefault(); const a = runActivity(ra.dataset.runOpenAct), lm = runLinkedMap(), sid = a ? (lm[a.externalId] || (runSessionsOn(a.date)[0]||{}).id) : null; RUI.msg = '';
     if(sid){ RUI.tab = 'program'; RUI.openId = sid; RUI.scrollTo = sid; } else RUI.tab = 'overview'; showView(sid ? 'program' : 'running'); return; }
+  const pf = e.target.closest && e.target.closest('[data-more-prof]'); if(pf){ e.preventDefault(); ui.moreProf = !ui.moreProf; renderCurrent(); if(ui.moreProf) setTimeout(()=>{ const c = document.getElementById('profileCard'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); }, 30); return; }
+  const iy = e.target.closest && e.target.closest('[data-inj-yes],[data-inj-no]'); if(iy){ e.preventDefault();
+    if(iy.dataset.injYes){ const a = iy.dataset.injYes, first = Array.from({length:14},(_,i)=>addDays(todayISO(),-13+i)).find(d=> CB.dailyLogs[d] && CB.dailyLogs[d].painArea===a && num(CB.dailyLogs[d].pain)>0); injuryAdd(a, first); }
+    else { const p = profileW(); p.injuryAsked = { ...(p.injuryAsked||{}), [iy.dataset.injNo]: todayISO() }; }
+    saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
+  const ih = e.target.closest && e.target.closest('[data-inj-healed]'); if(ih){ e.preventDefault(); injuryHealed(ih.dataset.injHealed); saveState(); renderCurrent(); return; }
   const oc = e.target.closest && e.target.closest('[data-oc-open]'); if(oc){ e.preventDefault(); ui.date = todayISO(); showView('today'); const card = document.getElementById('ocCard'); if(card){ card.open = true; setTimeout(()=>card.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
   const tab = e.target.closest && e.target.closest('[data-run-tab]'); if(tab){ RUI.tab = tab.dataset.runTab; RUI.msg = ''; const v = document.getElementById('view-running'); if(v) v.innerHTML = ''; /* geen open/dicht-stand meenemen naar een ander tabblad */ renderCurrent(); window.scrollTo({top:0}); return; }
   const b = e.target.closest && e.target.closest('[data-run-act]'); if(!b) return;
