@@ -892,6 +892,15 @@ body{background:var(--paper)}
   .wk-day .wk-h{font-size:11.5px}
 }
 @media(max-width:380px){ .wk-progs{grid-template-columns:minmax(0,1fr)!important} }
+/* beelden: computer = brede berglandschappen in de kop, eigen beeld in de kaart; telefoon = eigen beeld in de kop (staand past daar) */
+.td .td-today-art{background-position:center 35%}
+@media(max-width:860px){
+  .td .td-hero-photo{background-image:url(achtergronden/kop_m_rust.webp)}
+  .td.sf-ochtend .td-hero-photo{background-image:url(achtergronden/kop_m_ochtend.webp)}
+  .td.sf-training .td-hero-photo{background-image:url(achtergronden/kop_m_training.webp)}
+  .td.sf-herstel .td-hero-photo{background-image:url(achtergronden/kop_m_herstel.webp)}
+  .td.sf-rust .td-hero-photo{background-image:url(achtergronden/kop_m_rust.webp)}
+}
 @media(max-width:860px){
   #buildTag{display:none}
   .wk-day{grid-template-columns:76px minmax(0,1fr) auto}
@@ -968,7 +977,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.17.0";
+const APP_VERSION = "block2-2.17.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
