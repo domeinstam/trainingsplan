@@ -255,6 +255,9 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td-task-in{flex:1;min-width:0}
 .td-task input[type=checkbox]{appearance:none;-webkit-appearance:none;width:22px;height:22px;border:2px solid #B9C6D0;border-radius:50%;margin:0;display:inline-grid;place-content:center;background:#fff;cursor:pointer;flex:0 0 auto}
 .td-task input[type=checkbox]:checked{background:var(--td-pos);border-color:var(--td-pos)}
+/* optionele taak (extra beweging): geen lijn erboven, wel een gestippeld rondje; telt niet mee in de teller */
+.td-task:has(+ .td-task.is-opt){border-bottom:0}
+.td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
 .td-tick{width:22px;height:22px;margin-top:0}
@@ -1158,7 +1161,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.20.2";
+const APP_VERSION = "block2-2.20.3";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2973,7 +2976,7 @@ function extraMove(){
 function extraMoveCardHTML(){
   const cur = extraMove(), other = cur && !EXTRA_MOVES.includes(cur);
   return `<div class="card" id="extraMoveCard"><h3>Extra beweging</h3>
-    <p class="small muted" style="margin-top:0">Komt bij Mijn taken als optioneel. Telt niet mee als taak.</p>
+    <p class="small muted" style="margin-top:0">Staat bij Mijn taken als optionele taak, met een gestippeld rondje. Telt niet mee in de teller.</p>
     <div class="rt-two"><div class="field"><label for="exMoveSel">Activiteit</label><select id="exMoveSel" data-exmove-sel>
       <option value="" ${!cur?'selected':''}>Geen</option>${EXTRA_MOVES.map(x=>`<option value="${x}" ${cur===x?'selected':''}>${x}</option>`).join('')}<option value="__other" ${other || ui.exMoveOther ? 'selected' : ''}>Iets anders…</option></select></div>
     ${other || ui.exMoveOther ? `<div class="field"><label for="exMoveTxt">Naam</label><input id="exMoveTxt" type="text" maxlength="40" value="${other ? esc(cur) : ''}" placeholder="bijv. Hond uitlaten, Roeien" data-exmove-txt></div>` : ''}</div></div>`;
@@ -3496,7 +3499,7 @@ function tdTasks(st, ctx){
 }
 function tdTaskCard(st, ctx){
   const tasks = tdTasks(st, ctx), plannedT = tasks.filter(x=>!x.optional), n = plannedT.filter(x=>x.done).length;
-  const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.play ? `<button class="td-play" data-rt-play="${esc(x.play)}" aria-label="Start stap voor stap">${TD_ICO(TDI.play)}Start</button>` : ''}${x.go ? `<button class="td-go" ${x.goAttr || `data-td-open="${x.go}"`} aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
+  const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''} ${x.optional?'is-opt':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.play ? `<button class="td-play" data-rt-play="${esc(x.play)}" aria-label="Start stap voor stap">${TD_ICO(TDI.play)}Start</button>` : ''}${x.go ? `<button class="td-go" ${x.goAttr || `data-td-open="${x.go}"`} aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
   return `<section class="td-card td-tasks" aria-labelledby="tdTasksH">
     <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
     <ul class="td-tasklist">${tasks.map(row).join('')}</ul>
@@ -3798,14 +3801,17 @@ function weekWideHTML(wi, W){
       else if(s.status==='planned'){ anyPlanned = true; if(dt < today) attention = true; }
       else if(s.status==='skipped') acts[acts.length-1].m += ' · overgeslagen'; });
     allRunRecords().filter(r=> r.date===dt && !r._program).forEach(r=>{ acts.push({ t:'Hardlopen', m:'Garmin Coach-run' + (r.totalMin!=null ? ' · '+nl(r.totalMin)+' min' : '') }); if(r.done===true) anyDone = true; });
-    CB.strengthSessions.filter(s=>s.date===dt).forEach(s=>{ acts.push({ t: s.session==='R' ? (s.routineName||'Routine') : 'Kracht '+s.session, m:s.durationMin!=null ? nl(s.durationMin)+' min' : 'gedaan' }); anyDone = true; });
+    /* routines staan op hun eigen regel (zon), niet ook nog als activiteit */
+    CB.strengthSessions.filter(s=>s.date===dt).forEach(s=>{ anyDone = true; if(s.session!=='R') acts.push({ t:'Kracht '+s.session, m:s.durationMin!=null ? nl(s.durationMin)+' min' : 'gedaan' }); });
     CB.walks.filter(w=>w.date===dt).forEach(w=>{ acts.push({ t:'Lange wandeling', m:w.totalMin!=null ? nl(w.totalMin)+' min' : 'gedaan' }); anyDone = true; });
     (CB.learningSessions||[]).filter(x=>x.date===dt).forEach(x=>{ acts.push({ t:'Leermoment', m:exName(x.exerciseId) }); anyDone = true; });
     if(cfg.strengthA && wp.strengthADay===dk && !ws.strengthA.done && dt>=today){ acts.push({ t:'Kracht A', m:'voorstel' }); sugg = true; }
     if(cfg.strengthB && wp.strengthBDay===dk && !ws.strengthB.done && dt>=today){ acts.push({ t:'Kracht B', m:'voorstel' }); sugg = true; }
     if(isLongWalkWeek(wi) && wp.longWalkDay===dk && !ws.longWalk.done && dt>=today){ acts.push({ t:'Lange wandeling', m:'voorstel' }); sugg = true; }
-    const rDone = ws.routines.filter(x=> routineDoneOn(CB.dailyLogs[dt], x.r)).length;
-    const routine = showR && rDone > 0 ? (ws.routines.length===1 ? ws.routines[0].r.name : rDone===ws.routines.length ? 'Routines ✓' : `Routines ${rDone}/${ws.routines.length}`) : '';
+    /* routines van die dag (zoals op Vandaag), plus wat die dag is afgevinkt; ✓ als alles gedaan is */
+    const lg = CB.dailyLogs[dt], rDay = showR ? ws.routines.map(x=>x.r).filter(r=> routineDoneOn(lg, r) || routineToday(dt, lg).some(y=>y.id===r.id)) : [];
+    const rDone = rDay.filter(r=> routineDoneOn(lg, r)).length, rAll = rDay.length && rDone===rDay.length;
+    const routine = !rDay.length ? '' : rDay.length===1 ? rDay[0].name+(rAll ? ' ✓' : '') : rAll ? 'Routines ✓' : dt > today ? rDay.length+' routines' : `Routines ${rDone}/${rDay.length}`;
     const st = attention ? 'attention' : dt===today ? 'today' : anyPlanned ? 'planned' : anyDone ? 'done' : sugg ? 'suggested' : 'rest';
     const hs = dt > today ? null : effectiveDayStatus(dt);
     const hText = dt > today ? 'Herstel: nog niet bekend' : (hs ? HL[hs] : 'Herstel: niet ingevuld');
@@ -3815,7 +3821,7 @@ function weekWideHTML(wi, W){
       <div class="wk-day-h"><span>${esc(label)}</span>${st==='done' ? '<i class="wk-mark ok" aria-hidden="true">✓</i>' : st==='attention' ? '<i class="wk-mark warn" aria-hidden="true">!</i>' : ''}</div>
       ${shown.map(a=>`<div class="wk-act">${TD_ICO(/^Kracht/.test(a.t) ? TDI.dumb : /wandeling/i.test(a.t) ? TDI.walk : /Leermoment/.test(a.t) ? TDI.list : TDI.run, 'wk-act-ic')}<b>${esc(a.t)}</b><span>${esc(a.m)}</span></div>`).join('')}${more>0 ? `<div class="wk-more">+${more} meer</div>` : ''}
       ${!acts.length ? '<div class="wk-act wk-rest"><span class="wk-dash" aria-hidden="true">—</span><b>Rustdag</b></div>' : ''}
-      ${routine ? `<div class="wk-routine">${TD_ICO(TDI.sun)}${esc(routine)}</div>` : ''}
+      ${routine ? `<div class="wk-routine${rAll ? ' done' : ''}">${TD_ICO(TDI.sun)}${esc(routine)}</div>` : ''}
       ${st==='rest' ? '<span class="wk-pill-gap"></span>' : `<span class="wk-pill st-${st}">${st==='done' ? '✓ ' : ''}${esc(S[st])}</span>`}
       <span class="wk-h st-${hs||'none'}"><i aria-hidden="true"></i>${esc(hText)}</span></a>`;
   };
