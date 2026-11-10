@@ -261,6 +261,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .inj-ask-b{display:flex;gap:8px;flex-wrap:wrap}
 .prof-inj{list-style:none;margin:0 0 8px;padding:0}.prof-inj li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #EDF2F5}
 .prof-add{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}.prof-add .field{margin:0;flex:0 1 280px}
+.prof-old{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;align-items:center}.prof-old span{display:inline-flex;align-items:center;gap:4px}
+.prof-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;border-radius:6px}.prof-x:hover{background:#F0F4F6;color:var(--ink)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
@@ -1175,7 +1177,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.21.3";
+const APP_VERSION = "block2-2.21.4";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -3037,6 +3039,14 @@ function injuryAdd(area, since){
   if(p.injuries.some(x=> x.status==='actief' && x.area.toLowerCase()===area.toLowerCase())) return;
   p.injuries.push({ id:'inj'+Date.now().toString(36), area, since: since || todayISO(), status:'actief' });
 }
+/* verwijderen = markering (geen echte delete), zodat synchroniseren hem niet terugzet */
+function injuryDelete(id){ const x = (profileW().injuries||[]).find(y=>y.id===id); if(x){ x.status = 'verwijderd'; x.deletedAt = todayISO(); } }
+/* startgewicht: wat je zelf invult; anders je eerste weging van dit trainingsblok (anders de eerste die er is) */
+function firstWeight(){
+  const rows = recoveryTimeline().filter(r=> r.weight!=null), bs = blockStart();
+  return rows.find(r=> r.date >= bs) || rows[0] || null;
+}
+function profileStartWeight(){ const v = num(profile().startWeightKg); if(v!=null) return { kg:v, own:true }; const f = firstWeight(); return f ? { kg:f.weight, date:f.date, own:false } : null; }
 function injuryHealed(id){ const x = (profileW().injuries||[]).find(y=>y.id===id); if(x){ x.status = 'hersteld'; x.healedAt = todayISO(); } }
 function painFieldsHTML(d, l){
   const q = painQ(l), a = l.painArea || '', opts = [...new Set([...injuriesActive().map(x=>x.area), ...PAIN_AREAS])], other = (a && !opts.includes(a)) || ui.painOther===d;
@@ -3054,13 +3064,14 @@ function injuryAskHTML(d){
     <span class="inj-ask-b"><button class="btn sm primary" data-inj-yes="${esc(a)}">Ja, als blessure bewaren</button><button class="btn sm" data-inj-no="${esc(a)}">Nee</button></span></div>`;
 }
 function profileCardHTML(){
-  const p = profile(), age = profileAge(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld');
+  const p = profile(), age = profileAge(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld'), sw = profileStartWeight();
   return `<div class="card prof-card" id="profileCard">
     <p class="small muted" style="margin-top:0">Alleen voor jou. Atempo gebruikt dit voor je leeftijd (hartslag), je startgewicht en je blessures.</p>
     <div class="form-grid cols-3">
       <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
       <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" max="${todayISO()}"></div>
-      <div class="field"><label for="profW">Startgewicht (kg)</label><input id="profW" type="number" data-prof="startWeightKg" value="${esc(p.startWeightKg ?? '')}" inputmode="decimal" step="0.1" min="30" max="250"></div>
+      <div class="field"><label for="profW">Startgewicht (kg)</label><input id="profW" type="number" data-prof="startWeightKg" value="${esc(p.startWeightKg ?? '')}" placeholder="${sw && !sw.own ? esc(nl(sw.kg)) : ''}" inputmode="decimal" step="0.1" min="30" max="250">
+        ${sw && !sw.own ? `<div class="tny muted" style="margin-top:4px">${esc(nl(sw.kg))} kg uit je eerste weging (${esc(fmt(sw.date,{day:'numeric',month:'short'}))}). Vul zelf in om dit te wijzigen.</div>` : ''}</div>
     </div>
     ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
     <h4 style="margin:14px 0 6px">Blessures</h4>
@@ -3068,7 +3079,7 @@ function profileCardHTML(){
       : ''}
     <div class="prof-add"><div class="field"><select data-inj-add-sel aria-label="Blessure toevoegen"><option value="">+ ${act.length ? 'Nog een blessure' : 'Blessure'} toevoegen…</option>${PAIN_AREAS.filter(o=> !act.some(x=>x.area.toLowerCase()===o.toLowerCase())).map(o=>`<option>${esc(o)}</option>`).join('')}<option value="__other">Anders…</option></select></div>
       ${ui.injOther ? `<div class="field"><input type="text" data-inj-add-txt maxlength="40" placeholder="bv. linkerbeen" aria-label="Plek van de blessure"></div>` : ''}</div>
-    ${old.length ? `<p class="tny muted" style="margin-top:8px">Eerder: ${old.map(x=>esc(x.area)+(x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':'')).join(' · ')}</p>` : ''}
+    ${old.length ? `<div class="prof-old tny muted">Eerder: ${old.map(x=>`<span>${esc(x.area)}${x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':''} <button class="prof-x" data-inj-del="${esc(x.id)}" aria-label="${esc(x.area)} verwijderen" title="Verwijderen">✕</button></span>`).join('')}</div>` : ''}
   </div>`;
 }
 function routineToday(d, l){ return routinesActive().filter(r=> routineShownOn(r, d, l || CB.dailyLogs[d])); }
@@ -7252,6 +7263,7 @@ document.addEventListener('click', e=>{
     if(iy.dataset.injYes){ const a = iy.dataset.injYes, first = Array.from({length:14},(_,i)=>addDays(todayISO(),-13+i)).find(d=> CB.dailyLogs[d] && CB.dailyLogs[d].painArea===a && num(CB.dailyLogs[d].pain)>0); injuryAdd(a, first); }
     else { const p = profileW(); p.injuryAsked = { ...(p.injuryAsked||{}), [iy.dataset.injNo]: todayISO() }; }
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
+  const idl = e.target.closest && e.target.closest('[data-inj-del]'); if(idl){ e.preventDefault(); injuryDelete(idl.dataset.injDel); saveState(); renderCurrent(); return; }
   const ih = e.target.closest && e.target.closest('[data-inj-healed]'); if(ih){ e.preventDefault(); injuryHealed(ih.dataset.injHealed); saveState(); renderCurrent(); return; }
   const oc = e.target.closest && e.target.closest('[data-oc-open]'); if(oc){ e.preventDefault(); ui.date = todayISO(); showView('today'); const card = document.getElementById('ocCard'); if(card){ card.open = true; setTimeout(()=>card.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
   const tab = e.target.closest && e.target.closest('[data-run-tab]'); if(tab){ RUI.tab = tab.dataset.runTab; RUI.msg = ''; const v = document.getElementById('view-running'); if(v) v.innerHTML = ''; /* geen open/dicht-stand meenemen naar een ander tabblad */ renderCurrent(); window.scrollTo({top:0}); return; }
