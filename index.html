@@ -852,6 +852,110 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
   .run-day-r .pc::before{content:"☼ "}
   .run-day.rest .run-day-s .btn{padding:4px 8px;font-size:12px;min-height:32px}
 }
+
+/* ===== Hardlopen — Design 3.0 (alleen opmaak; zelfde gegevens en knoppen) ===== */
+#view-running .rv3{display:flex;flex-direction:column;gap:16px}
+#view-running .rv3>*{margin-top:0;margin-bottom:0}
+#view-running .rv3 .card{border-radius:18px;border:1px solid #DCEBF0;box-shadow:0 2px 14px rgba(8,44,84,.06)}
+#view-running .rv3 .td-ico{flex:0 0 auto}
+/* natuurkop */
+#view-running .rv-hero{position:relative;overflow:hidden;border-radius:18px;min-height:176px;padding:26px 30px;margin:0;display:flex;align-items:center;color:#fff;border:0;background:#0b3a5c}
+#view-running .rv-hero-photo{position:absolute;inset:0;background:url(achtergronden/kop_training.webp) center 62%/cover no-repeat}
+#view-running .rv-hero-shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,44,84,.72) 0%,rgba(8,44,84,.42) 38%,rgba(8,44,84,0) 70%)}
+#view-running .rv-hero-text{position:relative;max-width:620px}
+#view-running .rv-hero .eyebrow{color:#fff;opacity:.92;letter-spacing:.14em;text-shadow:0 1px 6px rgba(0,0,0,.3)}
+#view-running .rv-hero h2{color:#fff;font-size:40px;line-height:1.1;margin:6px 0 8px;display:flex;align-items:center;gap:14px;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+#view-running .rv-hero .rv-hero-ico{width:40px;height:40px;stroke-width:2}
+#view-running .rv-hero p{margin:0;font-size:16px;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.35)}
+/* Garmin-status */
+#view-running .rv-bar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-radius:14px;background:#E3F3EA;color:#14532D;font-size:14.5px;font-weight:600}
+#view-running .rv-bar>span{flex:1 1 auto}
+#view-running .rv-bar .rv-bar-ico{width:22px;height:22px;color:#14532D}
+#view-running .rv-bar .rv-bar-ok{width:24px;height:24px;color:#fff;background:#2E9E5B;border-radius:50%;padding:4px;stroke-width:3;box-sizing:border-box}
+#view-running .rv-bar.wait,#view-running .rv-bar.busy{background:#EAF6F8;color:#035A63}
+#view-running .rv-bar.wait .rv-bar-ico,#view-running .rv-bar.busy .rv-bar-ico{color:#035A63}
+#view-running .rv-bar.err{background:#FFF1E3;color:#8A4A0B}
+#view-running .rv-bar.err .rv-bar-ico{color:#C2620E}
+/* volgende training: foto + gegevens */
+#view-running .rv-next{display:grid;grid-template-columns:minmax(220px,32%) minmax(0,1fr);gap:0;padding:0;overflow:hidden}
+#view-running .rv-next-photo{background:url(achtergronden/kaart_training.webp) center 30%/cover no-repeat;min-height:220px;margin:12px;border-radius:14px}
+#view-running .rv-next-body{padding:22px 26px 22px 18px;min-width:0}
+#view-running .rv-label{font-size:15px;font-weight:700;color:var(--ink)}
+#view-running .rv-next .run-when{display:flex;align-items:center;gap:8px;font-size:16px;margin:6px 0 4px}
+#view-running .rv-next .run-when .td-ico{width:20px;height:20px}
+#view-running .rv-title{margin:2px 0 10px}
+#view-running .rv-next .run-big{font-size:26px;color:var(--ink)}
+#view-running .rv-meta{font-size:15px;color:var(--text)}
+#view-running .rv-tl .run-tl{max-width:min(100%,720px);margin:4px 0 12px}
+#view-running .rv-next-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
+#view-running .rv-next-foot .run-g{margin:0}
+#view-running .rv-next-foot .run-g-ok{font-size:14px}
+#view-running .rv-next-foot .run-actions{margin:0}
+#view-running .rv3 .run-actions .btn{display:inline-flex;align-items:center;gap:8px}
+#view-running .rv3 .run-actions .btn .td-ico{width:18px;height:18px}
+#view-running .rv3 .btn.primary{border-radius:999px;padding:10px 20px}
+/* herstel en veiligheid */
+#view-running .rv3 .run-status{background:linear-gradient(180deg,#fff 0%,#FFFDF9 100%);padding:18px 22px}
+#view-running .rv3 .run-status.st-orange{background:linear-gradient(180deg,#FFF6EC 0%,#FFFBF6 100%);border-color:#F3D9BC;border-left:6px solid #E8892B}
+#view-running .rv3 .run-status.st-red{background:linear-gradient(180deg,#FDEEEE 0%,#FFF8F8 100%);border-color:#F0CACA;border-left:6px solid #C0392B}
+#view-running .rv3 .run-status.st-green{border-left:6px solid #2E9E5B}
+#view-running .rv3 .run-light{align-items:center}
+#view-running .rv3 .run-light b{font-size:18px;color:var(--ink)}
+#view-running .rv-dot{width:30px;height:30px;border-radius:50%;flex:0 0 30px;background:#2E9E5B;box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+#view-running .st-orange .rv-dot{background:#F07F1A;border:2px solid #3b2a1a}
+#view-running .st-red .rv-dot{background:#C0392B}
+#view-running .rv3 .run-src .row{align-items:center;gap:16px}
+#view-running .rv3 .run-src .k{display:flex;align-items:center;gap:12px;font-weight:600;color:var(--ink)}
+#view-running .rv3 .rv-row-ico{width:22px;height:22px;color:var(--green)}
+#view-running .rv3 .run-status details.acc{background:#EAF6F2;border:0;border-radius:12px}
+/* evaluatie */
+#view-running .rv-eval{display:grid;grid-template-columns:220px minmax(0,1fr);gap:0;padding:22px 24px}
+#view-running .rv-eval-head{display:flex;align-items:flex-start;gap:14px;padding-right:20px;border-right:1px solid #E1ECF0}
+#view-running .rv-eval-head h3{margin:4px 0 0;font-size:26px;color:var(--ink)}
+#view-running .rv-eval-ico{width:36px;height:36px;color:var(--green)}
+#view-running .rv-eval-body{padding-left:28px;min-width:0}
+#view-running .rv-advice{margin:0 0 4px;font-size:17px;color:var(--ink)}
+#view-running .rv-eval-body ul{margin:4px 0 8px;padding-left:20px}
+#view-running .rv-eval-body ul li::marker{color:var(--green)}
+#view-running .rv3 .btn.rv-discouraged{color:var(--muted);border-style:dashed}
+#view-running .rv-advise-no{display:flex;align-items:center;gap:6px;color:#8A4A0B;margin-top:8px}
+#view-running .rv-advise-no .td-ico{width:16px;height:16px}
+/* onderaan: niveaus + naar het programma */
+#view-running .rv-foot{display:flex;align-items:flex-start;gap:16px}
+#view-running .rv-foot>.run-levels{flex:1 1 auto;margin:0;border-radius:14px;background:#EAF6F2;border:0}
+#view-running .rv-prog{display:inline-flex;align-items:center;gap:10px;border-radius:999px;padding:12px 20px;background:#fff;box-shadow:0 2px 10px rgba(8,44,84,.08);white-space:nowrap;flex:0 0 auto}
+#view-running .rv-prog .td-ico{width:20px;height:20px;color:var(--green)}
+#view-running .rv-arrow{font-size:18px;color:var(--green)}
+/* laptop */
+@media(max-width:1180px){
+  #view-running .rv-next{grid-template-columns:minmax(180px,28%) minmax(0,1fr)}
+  #view-running .rv-eval{grid-template-columns:180px minmax(0,1fr)}
+}
+/* tablet en telefoon: onder elkaar */
+@media(max-width:860px){
+  #view-running .rv-hero{min-height:150px;padding:20px}
+  #view-running .rv-hero-photo{background-position:68% 60%}
+  #view-running .rv-hero-shade{background:linear-gradient(180deg,rgba(8,44,84,.15) 0%,rgba(8,44,84,.65) 100%)}
+  #view-running .rv-hero{align-items:flex-end}
+  #view-running .rv-hero h2{font-size:30px}
+  #view-running .rv-hero .rv-hero-ico{width:30px;height:30px}
+  #view-running .rv-hero p{font-size:14.5px}
+  #view-running .rv-next{grid-template-columns:1fr}
+  #view-running .rv-next-photo{min-height:150px;margin:10px 10px 0}
+  #view-running .rv-next-body{padding:16px 18px 18px}
+  #view-running .rv-next .run-big{font-size:22px}
+  #view-running .rv-next-foot{flex-direction:column;align-items:stretch}
+  #view-running .rv-next-foot .run-actions .btn{width:100%;justify-content:center}
+  #view-running .rv-eval{grid-template-columns:1fr;padding:18px}
+  #view-running .rv-eval-head{border-right:0;padding:0 0 8px}
+  #view-running .rv-eval-head h3{font-size:22px}
+  #view-running .rv-eval-body{padding-left:0}
+  #view-running .rv-foot{flex-direction:column;align-items:stretch}
+  #view-running .rv-prog{justify-content:center}
+  #view-running .rv3 .run-src .row{flex-direction:column;align-items:flex-start;gap:4px}
+  #view-running .rv3 .run-src .v{text-align:left;padding-left:34px}
+  #view-running .rv-next-photo{min-height:120px}
+}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -1054,7 +1158,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.19.3";
+const APP_VERSION = "block2-2.20.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2660,7 +2764,7 @@ function renderToday(){
     </div></div>`;
   }
   if(extraMove() || checks.eveningWalk) html += `<div class="seg"><div class="lines">
-      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(extraMove() || 'Extra beweging')} — optioneel</label>
+      <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(extraMove() || 'Extra beweging')} (optioneel)</label>
       ${checks.eveningWalk ? `<div style="margin-top:6px;max-width:160px">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}
     </div></div>`;
   html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Routines instellen' : '="new">+ Routine toevoegen'}</a></div>`;
@@ -3329,12 +3433,12 @@ function todayWide(){
 const TD_HERSTEL = { green:['groen','Herstel: groen'], orange:['oranje','Herstel: rustig aan'], red:['rood','Herstel: herstel gaat voor'], none:['onbekend','Herstel: nog niet bekend'] };
 const tdChip = s => `<span class="td-chip st-${s}"><i aria-hidden="true"></i>${esc(TD_HERSTEL[s][1])}</span>`;
 function tdCoachCard(st){
-  const s = st.und ? 'none' : st.status, train = !!(st.planned || st.other);
+  const s = st.und ? 'none' : st.status, train = !!(st.planned || st.other), ran = !train && !!st.done;   // vandaag al gelopen: geen 'rustdag'
   let head, text;
   if(st.und){ head = 'Hoe voel je je vandaag?'; text = st.isToday ? 'Vul de Dagcheck in, dan weet de coach of trainen vandaag verstandig is.' : 'Voor deze dag is geen herstel vastgelegd.'; }
-  else if(s==='red'){ head = train ? 'Vandaag geen hardlooptraining' : 'Herstel gaat voor vandaag'; text = train ? 'Je herstel vraagt om rust. Rustig wandelen mag; verzet je training naar een andere dag.' : 'Neem de tijd om te herstellen. Rustig wandelen mag.'; }
-  else if(s==='orange'){ head = 'Rustig aan vandaag'; text = train ? 'Loop je training op Herstel of Rustig, of maak hem korter.' : 'Je herstel vraagt aandacht. Vandaag staat een rustdag op je programma.'; }
-  else { head = train ? 'Je kunt vandaag trainen' : 'Goed hersteld'; text = train ? 'Je herstel ziet er goed uit.' : 'Vandaag staat een rustdag op je programma.'; }
+  else if(s==='red'){ head = train ? 'Vandaag geen hardlooptraining' : 'Herstel gaat voor vandaag'; text = train ? 'Je herstel vraagt om rust. Rustig wandelen mag; verzet je training naar een andere dag.' : ran ? 'Je training zit erop. Neem de rest van de dag de tijd om te herstellen.' : 'Neem de tijd om te herstellen. Rustig wandelen mag.'; }
+  else if(s==='orange'){ head = 'Rustig aan vandaag'; text = train ? 'Loop je training op Herstel of Rustig, of maak hem korter.' : ran ? 'Je training zit erop. Je herstel vraagt aandacht: doe de rest van de dag rustig aan.' : 'Je herstel vraagt aandacht. Vandaag staat een rustdag op je programma.'; }
+  else { head = train ? 'Je kunt vandaag trainen' : ran ? 'Training gedaan' : 'Goed hersteld'; text = train ? 'Je herstel ziet er goed uit.' : ran ? 'Je training van vandaag zit erop. Goed gedaan.' : 'Vandaag staat een rustdag op je programma.'; }
   return `<section class="td-card td-coach st-${s}" aria-labelledby="tdCoachH">
     <div class="td-coach-top"><span class="td-coach-title">${TD_ICO(TDI.spark, 'td-spark')}Atempo Coach</span>${tdChip(s)}</div>
     <div class="td-coach-body"><span class="td-dot st-${s}" aria-hidden="true"></span><div>
@@ -3384,7 +3488,7 @@ function tdTasks(st, ctx){
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
   routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
-  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">optioneel</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
+  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
 function tdTaskCard(st, ctx){
@@ -4634,7 +4738,7 @@ function weightAvgWindow(endDate){
 function renderProgress(){
   const r = ui.progressRange;
   let html = `<div class="pagehead"><div class="eyebrow">Word ik aantoonbaar beter?</div><h2>Voortgang</h2>
-    <p>Geen samengestelde fitnessscore. Historische en nieuwe gegevens op één tijdlijn; de vóór-vakantieperiode is niet in alles 1-op-1 vergelijkbaar. 100% uitvoering zonder progressie is geen succes.</p></div>`;
+    <p>Geen samengestelde fitnessscore. 100% uitvoering zonder progressie is geen succes.</p></div>`;
   html += `<div class="section-title no-print" style="margin-top:0"><h2 style="font-size:14px">Periode</h2><div class="range-toggle">
     ${[['84','12 weken'],['42','6 weken'],['28','28 dagen'],['all','Alles']].map(([v,t])=>`<button class="btn sm ${r===v?'active':''}" data-range="${v}">${t}</button>`).join('')}
   </div></div>`;
@@ -6689,12 +6793,34 @@ function runDateShort(d){ return fmt(d,{weekday:'short',day:'numeric',month:'sho
    Alles van één training (aanpassen, Garmin, resultaat) opent onder die training in de kalender. */
 /* Hardlopen = alleen het overzicht (wat nu nodig is). Plannen en aanpassen gebeurt in het eigen Trainingsprogramma (view 'program'),
    samen met kracht en routines in één kalender. */
+/* Design 3.0: natuurkop, Garmin-status, volgende training (foto + stappen), herstel, evaluatie, niveaus. Alleen opmaak;
+   gegevens, regels en knoppen (data-run-act, data-oc-open, data-view) zijn dezelfde als voorheen. */
+const RUN_ICO = {
+  watch: '<rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6l1-3h4l1 3M9 18l1 3h4l1-3M12 10v2.5l1.5 1"/>',
+  clip:  '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6v2.5H9zM8.5 11.5l1.3 1.3 2.2-2.3M8.5 16.5l1.3 1.3 2.2-2.3M14 12h2.5M14 17h2.5"/>',
+  info:  '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+  tick:  '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+};
 function renderRunning(){
   RUI.tab = 'overview';
-  let html = `<div class="pagehead"><div class="eyebrow">Persoonlijk programma</div><h2>Hardlopen</h2></div>`;
-  if(RUI.msg) html += `<div class="run-msg ${RUI.msgKind==='err'?'err':''}">${esc(RUI.msg)}</div>`;
-  html += runViewOverview() + runLevelsHTML() + `<div class="run-actions no-print"><button class="btn sm" data-view="program">Naar het trainingsprogramma</button></div>`;
+  let html = `<div class="rv3"><header class="pagehead rv-hero"><div class="rv-hero-photo" aria-hidden="true"></div><div class="rv-hero-shade" aria-hidden="true"></div>
+    <div class="rv-hero-text"><div class="eyebrow">Persoonlijk programma</div><h2>${TD_ICO(TDI.run,'rv-hero-ico')}Hardlopen</h2><p>Jouw hardloopprogramma, afgestemd op jouw niveau en herstel.</p></div></header>`;
+  html += runSyncBar();
+  html += runViewOverview() + `<div class="rv-foot">${runLevelsHTML()}<button class="btn rv-prog no-print" data-view="program">${TD_ICO(TDI.cal)}Naar het trainingsprogramma<span class="rv-arrow" aria-hidden="true">→</span></button></div></div>`;
   setViewHTML('#view-running', html);
+}
+/* compacte Garmin-status: een melding van zojuist, anders de opgeslagen stand van de geplande trainingen.
+   Alleen 'In Garmin' als de opgeslagen stand dat bevestigt; het openen van de pagina start geen synchronisatie. */
+function runSyncBar(){
+  const bar = (cls, ico, txt, ok) => `<div class="rv-bar ${cls}" role="status">${TD_ICO(ico,'rv-bar-ico')}<span>${esc(txt)}</span>${ok ? TD_ICO(RUN_ICO.tick,'rv-bar-ok') : ''}</div>`;
+  if(RUI.msg) return RUI.msgKind==='err' ? bar('err', RUN_ICO.info, RUI.msg) : bar('', /garmin/i.test(RUI.msg) ? RUN_ICO.watch : RUN_ICO.info, RUI.msg, /garmin/i.test(RUI.msg));
+  if(RUI.coachBusy) return bar('busy', RUN_ICO.watch, 'Bezig met synchroniseren met Garmin…');
+  const today = todayISO(), up = RP().settings.paused ? [] : RP().sessions.filter(s=> s.status==='planned' && s.date>=today);
+  const st = up.map(coachState), sent = st.filter(x=>x==='sent').length, err = st.filter(x=>x==='error').length, open = up.length - sent - err;
+  if(!up.length || (!sent && !err && !coachConnected())) return '';                  // niets gepland of geen koppeling: geen balk
+  if(err) return bar('err', RUN_ICO.watch, err===1 ? 'Synchroniseren met Garmin is mislukt voor 1 training.' : 'Synchroniseren met Garmin is mislukt voor '+err+' trainingen.');
+  if(open) return bar('wait', RUN_ICO.watch, open===1 ? '1 training staat nog niet in Garmin.' : open+' trainingen staan nog niet in Garmin.');
+  return bar('', RUN_ICO.watch, sent===1 ? 'De geplande training staat in Garmin.' : 'Alle '+sent+' geplande trainingen staan in Garmin.', true);
 }
 function renderProgram(){
   RUI.tab = 'program';
@@ -6814,7 +6940,8 @@ function runStatusSources(rd, pre){
     if(num(pre.painLeft)!=null) oc.push('pijn linkerbeen '+pre.painLeft);
     if(typeof pre.painWalking==='boolean') oc.push(pre.painWalking || pre.painStairs ? 'klachten bij wandelen/traplopen' : 'geen klachten bij wandelen/traplopen');
   }
-  const row = (k, v) => `<div class="row"><span class="k">${k}</span><span class="v" style="white-space:normal;font-weight:500">${v}</span></div>`;
+  const ico = { 'Dagcheck vandaag':TDI.cal, 'Vorige training':TDI.run, 'Jouw beoordeling':TDI.heart };
+  const row = (k, v) => `<div class="row"><span class="k">${TD_ICO(ico[k.replace(/ \(.*$/,'')] || TDI.check,'rv-row-ico')}${k}</span><span class="v" style="white-space:normal;font-weight:500">${v}</span></div>`;
   let h = row('Dagcheck vandaag', (oc.length ? esc(oc.join(' · ')) : 'nog niet ingevuld') + ' <a href="#" data-oc-open class="tny">aanpassen</a>');
   if(rd.own) h += row('Jouw beoordeling (Vandaag)', RUN_LIGHT[rd.own].emoji+' '+esc(RUN_LIGHT[rd.own].nl.toLowerCase())+(rd.ownMilder ? ' <span class="tny muted">— die wijkt af van de automatische waarschuwing; de waarschuwing blijft staan.</span>' : ''));
   if(rd.last){
@@ -6841,26 +6968,25 @@ function runViewOverview(){
 
   /* volgende training */
   const nx = runNextTraining();
-  h += `<div class="card run-next"><div class="eyebrow">Volgende training</div>`;
+  h += `<div class="card run-next rv-next"><div class="rv-next-photo" aria-hidden="true"></div><div class="rv-next-body"><div class="rv-label">Volgende training</div>`;
   if(nx){
     const T = runTotals(nx.steps), when = nx.date===today ? 'Vandaag' : nx.date===addDays(today,1) ? 'Morgen' : runDateLabel(nx.date);
-    h += `<div class="run-when">${esc(when.charAt(0).toUpperCase()+when.slice(1))}</div>
-      <div><b class="run-big">${esc(nx.name)}</b> <span class="small muted">· ${runMinLabel(T.total)} · ${esc(runShortStructure(nx.steps))}</span></div>
-      ${runTimelineSVG(nx.steps, 34)}
+    h += `<div class="run-when">${TD_ICO(TDI.cal)}${esc(when.charAt(0).toUpperCase()+when.slice(1))}</div>
+      <div class="rv-title"><b class="run-big">${esc(nx.name)}</b> <span class="rv-meta">· ${runMinLabel(T.total)} · ${esc(runShortStructure(nx.steps))}</span></div>
+      <div class="rv-tl">${runTimelineSVG(nx.steps, 40)}</div>
       ${runRestWarnings(nx).map(w=>`<div class="warnline">${esc(w)}</div>`).join('')}
-      ${coachLineHTML(nx)}
-      <div class="run-actions">${runBtn('open|'+nx.id,'Bekijken of aanpassen','sm')}</div>`;
+      <div class="rv-next-foot">${coachLineHTML(nx)}<div class="run-actions">${runBtn('open|'+nx.id,TD_ICO(TDI.pen)+'Bekijken of aanpassen','primary')}</div></div>`;
   } else {
     const sug = runSuggestionDates(today, 3)[0], lvl = runCurrentTpl();
     h += `<p class="small">Er is geen training gepland.</p>`;
     if(sug) h += `<div class="run-actions big">${runBtn('plan|'+sug+'|'+lvl.id,'Plan '+esc(lvl.name)+' op '+esc(runDateShort(sug)),'primary')}</div>`;
   }
-  h += `</div>`;
+  h += `</div></div>`;
 
   /* herstelstatus: uit je Dagcheck, je eigen beoordeling op Vandaag en je vorige training */
   const rd = runReadiness(today), st = RUN_LIGHT[rd.shown], pre = runPre(today);
   h += `<div class="card run-status st-${rd.shown}">
-    <div class="run-light"><span class="run-bulb">${st.emoji}</span><div><b>${esc(runStatusHeadline(rd))}</b>
+    <div class="run-light"><span class="run-bulb rv-dot" role="img" aria-label="${esc(st.nl)}"></span><div><b>${esc(runStatusHeadline(rd))}</b>
       </div></div>
     ${runStatusSources(rd, pre)}
     ${runPreComplete(pre) ? '' : `<div class="run-actions"><button class="btn sm primary" data-oc-open>Dagcheck invullen</button></div>`}
@@ -6875,10 +7001,12 @@ function runViewOverview(){
   const ev = runEvaluation();
   if(ev.doneCount>=2){
     const up = /uitbreiden/i.test(ev.advice);
-    h += `<div class="card"><h3>Evaluatie</h3><p><b>${esc(ev.advice)}</b></p><ul class="small">${ev.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
+    h += `<div class="card rv-eval"><div class="rv-eval-head">${TD_ICO(RUN_ICO.clip,'rv-eval-ico')}<h3>Evaluatie</h3></div><div class="rv-eval-body">
+      <p class="rv-advice"><b>${esc(ev.advice)}</b></p><ul class="small">${ev.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>
       ${up ? '<div class="tny muted">Je hebt aanhoudende klachten aan het linkerbovenbeen (lies). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>' : ''}
-      <div class="tny muted">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
-      <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven','Niveau handhaven','sm')}${ev.nextTpl?runBtn('level|'+ev.nextTpl.id+'|opbouwen','Naar '+esc(ev.nextTpl.name),'sm'+(up?' primary':'')):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),'sm'):''}</div></div>`;
+      <div class="small">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
+      <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
+      ${ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
   }
 
   /* runs die nog bij geen training horen */
