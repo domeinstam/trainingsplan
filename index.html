@@ -318,6 +318,49 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .td-recovery #ocCard h4{margin:14px 0 8px;font-size:14px}
 .td-recovery #ocCard .recovery-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
 .td-recovery #ocCard .recovery-strip .rc span{font-size:11.5px}
+.td-rt-link{font-size:13.5px;font-weight:700;color:var(--td-act,#1B5E4B);text-decoration:underline;text-underline-offset:3px}
+.rt-deels{margin-left:26px}
+.wk-rrow{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:8px 0 4px}
+.wk-rrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--td-text,#24423A)}
+.wk-rrow b{white-space:nowrap}
+.rt-card .rt-mom{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--green);margin:14px 0 2px}
+.rt-card .rt-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rt-card .rt-nm{flex:1;min-width:0;font-weight:600;color:var(--ink)}
+.rt-card .rt-nm small{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px}
+.rt-card .rt-row.is-paused .rt-nm{color:var(--muted)}
+.rt-card .rt-pill{font-size:11.5px;background:#EEF0EE;color:#6B7B75;border-radius:20px;padding:3px 9px;font-weight:700}
+.rt-card .rt-add{display:block;width:100%;margin-top:12px;background:none;border:1.5px dashed #A9CDBE;border-radius:12px;padding:11px;color:var(--green);font-weight:700;font-size:14.5px;cursor:pointer}
+.rt-card .rt-add:hover{background:#F1F8F4}
+.rt-card .rt-form{border:1px solid var(--line);background:#F7FBF9;border-radius:14px;padding:14px;margin:10px 0;display:flex;flex-direction:column;gap:12px}
+.rt-card .rt-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(max-width:520px){.rt-card .rt-two{grid-template-columns:1fr}}
+.rt-card .rt-seg{display:flex;border:1px solid #CBD8E0;border-radius:10px;overflow:hidden;background:#fff}
+.rt-card .rt-seg label{flex:1;margin:0;position:relative;cursor:pointer}
+.rt-card .rt-seg input{position:absolute;opacity:0;inset:0;width:100%;height:100%;margin:0;cursor:pointer}
+.rt-card .rt-seg span{display:block;text-align:center;padding:10px 0;font-size:14px;color:var(--ink);border-right:1px solid #CBD8E0}
+.rt-card .rt-seg label:last-child span{border-right:0}
+.rt-card .rt-seg input:checked+span{background:var(--green);color:#fff;font-weight:700}
+.rt-card .rt-seg input:focus-visible+span{outline:2px solid var(--green2);outline-offset:-3px}
+.rt-card .rt-pause{display:flex;gap:8px;align-items:center;font-size:14px}
+.rt-card .rt-actions{display:flex;gap:8px;flex-wrap:wrap}
+.rt-card .rt-del{margin-left:auto;color:#A0442F}
+.rt-card input[aria-invalid="true"]{border-color:#C0563F}
+/* routine-detail in de rechterkolom: zelfde opbouw als de Ochtendcheck (één vraag per regel) */
+.td #routineCard .form-grid{display:flex;flex-direction:column;gap:0}
+.td #routineCard .field{flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;padding:7px 0;border-bottom:1px solid var(--td-line)}
+.td #routineCard .field label{margin:0;font-size:14px;font-weight:600;color:var(--td-text,#24423A);flex:1;min-width:0}
+.td #routineCard .field input{width:92px;flex:0 0 92px;min-height:40px;padding:8px 10px;text-align:center}
+.td #routineCard .field select{width:140px;flex:0 0 140px;min-height:40px;padding:8px 10px}
+.td #routineCard .field>.tny{flex-basis:100%;text-align:right;margin:0}
+.td #routineCard .field.wide{flex-direction:column;align-items:stretch;border-bottom:0}
+.td #routineCard .field.wide label{margin-bottom:6px}
+.td #routineCard .field.wide textarea{width:100%}
+.rt-sub::before{content:" · "}
+.td-tasks .rt-txt small{display:block;font-size:12.5px;color:var(--td-sub);line-height:1.3}
+.td-tasks .rt-sub::before{content:none}
+.lines .rt-sub{font-size:12.5px;color:var(--muted)}
+.td-wk-k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td .td-wkrow{grid-template-columns:28px 170px minmax(0,1fr) auto}
 .td-section{margin:4px 0 8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--td-sub)}
 .td-side-regs details.acc,.td-regs .card{margin-bottom:10px}
 .wk-pillweek{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--td-act);background:#E6F0F7;padding:5px 11px;border-radius:999px}
@@ -760,7 +803,7 @@ body{background:radial-gradient(900px 340px at 0% -8%, #E6F3F7 0%, rgba(230,243,
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.11.5";
+const APP_VERSION = "block2-2.12.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -1984,6 +2027,7 @@ function weekStatus(wi){
     strengthB:{ applicable:cfg.strengthB, done:bDone },
     longWalk:{ done:walkDone, applicable:walkWeek },
     routine:{ done:routineDays, of:7 },
+    routines: routineWeek(wi),        // per eigen routine: gedaan / eigen weekdoel
     learning:{
       target: cfg.learningTarget, done: focusLearn.length, total: learnWeek.length,
       focusExercise: cfg.focusExercise,
@@ -2293,7 +2337,7 @@ function renderToday(){
     if(!isFuture) snapshotAdvice(d);
     const cardsToday = isFuture ? [] : todayCards(d);
     const regs = cardsToday.map(c=> c==='coach' ? coachCard(d) : c==='learning' ? learningCard(d) : c==='strengthA' ? strengthCard(d,'A') : c==='strengthB' ? strengthCard(d,'B') : c==='longwalk' ? walkCard(d) : '').join('');
-    setViewHTML('#view-today', todayWideHTML(d, ctx, { oc: isFuture ? '' : ochtendcheckCard(), routine: (!isFuture && routinesShown()) ? routineDetailCard(d) : '',
+    setViewHTML('#view-today', todayWideHTML(d, ctx, { oc: isFuture ? '' : ochtendcheckCard(), routine: (!isFuture && routineDetailShown()) ? routineDetailCard(d) : '',
       regs, other: otherActivitiesPanel(d, { isFuture, cardsToday, primaryType: ctx.primary ? ctx.primary.type : null }) }));
     return;
   }
@@ -2339,15 +2383,9 @@ function renderToday(){
   }
 
   /* ---- VANDAAG: één primaire actie, context-gedreven ---- */
-  const routineDoneVal = l.routineDone || (checks.routine ? 'ja' : '');
-  const routineChecked = routineDoneVal==='ja' || routineDoneVal==='deels';
-  const showRoutines = routinesShown();
-  html += `<div class="card"><div class="answer">` + (showRoutines ? `
-    <div class="seg"><h4>Ochtend <a href="#" class="tny muted today-hide" data-routines="hide">niet tonen</a></h4><div class="lines">
-      <label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> Meditatie · contemplatie · gebed</label>
-      <label><input type="checkbox" data-routine-check${routineChecked?' checked':''}> Bestaande fysieke ochtendroutine (~${num(CB.routineMinutesTarget)||45} min)</label>
-      ${routineChecked ? `<label class="tny muted" style="margin-left:26px"><input type="checkbox" data-routine-deels${routineDoneVal==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}
-    </div></div>` : '');
+  const rtAct = routinesActive();
+  html += `<div class="card"><div class="answer">` + RT_MOMENTS.filter(([k])=> rtAct.some(r=>r.moment===k)).map(([k,lab])=>
+    `<div class="seg"><h4>${lab}</h4><div class="lines">${rtAct.filter(r=>r.moment===k).map(r=> routineCheckHTML(r, l, 'tny muted rt-deels')).join('')}</div></div>`).join('');
   // openstaande weekdoelen — klein en secundair, nooit als primaire taak
   if((ctx.openGoals||[]).length){
     const tech = focusEx ? ws.learning.focusTech : null;
@@ -2360,11 +2398,12 @@ function renderToday(){
       <label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling — optioneel, naar behoefte</label>
       ${checks.eveningWalk ? `<div style="margin-top:6px;max-width:160px">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}
     </div></div>`;
+  html += `<div class="seg"><a href="#" class="tny" data-rt-manage${rtAct.length ? '>Routines aanpassen' : '="new">+ Routine toevoegen'}</a></div>`;
   html += `</div></div>`;
 
   /* ---- invoer hoort bij het Ochtend-blok: eerst de ochtendcheck, dan het routine-detail ---- */
   html += ochtendcheckCard();
-  if(showRoutines) html += routineDetailCard(d);
+  if(routineDetailShown()) html += routineDetailCard(d);
 
   /* ---- WAT AL GEREGISTREERD IS ---- */
   const cardsToday = todayCards(d);
@@ -2393,7 +2432,7 @@ function renderToday(){
     if(ws.strengthA.applicable) rows += `<div class="row"><span class="k">Kracht A</span><span class="v ${cl(ws.strengthA.done)}">${ws.strengthA.done?'✓ gedaan':'nog te doen'}</span></div>`;
     if(ws.strengthB.applicable) rows += `<div class="row"><span class="k">Kracht B</span><span class="v ${cl(ws.strengthB.done)}">${ws.strengthB.done?'✓ gedaan':'nog te doen'}</span></div>`;
     rows += `<div class="row"><span class="k">Lange wandeling</span><span class="v ${ws.longWalk.applicable?cl(ws.longWalk.done):'na'}">${ws.longWalk.applicable?(ws.longWalk.done?'✓ gedaan':'nog te doen'):'niet deze week'}</span></div>`;
-    rows += `<div class="row"><span class="k">Ochtendroutine</span><span class="v">${ws.routine.done} / 7</span></div>`;
+    ws.routines.forEach(x=>{ rows += `<div class="row"><span class="k">${esc(x.r.name)}</span><span class="v">${x.done} / ${x.target}</span></div>`; });
     html += `<div class="card"><h3>Deze week <span class="sub">${esc(ctx.title)}</span></h3><div class="week-track">${rows}</div>
     <div class="tny muted" style="margin-top:10px">Hardlooptrainingen plan je onder <a href="#" data-view="running">Hardlopen</a>.</div>
     <p class="tny muted" style="margin-top:8px"><a href="#" data-view="week">Week openen →</a></p></div>`;
@@ -2534,9 +2573,80 @@ function todaySessionLine(s){
   return `<div class="tc-train"><b>${esc(s.name)}</b>${z ? ` · ${esc(runHrZone(z)[1])} ${s.target.low}–${s.target.high} bpm` : ''}</div>
     <div class="small muted">${runMinLabel(runTotals(s.steps).total)} · ${esc(runShortStructure(s.steps))}</div>`;
 }
-function routinesShown(){
-  if(CB.showRoutines===true || CB.showRoutines===false) return CB.showRoutines;
-  return Object.values(CB.dailyLogs||{}).some(l=> l && ((l.checks && (l.checks.spiritual || l.checks.routine)) || l.routineDone));   // wie ze al gebruikte, ziet ze; een nieuwe gebruiker niet
+/* ---- MIJN ROUTINES: iedere gebruiker zijn eigen lijst (CB.routines) ----
+   Zolang er niets is opgeslagen, krijgt wie de oude vaste routines al gebruikte die twee als startlijst; een nieuwe gebruiker niets.
+   De twee oude routines houden hun oude velden (checks.spiritual, routineDone/checks.routine), zodat eerdere dagen precies blijven
+   wat ze waren. Nieuwe routines: dailyLogs[d].routines[id] = 'ja' | 'nee'. Verwijderen = markeren (deleted), zodat synchronisatie
+   een verwijderde routine niet terugbrengt; afgevinkte dagen blijven bewaard. */
+const RT_MOMENTS = [['ochtend','Ochtend'],['middag','Middag'],['avond','Avond']];
+function routineList(){
+  if(Array.isArray(CB.routines)) return CB.routines.filter(r=> r && !r.deleted);
+  const used = Object.values(CB.dailyLogs||{}).some(l=> l && ((l.checks && (l.checks.spiritual || l.checks.routine)) || l.routineDone));
+  return used ? [ { id:'spiritual', name:'Meditatie · contemplatie · gebed', moment:'ochtend', minutes:null, perWeek:7, paused:false },
+                  { id:'routine',   name:'Fysieke ochtendroutine',            moment:'ochtend', minutes:null, perWeek:7, paused:false } ] : [];
+}
+function routinesActive(){ const o = Object.fromEntries(RT_MOMENTS.map(([k],i)=>[k,i])); return routineList().filter(r=>!r.paused).map((r,i)=>[r,i]).sort((a,b)=> ((o[a[0].moment]??0)-(o[b[0].moment]??0)) || a[1]-b[1]).map(x=>x[0]); }
+function routinesShown(){ return routinesActive().length > 0; }
+function routineDetailShown(){ return routinesActive().some(r=> r.id==='routine'); }
+function routineMinutes(r){ return r.id==='routine' ? (num(CB.routineMinutesTarget)||45) : num(r.minutes); }
+function routinePerWeek(r){ return Math.min(7, Math.max(1, num(r.perWeek)||7)); }
+function routineDoneOn(l, r){
+  if(!l) return false;
+  if(r.id==='spiritual') return !!(l.checks && l.checks.spiritual);
+  if(r.id==='routine') return routineDoneish(l);
+  const v = l.routines && l.routines[r.id]; return v==='ja' || v==='deels';
+}
+function routineWeek(wi){ const ds = weekDates(wi); return routinesActive().map(r=>({ r, done: ds.filter(d=> routineDoneOn(CB.dailyLogs[d], r)).length, target: routinePerWeek(r) })); }
+/* één vinkje voor Vandaag; de oude routines gebruiken hun oude velden en knoppen */
+function routineCheckHTML(r, l, subCls, withMoment){
+  const checks = l.checks || {}, m = routineMinutes(r), mom = (RT_MOMENTS.find(x=>x[0]===r.moment)||[])[1];
+  const extra = [withMoment && routinesActive().some(x=>x.moment!==r.moment) && mom ? mom : null, m!=null ? '~'+m+' min' : null].filter(Boolean).join(' · ');
+  const txt = `<span class="rt-txt">${esc(r.name)}${extra ? `<small class="rt-sub">${esc(extra)}</small>` : ''}</span>`;
+  if(r.id==='spiritual') return `<label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> ${txt}</label>`;
+  if(r.id==='routine'){
+    const rv = l.routineDone || (checks.routine ? 'ja' : ''), on = rv==='ja' || rv==='deels';
+    return `<label><input type="checkbox" data-routine-check${on?' checked':''}> ${txt}</label>${on ? `<label class="${subCls}"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}`;
+  }
+  return `<label><input type="checkbox" data-rt-check="${esc(r.id)}"${routineDoneOn(l, r)?' checked':''}> ${txt}</label>`;
+}
+/* Meer › Mijn routines: lijst per moment, toevoegen/wijzigen in de kaart zelf */
+function routinesCardHTML(){
+  const all = routineList(), ed = ui.rtEdit;
+  const sub = r => [routineMinutes(r)!=null ? routineMinutes(r)+' min' : null, routinePerWeek(r)>=7 ? 'elke dag' : routinePerWeek(r)+'× per week', r.id==='routine' ? 'met uitgebreide registratie' : null].filter(Boolean).join(' · ');
+  const form = r => `<div class="rt-form" id="rtForm">
+      <div class="field"><label for="rtName">Naam</label><input id="rtName" type="text" maxlength="60" value="${esc(r ? r.name : '')}" placeholder="bijv. stretchen, meditatie, koude douche"></div>
+      <div class="field"><label>Moment</label><div class="rt-seg" role="radiogroup" aria-label="Moment">${RT_MOMENTS.map(([k,lab])=>`<label><input type="radio" name="rtMoment" value="${k}" ${(r ? r.moment : 'ochtend')===k ? 'checked' : ''}><span>${lab}</span></label>`).join('')}</div></div>
+      <div class="rt-two"><div class="field"><label for="rtMin">Richttijd in minuten (optioneel)</label><input id="rtMin" type="number" inputmode="numeric" min="1" max="600" value="${r && routineMinutes(r)!=null ? routineMinutes(r) : ''}"></div>
+        <div class="field"><label for="rtWeek">Hoe vaak per week</label><select id="rtWeek">${[1,2,3,4,5,6,7].map(n=>`<option value="${n}" ${(r ? routinePerWeek(r) : 7)===n ? 'selected' : ''}>${n===7 ? 'elke dag' : n+'× per week'}</option>`).join('')}</select></div></div>
+      ${r ? `<label class="rt-pause"><input type="checkbox" id="rtPause" ${r.paused ? 'checked' : ''}> Pauzeren <span class="tny muted">— even niet op Vandaag; wat je afvinkte blijft bewaard</span></label>` : ''}
+      <div class="rt-actions"><button class="btn primary" data-rt-save="${r ? esc(r.id) : 'new'}">Opslaan</button><button class="btn" data-rt-cancel>Annuleren</button>${r ? `<button class="btn rt-del" data-rt-del="${esc(r.id)}">Verwijderen</button>` : ''}</div>
+    </div>`;
+  const row = r => ed===r.id ? form(r) : `<div class="rt-row ${r.paused ? 'is-paused' : ''}"><div class="rt-nm">${esc(r.name)}<small>${esc(sub(r))}</small></div>${r.paused ? '<span class="rt-pill">Gepauzeerd</span>' : ''}<button class="btn sm" data-rt-edit="${esc(r.id)}">Wijzig</button></div>`;
+  const groups = RT_MOMENTS.filter(([k])=> all.some(r=>r.moment===k)).map(([k,lab])=> `<div class="rt-mom">${lab}</div>${all.filter(r=>r.moment===k).map(row).join('')}`).join('');
+  return `<div class="card rt-card" id="myRoutines"><h3>Mijn routines</h3>
+    <p class="tny muted">Wat je vast wilt doen, zoals meditatie of stretchen. Ze staan op Vandaag als vinkje en bij Deze week met je eigen doel.</p>
+    ${groups || '<p class="small muted">Je hebt nog geen routines.</p>'}
+    ${ed==='new' ? form(null) : '<button class="rt-add" data-rt-edit="new">+ Routine toevoegen</button>'}</div>`;
+}
+function routineSave(id){
+  const nameEl = document.getElementById('rtName'), name = (nameEl && nameEl.value || '').trim().slice(0,60);
+  if(!name){ if(nameEl){ nameEl.focus(); nameEl.setAttribute('aria-invalid','true'); } return; }
+  const list = CB.routines = Array.isArray(CB.routines) ? CB.routines : routineList().map(r=>({ ...r }));   // startlijst wordt nu pas vastgelegd
+  const moment = (document.querySelector('input[name="rtMoment"]:checked')||{}).value || 'ochtend';
+  const mn = num(document.getElementById('rtMin').value), pw = num(document.getElementById('rtWeek').value) || 7, pz = document.getElementById('rtPause');
+  let r = id==='new' ? null : list.find(x=>x.id===id && !x.deleted);
+  if(!r){ r = { id:'rt'+Date.now().toString(36), createdAt:new Date().toISOString(), paused:false }; list.push(r); }
+  Object.assign(r, { name, moment: RT_MOMENTS.some(x=>x[0]===moment) ? moment : 'ochtend', perWeek: Math.min(7, Math.max(1, pw)), updatedAt:new Date().toISOString() });
+  if(pz) r.paused = pz.checked;
+  if(r.id==='routine'){ if(mn!=null && mn>0) CB.routineMinutesTarget = mn; r.minutes = null; } else r.minutes = mn!=null && mn>0 ? mn : null;
+  ui.rtEdit = null; saveState(); renderCurrent();
+}
+function routineDelete(id){
+  const r = routineList().find(x=>x.id===id); if(!r) return;
+  if(!confirm(`Routine "${r.name}" verwijderen? Wat je eerder afvinkte blijft bewaard.`)) return;
+  const list = CB.routines = Array.isArray(CB.routines) ? CB.routines : routineList().map(x=>({ ...x }));
+  const it = list.find(x=>x.id===id); if(it){ it.deleted = true; it.updatedAt = new Date().toISOString(); }
+  ui.rtEdit = null; saveState(); renderCurrent();
 }
 /* de stand van één dag voor Vandaag: herstel (zoals beoordeeld), training van die dag en de volgende training.
    Eén bron voor het mobiele blok en de desktopkaarten, zodat kleur en tekst overal hetzelfde zeggen. */
@@ -2659,11 +2769,7 @@ function tdTasks(st, ctx){
     if(runOutcome(done).state==='incomplete') out.push({ done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
   if(other) out.push({ done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
-  if(routinesShown()){
-    const rv = l.routineDone || (checks.routine ? 'ja' : ''), rOn = rv==='ja' || rv==='deels';
-    out.push({ done:!!checks.spiritual, check:true, html:`<label><input type="checkbox" data-check="spiritual"${checks.spiritual?' checked':''}> Meditatie · contemplatie · gebed</label>` });
-    out.push({ done:rOn, check:true, go:'routineCard', html:`<label><input type="checkbox" data-routine-check${rOn?' checked':''}> Fysieke ochtendroutine (~${num(CB.routineMinutesTarget)||45} min)</label>${rOn ? `<label class="td-subcheck"><input type="checkbox" data-routine-deels${rv==='deels'?' checked':''}> deels / afwijkend uitgevoerd</label>` : ''}` });
-  }
+  routinesActive().forEach(r=> out.push({ done:routineDoneOn(l, r), check:true, go: r.id==='routine' ? 'routineCard' : null, html: routineCheckHTML(r, l, 'td-subcheck', true) }));
   out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> Wandeling <span class="td-opt">aanbevolen, naar behoefte</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
@@ -2675,7 +2781,7 @@ function tdTaskCard(st, ctx){
     <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
     <ul class="td-tasklist">${first.map(row).join('')}</ul>
     ${rest.length ? `<details class="td-more"><summary>Alle taken (${tasks.length})</summary><ul class="td-tasklist">${rest.map(row).join('')}</ul></details>` : ''}
-    ${routinesShown() ? `<div class="td-foot"><a href="#" class="tny muted" data-routines="hide">routines niet tonen</a></div>` : ''}
+    <div class="td-foot">${routinesShown() ? '<a href="#" class="td-rt-link" data-rt-manage>Routines aanpassen</a>' : '<a href="#" class="td-rt-link" data-rt-manage="new">+ Routine toevoegen</a>'}</div>
   </section>`;
 }
 function tdRecoveryCard(st, oc){
@@ -2697,12 +2803,12 @@ function tdWeekCard(d, ctx){
   if(ws.strengthA.applicable) items.push([TDI.dumb, 'Kracht A', ws.strengthA.done?1:0, 1, 'k']);
   if(ws.strengthB.applicable) items.push([TDI.dumb, 'Kracht B', ws.strengthB.done?1:0, 1, 'k']);
   if(ws.longWalk.applicable) items.push([TDI.walk, 'Lange wandeling', ws.longWalk.done?1:0, 1, 'w']);
-  if(routinesShown()) items.push([TDI.sun, 'Ochtendroutine', ws.routine.done, 7, 'r']);
+  ws.routines.forEach(x=> items.push([TDI.sun, x.r.name, x.done, x.target, 'r']));
   if(cfg.consolidation) notes.push('Geen nieuwe oefening deze week');
   else if(ws.learning && ws.learning.target>0 && ws.learning.focusExercise) notes.push('Leermoment: '+exName(ws.learning.focusExercise));
   if(!ws.longWalk.applicable) notes.push('Lange wandeling: niet deze week');
   if(!ws.strengthA.applicable && !ws.strengthB.applicable) notes.push('Kracht A/B: nog niet aan de orde');
-  const bar = ([ico,k,a,b,c]) => `<div class="td-wkrow"><span class="td-wk-ico ${c}">${TD_ICO(ico)}</span><span class="td-wk-k">${esc(k)}</span><div class="td-bar" role="img" aria-label="${esc(k)}: ${a} van ${b}"><i class="${c ? 'td-bar-'+c : ''}" style="width:${Math.min(100, Math.round(100*a/(b||1)))}%"></i></div><b>${a} / ${b}</b></div>`;
+  const bar = ([ico,k,a,b,c]) => `<div class="td-wkrow"><span class="td-wk-ico ${c}">${TD_ICO(ico)}</span><span class="td-wk-k" title="${esc(k)}">${esc(k)}</span><div class="td-bar" role="img" aria-label="${esc(k)}: ${a} van ${b}"><i class="${c ? 'td-bar-'+c : ''}" style="width:${Math.min(100, Math.round(100*a/(b||1)))}%"></i></div><b>${a} / ${b}</b></div>`;
   return `<section class="td-card td-week" aria-labelledby="tdWeekH">
     <div class="td-card-head"><h3 id="tdWeekH" class="td-h-ico">${TD_ICO(TDI.bars)}Mijn week</h3><span class="td-sub">${esc(ctx.title)}</span></div>
     <div class="td-week-grid"><div class="td-week-rows">${items.length ? items.map(bar).join('') : '<div class="td-sub">Deze week staat er niets gepland.</div>'}</div>
@@ -2846,7 +2952,7 @@ function renderWeek(){
   if(!ws.strengthA.applicable && !ws.strengthB.applicable && !cfg.consolidation && cfg.learningTarget===0)
     goalRows += `<div class="row"><span class="k">Kracht A / B</span><span class="v na">nog niet aan de orde — eerst leren</span></div>`;
   goalRows += `<div class="row"><span class="k">Lange wandeling</span><span class="v ${ws.longWalk.applicable?cl(ws.longWalk.done):'na'}">${ws.longWalk.applicable?(ws.longWalk.done?'✓ gedaan':'nog te doen'):'niet deze week (om de week)'}</span></div>`;
-  goalRows += `<div class="row"><span class="k">Ochtendroutine</span><span class="v">${ws.routine.done} / 7 dagen</span></div>`;
+  ws.routines.forEach(x=>{ goalRows += `<div class="row"><span class="k">${esc(x.r.name)}</span><span class="v">${x.done} / ${x.target} ${x.target===1 ? 'dag' : 'dagen'}</span></div>`; });
   goalRows += `<div class="row"><span class="k">Wandeling</span><span class="v na">optioneel / naar behoefte</span></div>`;
 
   html += `<div class="card"><h3>Weekdoelen</h3><div class="week-track">${goalRows}</div>
@@ -2942,16 +3048,19 @@ function weekCoachLine(wi, ws, ds){
 }
 function weekWideHTML(wi, W){
   const { ds, ws, wp, cfg, mins, goalRows, phaseLabel, conflicts, parts } = W, today = todayISO(), rp = RP();
-  const showR = routinesShown();
+  const showR = ws.routines.length > 0;
   // voortgangskaarten: alleen wat deze week van toepassing is, hooguit drie
   const cards = [];
   if(ws.coach.target!=null) cards.push({ k:'run', t:'Hardlopen', a:ws.coach.done, b:ws.coach.target, u:'trainingen' });
   const kr = [ws.strengthA, ws.strengthB].filter(x=>x.applicable);
   if(kr.length) cards.push({ k:'kracht', t:'Kracht', a:kr.filter(x=>x.done).length, b:kr.length, u:kr.length===1 ? 'training' : 'trainingen' });
   if(ws.longWalk.applicable) cards.push({ k:'walk', t:'Lange wandeling', a:ws.longWalk.done?1:0, b:1, u:'deze week' });
-  if(showR) cards.push({ k:'routine', t:'Ochtendroutine', a:ws.routine.done, b:7, u:'dagen' });
+  if(showR) cards.push({ k:'routine', t: ws.routines.length===1 ? ws.routines[0].r.name : 'Routines', rows: ws.routines });
   const WKI = { run:TDI.run, kracht:TDI.dumb, walk:TDI.walk, routine:TDI.sun };
-  const cardHTML = c => `<div class="td-card wk-prog wk-tint-${c.k}"><div class="wk-prog-t">${TD_ICO(WKI[c.k], 'wk-ic-'+c.k)}${esc(c.t)}</div>
+  const pct = (a,b) => Math.min(100, Math.round(100*a/(b||1)));
+  const cardHTML = c => c.rows ? `<div class="td-card wk-prog wk-tint-${c.k}"><div class="wk-prog-t">${TD_ICO(WKI[c.k], 'wk-ic-'+c.k)}${esc(c.t)}</div>
+    ${c.rows.map(x=>`<div class="wk-rrow">${c.rows.length>1 ? `<span>${esc(x.r.name)}</span>` : '<span></span>'}<b>${x.done} / ${x.target}</b></div><div class="td-bar" role="img" aria-label="${esc(x.r.name)}: ${x.done} van ${x.target}"><i class="wk-bar-${c.k}" style="width:${pct(x.done, x.target)}%"></i></div>`).join('')}</div>`
+    : `<div class="td-card wk-prog wk-tint-${c.k}"><div class="wk-prog-t">${TD_ICO(WKI[c.k], 'wk-ic-'+c.k)}${esc(c.t)}</div>
     <div class="wk-prog-v"><b>${c.a} / ${c.b}</b> <span>${esc(c.u)}</span></div>
     <div class="td-bar" role="img" aria-label="${esc(c.t)}: ${c.a} van ${c.b}"><i class="wk-bar-${c.k}" style="width:${Math.min(100, Math.round(100*c.a/(c.b||1)))}%"></i></div></div>`;
   const [cs, ctext] = weekCoachLine(wi, ws, ds);
@@ -2975,7 +3084,8 @@ function weekWideHTML(wi, W){
     if(cfg.strengthA && wp.strengthADay===dk && !ws.strengthA.done && dt>=today){ acts.push({ t:'Kracht A', m:'voorstel' }); sugg = true; }
     if(cfg.strengthB && wp.strengthBDay===dk && !ws.strengthB.done && dt>=today){ acts.push({ t:'Kracht B', m:'voorstel' }); sugg = true; }
     if(isLongWalkWeek(wi) && wp.longWalkDay===dk && !ws.longWalk.done && dt>=today){ acts.push({ t:'Lange wandeling', m:'voorstel' }); sugg = true; }
-    const routine = showR && routineDoneish(CB.dailyLogs[dt]);
+    const rDone = ws.routines.filter(x=> routineDoneOn(CB.dailyLogs[dt], x.r)).length;
+    const routine = showR && rDone > 0 ? (ws.routines.length===1 ? ws.routines[0].r.name : rDone===ws.routines.length ? 'Routines ✓' : `Routines ${rDone}/${ws.routines.length}`) : '';
     const st = attention ? 'attention' : dt===today ? 'today' : anyPlanned ? 'planned' : anyDone ? 'done' : sugg ? 'suggested' : 'rest';
     const hs = dt > today ? null : effectiveDayStatus(dt);
     const hText = dt > today ? 'Herstel: nog niet bekend' : (hs ? HL[hs] : 'Herstel: niet ingevuld');
@@ -2985,13 +3095,13 @@ function weekWideHTML(wi, W){
       <div class="wk-day-h"><span>${esc(label)}</span>${st==='done' ? '<i class="wk-mark ok" aria-hidden="true">✓</i>' : st==='attention' ? '<i class="wk-mark warn" aria-hidden="true">!</i>' : ''}</div>
       ${shown.map(a=>`<div class="wk-act">${TD_ICO(/^Kracht/.test(a.t) ? TDI.dumb : /wandeling/i.test(a.t) ? TDI.walk : /Leermoment/.test(a.t) ? TDI.list : TDI.run, 'wk-act-ic')}<b>${esc(a.t)}</b><span>${esc(a.m)}</span></div>`).join('')}${more>0 ? `<div class="wk-more">+${more} meer</div>` : ''}
       ${!acts.length ? '<div class="wk-act wk-rest"><span class="wk-dash" aria-hidden="true">—</span><b>Rustdag</b></div>' : ''}
-      ${routine ? `<div class="wk-routine">${TD_ICO(TDI.sun)}Ochtendroutine</div>` : ''}
+      ${routine ? `<div class="wk-routine">${TD_ICO(TDI.sun)}${esc(routine)}</div>` : ''}
       ${st==='rest' ? '<span class="wk-pill-gap"></span>' : `<span class="wk-pill st-${st}">${st==='done' ? '✓ ' : ''}${esc(S[st])}</span>`}
       <span class="wk-h st-${hs||'none'}"><i aria-hidden="true"></i>${esc(hText)}</span></a>`;
   };
   const sum = (title, right, ico) => `<summary class="wk-sum"><span class="wk-sum-ico">${TD_ICO(ico)}</span><span class="wk-sum-t">${title}</span><span class="wk-sum-r">${right}</span>${TD_ICO(TDI.chev, 'wk-sum-chev')}</summary>`;
   const goalSum = [ws.coach.target!=null ? `${ws.coach.done} van ${ws.coach.target} hardlooptrainingen` : null, kr.length ? `kracht ${kr.filter(x=>x.done).length} van ${kr.length}` : null,
-    ws.longWalk.applicable ? (ws.longWalk.done ? 'lange wandeling gedaan' : 'lange wandeling nog te doen') : null, showR ? `ochtendroutine ${ws.routine.done} van 7` : null].filter(Boolean).join(' · ');
+    ws.longWalk.applicable ? (ws.longWalk.done ? 'lange wandeling gedaan' : 'lange wandeling nog te doen') : null, showR ? `routines ${ws.routines.reduce((a,x)=>a+x.done,0)}× afgevinkt` : null].filter(Boolean).join(' · ');
   const inner = s => s ? s.replace(/^<details class="acc"><summary>[\s\S]*?<\/summary>/, '').replace(/<\/details>\s*$/, '') : '';
   const weekOpts = Array.from({length:blockWeeks()},(_,i)=>{ const d2 = weekDates(i); return `<option value="${i}" ${i===wi?'selected':''}>Week ${i+1} · ${esc(fmt(d2[0],{day:'numeric',month:'short'}))} – ${esc(fmt(d2[6],{day:'numeric',month:'short'}))}</option>`; }).join('');
   return `<div class="td wk sf-rust">
@@ -3258,7 +3368,8 @@ function routineDetailCard(d){
   const anyPrev = ROUTINE_DETAIL_FIELDS.some(f=> (rd[f]==null||rd[f]==='') && prev[f]);
   const mostRecent = Object.values(prev).filter(Boolean).sort((a,b)=> b.date.localeCompare(a.date))[0];
   const prevNote = prevRoutineValue('note', d);
-  return `<details class="acc" id="routineCard"><summary>Ochtendroutine — detail registreren (optioneel)</summary><div class="acc-body">
+  const rName = (routineList().find(r=>r.id==='routine')||{}).name || 'Ochtendroutine';
+  return `<details class="acc" id="routineCard"><summary>${esc(rName)} — detail registreren (optioneel)</summary><div class="acc-body">
     <p class="tny muted">Alleen invullen wat nuttig is. Push-ups, vooroverbuiging en balans L/R voeden de progressiegrafieken. Bewegingsbereik meet je apart in W0/W6 — hetzelfde bereik bij minder herhalingen is een efficiëntieverbetering, geen achteruitgang. Grijze waarden zijn je vorige registratie, ter herinnering — pas als jij ze bevestigt of invult tellen ze mee voor vandaag.</p>
     ${mostRecent ? `<p class="tny muted">Vorige registratie: ${esc(relativeDayLabel(mostRecent.date, d))}${anyPrev?` · <a href="#" data-apply-prev-routine="${d}">Vorige waarden overnemen</a>`:''}</p>` : ''}
     <div class="form-grid">
@@ -4400,7 +4511,7 @@ function renderData(){
     <p>Je data wordt in deze browser bewaard en, als je hieronder bent ingelogd, ook gesynchroniseerd met je eigen cloud (telefoon en computer delen dan dezelfde data). Maak daarnaast geregeld een JSON-back-up. Historische data is read-only.</p></div>`;
 
   html += syncCardHTML();
-  html += `<div class="card"><h3>Vandaag</h3><label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-routines="${routinesShown()?'hide':'show'}" ${routinesShown()?'checked':''}> Ochtendroutines tonen (meditatie·contemplatie·gebed en de fysieke ochtendroutine)</label></div>`;
+  html += routinesCardHTML();
   if(typeof coachSettingsHTML==='function') html += `<div class="card">${coachSettingsHTML()}</div>`;   // koppeling met Intervals.icu (Garmin) naast de synchronisatie
   html += `<div class="grid cols-2">
     <div class="card"><h3>Back-up &amp; herstel</h3>
@@ -5120,7 +5231,7 @@ function buildPrint(mode){
     if(ws.strengthA.applicable) goalBits.push(`Kracht A ${ws.strengthA.done?'✓':'nog te doen'}`);
     if(ws.strengthB.applicable) goalBits.push(`Kracht B ${ws.strengthB.done?'✓':'nog te doen'}`);
     goalBits.push(`Lange wandeling ${ws.longWalk.applicable?(ws.longWalk.done?'✓':'nog te doen'):'niet deze week'}`);
-    goalBits.push(`Ochtendroutine ${ws.routine.done}/7`);
+    ws.routines.forEach(x=> goalBits.push(`${esc(x.r.name)} ${x.done}/${x.target}`));
     t.innerHTML = `<div class="print-page">
       <h1>Atempo — week ${wi+1} van ${blockWeeks()} · ${esc(PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
       <p>${fmt(ds[0],{day:'numeric',month:'long'})} – ${fmt(ds[6],{day:'numeric',month:'long'})} · ${esc(CB.hoofddoel)}</p>
@@ -5198,7 +5309,12 @@ document.addEventListener('click', e=>{
   }
   const apr = e.target.closest('[data-apply-prev-routine]'); if(apr){ e.preventDefault(); applyPreviousRoutineValues(apr.dataset.applyPrevRoutine); return; }
   const tdo = e.target.closest('[data-td-open]'); if(tdo){ e.preventDefault(); const box = document.getElementById(tdo.dataset.tdOpen); const det = box && (box.tagName==='DETAILS' ? box : box.querySelector('details')); if(det){ det.open = true; setTimeout(()=>det.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
-  const rtn = e.target.closest('[data-routines]'); if(rtn){ if(rtn.tagName!=='INPUT') e.preventDefault(); CB.showRoutines = rtn.dataset.routines==='show'; saveState(); renderCurrent(); return; }
+  const rtm = e.target.closest('[data-rt-manage]'); if(rtm){ e.preventDefault(); ui.rtEdit = rtm.dataset.rtManage==='new' ? 'new' : null; showView('data');
+    setTimeout(()=>{ const c = document.getElementById('myRoutines'); if(c) c.scrollIntoView({ block:'start', behavior:'smooth' }); const n = document.getElementById('rtName'); if(n) n.focus({ preventScroll:true }); }, 40); return; }
+  const rte = e.target.closest('[data-rt-edit]'); if(rte){ e.preventDefault(); ui.rtEdit = rte.dataset.rtEdit; renderCurrent(); setTimeout(()=>{ const n = document.getElementById('rtName'); if(n) n.focus(); }, 20); return; }
+  const rtc = e.target.closest('[data-rt-cancel]'); if(rtc){ e.preventDefault(); ui.rtEdit = null; renderCurrent(); return; }
+  const rts = e.target.closest('[data-rt-save]'); if(rts){ e.preventDefault(); routineSave(rts.dataset.rtSave); return; }
+  const rtd = e.target.closest('[data-rt-del]'); if(rtd){ e.preventDefault(); routineDelete(rtd.dataset.rtDel); return; }
   const ost = e.target.closest('[data-own-set]'); if(ost){ e.preventDefault(); const [dd,s]=ost.dataset.ownSet.split('|'); ensureLog(dd).traffic = s; saveState(); renderToday(); return; }
   const ocl = e.target.closest('[data-own-clear]'); if(ocl){ e.preventDefault(); const dd=ocl.dataset.ownClear; if(CB.dailyLogs[dd]) CB.dailyLogs[dd].traffic = null; saveState(); renderToday(); return; }
   const mvs = e.target.closest('[data-move-start]'); if(mvs){ const [kind,id]=mvs.dataset.moveStart.split('|'); ui.moveOn={kind,id}; renderToday(); return; }
@@ -5273,6 +5389,11 @@ document.addEventListener('change', e=>{
     const l = ensureLog(ui.date);
     l.routineDone = el.checked ? 'deels' : 'ja';
     (l.checks = l.checks || {}).routine = true;
+    saveState(); renderToday(); return;
+  }
+  if(el.dataset.rtCheck){
+    const l = ensureLog(ui.date); l.routines = l.routines || {};
+    l.routines[el.dataset.rtCheck] = el.checked ? 'ja' : 'nee';      // 'nee' i.p.v. weghalen: synchronisatie brengt een uitgevinkte dag dan niet terug
     saveState(); renderToday(); return;
   }
   if(el.dataset.check){
