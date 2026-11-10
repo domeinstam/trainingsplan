@@ -1054,7 +1054,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.19.1";
+const APP_VERSION = "block2-2.19.2";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2700,7 +2700,6 @@ function renderToday(){
     rows += `<div class="row"><span class="k">Lange wandeling</span><span class="v ${ws.longWalk.applicable?cl(ws.longWalk.done):'na'}">${ws.longWalk.applicable?(ws.longWalk.done?'✓ gedaan':'nog te doen'):'niet deze week'}</span></div>`;
     ws.routines.forEach(x=>{ rows += `<div class="row"><span class="k">${esc(x.r.name)}</span><span class="v">${x.done} / ${x.target}</span></div>`; });
     html += `<div class="card"><h3>Deze week <span class="sub">${esc(ctx.title)}</span></h3><div class="week-track">${rows}</div>
-    <div class="tny muted" style="margin-top:10px">Trainingen plan je in de <a href="#" data-view="program">Kalender</a>.</div>
     <p class="tny muted" style="margin-top:8px"><a href="#" data-view="week">Week openen →</a></p></div>`;
   }
 
@@ -3738,7 +3737,7 @@ function weekWideHTML(wi, W){
           <button class="btn sm" data-week="${Math.min(blockWeeks()-1, wi+1)}" aria-label="Volgende week" ${wi===blockWeeks()-1?'disabled':''}>${TD_ICO(TDI.chev)}</button>
         </div></div>
       <div class="wk-days">${ds.map(day).join('')}</div>
-      <p class="td-sub">Tik op een dag om hem te openen. Onderaan elke dag staat je herstel, los van de training. Trainingen plan je in de <a href="#" data-view="program">Kalender</a>.</p>
+      <p class="td-sub">Tik op een dag om hem te openen. Onderaan elke dag staat je herstel, los van de training.</p>
     </section>
     ${conflicts.length ? `<div class="td-card wk-warn"><b>Aandachtspunten</b>${conflicts.map(c=>`<div class="td-note st-orange">${esc(c)}</div>`).join('')}<p class="td-sub">Signalering, geen blokkade. Jij beslist.</p></div>` : ''}
     <div class="wk-acc">
