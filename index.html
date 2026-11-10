@@ -990,7 +990,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.17.3";
+const APP_VERSION = "block2-2.17.4";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2782,10 +2782,14 @@ function todaySessionLine(s){
    een verwijderde routine niet terugbrengt; afgevinkte dagen blijven bewaard. */
 const RT_MOMENTS = [['ochtend','Ochtend'],['middag','Middag'],['avond','Avond']];
 function routineList(){
-  if(Array.isArray(CB.routines)) return CB.routines.filter(r=> r && !r.deleted);
+  if(Array.isArray(CB.routines)){
+    /* de oude standaardnaam heet voortaan kort 'Routine' (op verzoek van Rens, 2026-11-10); een zelfgekozen naam blijft staan */
+    CB.routines.forEach(r=>{ if(r && r.id==='routine' && r.name==='Fysieke ochtendroutine') r.name = 'Routine'; });
+    return CB.routines.filter(r=> r && !r.deleted);
+  }
   const used = Object.values(CB.dailyLogs||{}).some(l=> l && ((l.checks && (l.checks.spiritual || l.checks.routine)) || l.routineDone));
   return used ? [ { id:'spiritual', name:'Meditatie · contemplatie · gebed', moment:'ochtend', minutes:null, perWeek:7, paused:false },
-                  { id:'routine',   name:'Fysieke ochtendroutine',            moment:'ochtend', minutes:null, perWeek:7, paused:false } ] : [];
+                  { id:'routine',   name:'Routine',                           moment:'ochtend', minutes:null, perWeek:7, paused:false } ] : [];
 }
 function routinesActive(){ const o = Object.fromEntries(RT_MOMENTS.map(([k],i)=>[k,i])); return routineList().filter(r=>!r.paused).map((r,i)=>[r,i]).sort((a,b)=> ((o[a[0].moment]??0)-(o[b[0].moment]??0)) || a[1]-b[1]).map(x=>x[0]); }
 function routinesShown(){ return routinesActive().length > 0; }
@@ -3104,8 +3108,7 @@ function tdActivityCard(st, isFuture){
 /* mijn taken: afgeleid uit wat Atempo al weet (geen eigen takenlijst); afvinken = dezelfde registratie als altijd */
 function tdTasks(st, ctx){
   const { d, l, planned, done, other, isToday } = st, checks = l.checks || {}, out = [];
-  const pre = runPre(d), ocDone = runPreComplete(pre);
-  if(isToday || ocDone) out.push({ done:ocDone, html: ocDone ? 'Dagcheck' : `<button class="td-link" data-oc-open>Dagcheck invullen</button>` });
+  /* de Dagcheck staat niet als taak: die zit al in de coach en bij Mijn herstel */
   if(planned) out.push({ done:false, html:`<button class="td-link" data-run-open="${planned.id}">Hardlooptraining · ${esc(planned.name.replace(/ – .*/, ''))}</button>` });
   if(done){ out.push({ done:true, html:'Hardlooptraining' });
     if(runOutcome(done).state==='incomplete') out.push({ done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
@@ -3118,12 +3121,9 @@ function tdTasks(st, ctx){
 function tdTaskCard(st, ctx){
   const tasks = tdTasks(st, ctx), plannedT = tasks.filter(x=>!x.optional), n = plannedT.filter(x=>x.done).length;
   const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.go ? `<button class="td-go" ${x.goAttr || `data-td-open="${x.go}"`} aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
-  const first = tasks.slice(0,3), rest = tasks.slice(3);
   return `<section class="td-card td-tasks" aria-labelledby="tdTasksH">
     <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
-    <ul class="td-tasklist">${first.map(row).join('')}</ul>
-    ${rest.length ? `<details class="td-more"><summary>Alle taken (${tasks.length})</summary><ul class="td-tasklist">${rest.map(row).join('')}</ul></details>` : ''}
-    <div class="td-foot">${routinesShown() ? '<a href="#" class="td-rt-link" data-rt-manage>Routines instellen</a>' : '<a href="#" class="td-rt-link" data-rt-manage="new">+ Routine toevoegen</a>'}</div>
+    <ul class="td-tasklist">${tasks.map(row).join('')}</ul>
   </section>`;
 }
 function tdRecoveryCard(st, oc){
