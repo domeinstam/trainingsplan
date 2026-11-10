@@ -374,6 +374,14 @@ body.rtp-open{overflow:hidden}
 .td-recovery #ocCard .field select{text-align:left}
 .td-recovery #ocCard .field.wide{flex-direction:column;align-items:stretch;border-bottom:0}
 .td-recovery #ocCard .field.wide label{margin-bottom:6px}
+.pq-seg{display:inline-flex;border:1px solid var(--td-line,#D9E5EA);border-radius:10px;overflow:hidden;flex:0 0 auto}
+.pq-b{border:0;background:#fff;padding:8px 16px;font-weight:700;font-size:14px;color:var(--td-text,#24423A);cursor:pointer;min-height:40px}
+.pq-b+.pq-b{border-left:1px solid var(--td-line,#D9E5EA)}.pq-b.on{background:var(--green,#04717C);color:#fff}
+.td-recovery #ocCard .field.pq-wide{flex-direction:column;align-items:stretch;gap:6px}
+.td-recovery #ocCard .field.pq-wide select,.td-recovery #ocCard .field.pq-wide input{width:100%;flex:1 1 auto;text-align:left}
+.pq-scale{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px}
+.pq-n{border:1px solid var(--td-line,#D9E5EA);background:#fff;border-radius:8px;min-height:36px;font-weight:700;font-size:13.5px;color:var(--td-text,#24423A);cursor:pointer;padding:0}
+.pq-n.on{background:#E8892B;border-color:#E8892B;color:#fff}
 .td-recovery #ocCard .field.wide textarea{width:100%}
 .td-recovery #ocCard .acc .acc{margin-top:10px}
 .td-recovery #ocCard h4{margin:14px 0 8px;font-size:14px}
@@ -1177,7 +1185,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.21.4";
+const APP_VERSION = "block2-2.21.5";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -3050,13 +3058,21 @@ function profileStartWeight(){ const v = num(profile().startWeightKg); if(v!=nul
 function injuryHealed(id){ const x = (profileW().injuries||[]).find(y=>y.id===id); if(x){ x.status = 'hersteld'; x.healedAt = todayISO(); } }
 function painFieldsHTML(d, l){
   const q = painQ(l), a = l.painArea || '', opts = [...new Set([...injuriesActive().map(x=>x.area), ...PAIN_AREAS])], other = (a && !opts.includes(a)) || ui.painOther===d;
-  let h = `<div class="field"><label>Pijn?</label><select data-pain-q="${esc(d)}"><option value="" ${!q?'selected':''}>—</option><option value="nee" ${q==='nee'?'selected':''}>nee</option><option value="ja" ${q==='ja'?'selected':''}>ja</option></select></div>`;
+  const seg = (v, t) => `<button type="button" class="pq-b ${q===v?'on':''}" data-pain-set="${esc(d)}|${v}" aria-pressed="${q===v}">${t}</button>`;
+  let h = `<div class="field pq"><label id="pqL">Pijn?</label><div class="pq-seg" role="group" aria-labelledby="pqL">${seg('nee','Nee')}${seg('ja','Ja')}</div></div>`;
   if(q==='ja'){
-    h += `<div class="field"><label>Waar?</label><select data-pain-area="${esc(d)}"><option value="">— kies —</option>${opts.map(o=>`<option ${o===a && !other?'selected':''}>${esc(o)}</option>`).join('')}<option value="__other" ${other?'selected':''}>Anders…</option></select></div>`;
-    if(other) h += `<div class="field"><label>Welke plek?</label><input type="text" data-pain-area-txt="${esc(d)}" value="${esc(a && !opts.includes(a) ? a : '')}" maxlength="40" placeholder="bv. linkerbeen"></div>`;
-    h += fInput('Hoe erg? 1–10','currentBlock.dailyLogs.'+d+'.pain', num(l.pain)>0 ? l.pain : '','number','inputmode="numeric" min="1" max="10"');
+    h += `<div class="field pq-wide"><label for="pqWhere">Waar?</label><select id="pqWhere" data-pain-area="${esc(d)}"><option value="">Kies een plek…</option>${opts.map(o=>`<option ${o===a && !other?'selected':''}>${esc(o)}</option>`).join('')}<option value="__other" ${other?'selected':''}>Anders…</option></select></div>`;
+    if(other) h += `<div class="field pq-wide"><label for="pqOther">Welke plek?</label><input id="pqOther" type="text" data-pain-area-txt="${esc(d)}" value="${esc(a && !opts.includes(a) ? a : '')}" maxlength="40" placeholder="bv. linkerbeen"></div>`;
+    const pv = num(l.pain);
+    h += `<div class="field pq-wide"><label id="pqHow">Hoe erg? <span class="tny muted">1 = licht, 10 = heel erg</span></label><div class="pq-scale" role="group" aria-labelledby="pqHow">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" class="pq-n ${pv===n?'on':''}" data-pain-n="${esc(d)}|${n}" aria-pressed="${pv===n}">${n}</button>`).join('')}</div></div>`;
   }
   return h;
+}
+function painSet(d, v){
+  const l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); ui.painOther = null;
+  if(v==='nee'){ l.painAny = 'nee'; l.pain = 0; delete l.painArea; }
+  else if(v==='ja'){ l.painAny = 'ja'; if(!(num(l.pain)>0)) l.pain = ''; const inj = injuriesActive(); if(!l.painArea && inj.length===1) l.painArea = inj[0].area; }
+  else { delete l.painAny; l.pain = ''; delete l.painArea; }
 }
 function injuryAskHTML(d){
   const a = injurySuggest(d); if(!a) return '';
@@ -3069,7 +3085,7 @@ function profileCardHTML(){
     <p class="small muted" style="margin-top:0">Alleen voor jou. Atempo gebruikt dit voor je leeftijd (hartslag), je startgewicht en je blessures.</p>
     <div class="form-grid cols-3">
       <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
-      <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" max="${todayISO()}"></div>
+      <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" min="1900-01-01" max="${todayISO()}"></div>
       <div class="field"><label for="profW">Startgewicht (kg)</label><input id="profW" type="number" data-prof="startWeightKg" value="${esc(p.startWeightKg ?? '')}" placeholder="${sw && !sw.own ? esc(nl(sw.kg)) : ''}" inputmode="decimal" step="0.1" min="30" max="250">
         ${sw && !sw.own ? `<div class="tny muted" style="margin-top:4px">${esc(nl(sw.kg))} kg uit je eerste weging (${esc(fmt(sw.date,{day:'numeric',month:'short'}))}). Vul zelf in om dit te wijzigen.</div>` : ''}</div>
     </div>
@@ -6162,18 +6178,16 @@ document.addEventListener('change', e=>{
   if(el.matches && el.matches('[data-exmove-txt]')){ const v = el.value.trim(); if(v) extraMoveSet(v); return; }
   /* Dagcheck pijn en Mijn profiel */
   const ocKeep = () => { saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; };
-  if(el.matches && el.matches('[data-pain-q]')){ const d = el.dataset.painQ, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}), v = el.value; ui.painOther = null;
-    if(v==='nee'){ l.painAny = 'nee'; l.pain = 0; delete l.painArea; }
-    else if(v==='ja'){ l.painAny = 'ja'; if(!(num(l.pain)>0)) l.pain = ''; const inj = injuriesActive(); if(!l.painArea && inj.length===1) l.painArea = inj[0].area; }
-    else { delete l.painAny; l.pain = ''; delete l.painArea; }
-    ocKeep(); return; }
   if(el.matches && el.matches('[data-pain-area]')){ const d = el.dataset.painArea, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {});
     if(el.value==='__other'){ ui.painOther = d; ocKeep(); setTimeout(()=>{ const t = document.querySelector('[data-pain-area-txt]'); if(t) t.focus(); }, 20); return; }
     ui.painOther = null; if(el.value) l.painArea = el.value; else delete l.painArea; ocKeep(); return; }
   if(el.matches && el.matches('[data-pain-area-txt]')){ const d = el.dataset.painAreaTxt, l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}), v = el.value.trim().slice(0,40); if(v) l.painArea = v; ocKeep(); return; }
   if(el.matches && el.matches('[data-prof]')){ const k = el.dataset.prof, p = profileW(), v = el.value.trim();
     if(k==='startWeightKg'){ const n = num(v); if(n!=null && n>=30 && n<=250) p.startWeightKg = Math.round(n*10)/10; else if(!v) delete p.startWeightKg; }
-    else if(k==='birthDate'){ if(/^\d{4}-\d{2}-\d{2}$/.test(v) && v<=todayISO()) p.birthDate = v; else if(!v) delete p.birthDate; }
+    else if(k==='birthDate'){
+      /* tijdens het typen van het jaar geeft de browser tussenstanden (0001, 0019, 0198): die niet opslaan en niet hertekenen */
+      const y = Number(v.slice(0,4));
+      if(/^\d{4}-\d{2}-\d{2}$/.test(v) && y>=1900 && v<=todayISO()) p.birthDate = v; else if(!v) delete p.birthDate; else return; }
     else if(k==='name'){ if(v) p.name = v.slice(0,40); else delete p.name; }
     saveState(); renderCurrent(); return; }
   if(el.matches && el.matches('[data-inj-add-sel]')){ if(el.value==='__other'){ ui.injOther = true; renderCurrent(); setTimeout(()=>{ const t = document.querySelector('[data-inj-add-txt]'); if(t) t.focus(); }, 20); return; }
@@ -7262,6 +7276,10 @@ document.addEventListener('click', e=>{
   const iy = e.target.closest && e.target.closest('[data-inj-yes],[data-inj-no]'); if(iy){ e.preventDefault();
     if(iy.dataset.injYes){ const a = iy.dataset.injYes, first = Array.from({length:14},(_,i)=>addDays(todayISO(),-13+i)).find(d=> CB.dailyLogs[d] && CB.dailyLogs[d].painArea===a && num(CB.dailyLogs[d].pain)>0); injuryAdd(a, first); }
     else { const p = profileW(); p.injuryAsked = { ...(p.injuryAsked||{}), [iy.dataset.injNo]: todayISO() }; }
+    saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
+  const pqb = e.target.closest && e.target.closest('[data-pain-set],[data-pain-n]'); if(pqb){ e.preventDefault();
+    if(pqb.dataset.painSet){ const [d, v] = pqb.dataset.painSet.split('|'); painSet(d, v); }
+    else { const [d, n] = pqb.dataset.painN.split('|'), l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); l.painAny = 'ja'; l.pain = Number(n); }
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
   const idl = e.target.closest && e.target.closest('[data-inj-del]'); if(idl){ e.preventDefault(); injuryDelete(idl.dataset.injDel); saveState(); renderCurrent(); return; }
   const ih = e.target.closest && e.target.closest('[data-inj-healed]'); if(ih){ e.preventDefault(); injuryHealed(ih.dataset.injHealed); saveState(); renderCurrent(); return; }
