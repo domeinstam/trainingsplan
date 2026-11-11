@@ -270,6 +270,16 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task.is-opt:not(.is-done) .td-tick{border-style:dashed}
+.td-grip{flex:0 0 auto;align-self:center;border:0;background:none;color:#A3B6C4;cursor:grab;touch-action:none;width:18px;min-height:32px;padding:0;margin:0 -4px 0 -8px;border-radius:6px;display:grid;place-items:center}
+.td-grip svg{width:16px;height:16px}
+.td-grip:hover,.td-grip:focus-visible{color:var(--td-act);background:#F0F8FB}
+@media(hover:hover){ .td-grip{opacity:0;transition:opacity .12s} .td-task:hover .td-grip,.td-grip:focus-visible{opacity:1} }   /* computer: greepje bij aanwijzen */
+.td-tasklist li{user-select:none;-webkit-user-select:none}
+.td-tasklist li.run-dragging{opacity:.35}
+.td-tasklist li.rt-before{box-shadow:inset 0 3px 0 var(--td-act)}
+.td-tasklist li.rt-after{box-shadow:inset 0 -3px 0 var(--td-act)}
+.tk-ghost{position:fixed;left:0;top:0;z-index:9999;pointer-events:none;margin:0;box-sizing:border-box;background:#fff;border:1px solid var(--td-act)!important;border-radius:12px;box-shadow:0 10px 26px rgba(8,44,84,.18);padding:8px 12px;cursor:grabbing}
+.tk-ghost .td-grip{opacity:1}
 .oc-panel{scroll-margin-top:90px}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
@@ -1240,7 +1250,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.22.1";
+const APP_VERSION = "block2-2.22.2";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -3463,59 +3473,67 @@ function rtExMove(i, to){
   const t = Math.max(0, Math.min(xs.length, to)), j = t > i ? t-1 : t; if(j===i) return false;
   const [m] = xs.splice(i, 1); xs.splice(j, 0, m); renderCurrent(); return j;
 }
-const RT_DRAG = { i:null, active:false, ghost:null, to:null, timer:null, eat:false };
-const rtRows = () => [...document.querySelectorAll('#rtForm .rt-exl li[data-rt-i]')];
-function rtDragStart(){
-  const D = RT_DRAG, li = rtRows().find(x=> Number(x.dataset.rtI)===D.i); if(!li){ D.i = null; return; }
-  const r = li.getBoundingClientRect(); D.active = true; D.dx = D.x0 - r.left; D.dy = D.y0 - r.top;
-  const g = document.createElement('div'); g.className = 'rt-ghost'; g.innerHTML = li.innerHTML;
-  g.querySelectorAll('select').forEach((x,k)=>{ x.removeAttribute('data-rt-ex-sets'); x.value = li.querySelectorAll('select')[k].value; });
-  g.querySelectorAll('[data-rt-ex-del],[data-rt-grip]').forEach(x=>{ x.removeAttribute('data-rt-ex-del'); x.removeAttribute('data-rt-grip'); });
-  g.style.width = r.width+'px'; g.style.transform = `translate(${r.left}px, ${r.top}px)`; document.body.appendChild(g); D.ghost = g; li.classList.add('run-dragging');
-  try { if(D.touch && navigator.vibrate) navigator.vibrate(12); } catch(e){}
-}
-function rtDragMove(x, y){
-  const D = RT_DRAG; D.ghost.style.transform = `translate(${x - D.dx}px, ${y - D.dy}px)`;
-  const rows = rtRows(); rows.forEach(li=> li.classList.remove('rt-before','rt-after'));
-  let to = rows.length; for(const li of rows){ const r = li.getBoundingClientRect(); if(y < r.top + r.height/2){ to = Number(li.dataset.rtI); break; } }
-  D.to = (to===D.i || to===D.i+1) ? null : to;
-  if(D.to!=null){ if(to < rows.length) rows[to].classList.add('rt-before'); else rows[rows.length-1].classList.add('rt-after'); }
-  if(y < 80) window.scrollBy(0, -14); else if(y > innerHeight - 80) window.scrollBy(0, 14);
-}
-function rtDragEnd(drop){
-  const D = RT_DRAG; clearTimeout(D.timer);
-  if(D.active){
-    if(D.ghost) D.ghost.remove(); rtRows().forEach(li=> li.classList.remove('rt-before','rt-after','run-dragging'));
-    D.eat = true; setTimeout(()=>{ D.eat = false; }, 400);
-    if(drop && D.to!=null){ const i = D.i, to = D.to; Object.assign(D, { i:null, active:false, ghost:null, to:null }); rtExMove(i, to); return; }
+/* één manier van verslepen voor lijsten (routine-oefeningen, Mijn taken): muis = meteen slepen; telefoon = aan het greepje,
+   of even vasthouden; toetsenbord = op het greepje pijl omhoog/omlaag. c: { list, attr (index op de li), grip, ghost, host, prep, move } */
+function listDrag(c){
+  const D = { i:null, active:false, ghost:null, to:null, timer:null, eat:false }, liSel = c.list+' li['+c.attr+']';
+  const rows = () => [...document.querySelectorAll(liSel)], idx = li => Number(li.getAttribute(c.attr));
+  function start(){
+    const li = rows().find(x=> idx(x)===D.i); if(!li){ D.i = null; return; }
+    const r = li.getBoundingClientRect(); D.active = true; D.dx = D.x0 - r.left; D.dy = D.y0 - r.top;
+    const g = document.createElement('div'); g.className = c.ghost; g.innerHTML = li.innerHTML; if(c.prep) c.prep(g, li);
+    g.querySelectorAll('['+c.grip+']').forEach(x=> x.removeAttribute(c.grip));
+    g.style.width = r.width+'px'; g.style.transform = `translate(${r.left}px, ${r.top}px)`; ((c.host && li.closest(c.host)) || document.body).appendChild(g); D.ghost = g; li.classList.add('run-dragging');
+    try { if(D.touch && navigator.vibrate) navigator.vibrate(12); } catch(e){}
   }
-  Object.assign(D, { i:null, active:false, ghost:null, to:null });
-}
-document.addEventListener('pointerdown', e=>{
-  const li = e.target.closest && e.target.closest('#rtForm .rt-exl li[data-rt-i]'); if(!li || e.button>0) return;
-  const grip = e.target.closest('[data-rt-grip]'); if(!grip && e.target.closest('select,button,input')) return;
-  const D = RT_DRAG; D.i = Number(li.dataset.rtI); D.x0 = e.clientX; D.y0 = e.clientY; D.active = false; D.touch = e.pointerType!=='mouse';
-  if(D.touch && grip){ e.preventDefault(); rtDragStart(); }
-  else if(D.touch) D.timer = setTimeout(rtDragStart, 380);
-});
-document.addEventListener('pointermove', e=>{
-  const D = RT_DRAG; if(D.i==null) return;
-  if(!D.active){
-    const moved = Math.hypot(e.clientX-D.x0, e.clientY-D.y0);
-    if(D.touch){ if(moved>10){ clearTimeout(D.timer); D.i = null; } return; }          // eerst bewegen = gewoon scrollen
-    if(moved<6) return; rtDragStart(); if(!D.active) return;
+  function move(x, y){
+    D.ghost.style.transform = `translate(${x - D.dx}px, ${y - D.dy}px)`;
+    const rs = rows(); rs.forEach(li=> li.classList.remove('rt-before','rt-after'));
+    let to = rs.length; for(const li of rs){ const r = li.getBoundingClientRect(); if(y < r.top + r.height/2){ to = idx(li); break; } }
+    D.to = (to===D.i || to===D.i+1) ? null : to;
+    if(D.to!=null){ if(to < rs.length) rs[to].classList.add('rt-before'); else rs[rs.length-1].classList.add('rt-after'); }
+    if(y < 80) window.scrollBy(0, -14); else if(y > innerHeight - 80) window.scrollBy(0, 14);
   }
-  e.preventDefault(); rtDragMove(e.clientX, e.clientY);
-}, { passive:false });
-document.addEventListener('touchmove', e=>{ if(RT_DRAG.active) e.preventDefault(); }, { passive:false });
-document.addEventListener('pointerup', ()=>{ if(RT_DRAG.i!=null) rtDragEnd(true); });
-document.addEventListener('pointercancel', ()=>{ if(RT_DRAG.i!=null) rtDragEnd(false); });
-document.addEventListener('click', e=>{ if(RT_DRAG.eat && e.target.closest && e.target.closest('#rtForm .rt-exl')){ e.preventDefault(); e.stopPropagation(); RT_DRAG.eat = false; } }, true);
-document.addEventListener('keydown', e=>{
-  const g = e.target.closest && e.target.closest('#rtForm [data-rt-grip]'); if(!g || (e.key!=='ArrowUp' && e.key!=='ArrowDown')) return;
-  e.preventDefault(); const i = Number(g.dataset.rtGrip), j = rtExMove(i, e.key==='ArrowUp' ? i-1 : i+2);
-  if(j!==false){ const n = document.querySelector(`#rtForm [data-rt-grip="${j}"]`); if(n) n.focus(); }
-});
+  function end(drop){
+    clearTimeout(D.timer);
+    if(D.active){
+      if(D.ghost) D.ghost.remove(); rows().forEach(li=> li.classList.remove('rt-before','rt-after','run-dragging'));
+      D.eat = true; setTimeout(()=>{ D.eat = false; }, 400);
+      if(drop && D.to!=null){ const i = D.i, to = D.to; Object.assign(D, { i:null, active:false, ghost:null, to:null }); c.move(i, to); return; }
+    }
+    Object.assign(D, { i:null, active:false, ghost:null, to:null });
+  }
+  document.addEventListener('pointerdown', e=>{
+    const li = e.target.closest && e.target.closest(liSel); if(!li || e.button>0) return;
+    const grip = e.target.closest('['+c.grip+']'); if(!grip && e.target.closest('select,button,input,textarea,a')) return;
+    D.i = idx(li); D.x0 = e.clientX; D.y0 = e.clientY; D.active = false; D.touch = e.pointerType!=='mouse';
+    if(D.touch && grip){ e.preventDefault(); start(); }
+    else if(D.touch) D.timer = setTimeout(start, 380);
+  });
+  document.addEventListener('pointermove', e=>{
+    if(D.i==null) return;
+    if(!D.active){
+      const moved = Math.hypot(e.clientX-D.x0, e.clientY-D.y0);
+      if(D.touch){ if(moved>10){ clearTimeout(D.timer); D.i = null; } return; }          // eerst bewegen = gewoon scrollen
+      if(moved<6) return; start(); if(!D.active) return;
+    }
+    e.preventDefault(); move(e.clientX, e.clientY);
+  }, { passive:false });
+  document.addEventListener('touchmove', e=>{ if(D.active) e.preventDefault(); }, { passive:false });
+  document.addEventListener('pointerup', ()=>{ if(D.i!=null) end(true); });
+  document.addEventListener('pointercancel', ()=>{ if(D.i!=null) end(false); });
+  document.addEventListener('click', e=>{ if(D.eat && e.target.closest && e.target.closest(c.list)){ e.preventDefault(); e.stopPropagation(); D.eat = false; } }, true);
+  document.addEventListener('keydown', e=>{
+    const g = e.target.closest && e.target.closest(c.list+' ['+c.grip+']'); if(!g || (e.key!=='ArrowUp' && e.key!=='ArrowDown')) return;
+    e.preventDefault(); const i = Number(g.getAttribute(c.grip)), j = c.move(i, e.key==='ArrowUp' ? i-1 : i+2);
+    if(j!==false){ const n = document.querySelector(`${c.list} [${c.grip}="${j}"]`); if(n) n.focus(); }
+  });
+  return D;
+}
+const RT_DRAG = listDrag({ list:'#rtForm .rt-exl', attr:'data-rt-i', grip:'data-rt-grip', ghost:'rt-ghost', move:(i, to)=> rtExMove(i, to),
+  prep:(g, li)=>{ g.querySelectorAll('select').forEach((x,k)=>{ x.removeAttribute('data-rt-ex-sets'); x.value = li.querySelectorAll('select')[k].value; }); g.querySelectorAll('[data-rt-ex-del]').forEach(x=> x.removeAttribute('data-rt-ex-del')); } });
+const TK_DRAG = listDrag({ list:'.td-tasks .td-tasklist', attr:'data-tk-i', grip:'data-tk-grip', ghost:'td-task tk-ghost', host:'.td', move:(i, to)=> taskMove(i, to),
+  prep:(g)=>{ g.querySelectorAll('[data-check],[data-bind],[data-rt-play],[data-rt-reg],[data-oc-panel],[data-run-open],[data-add],[data-rt-check]').forEach(x=>{ [...x.attributes].forEach(a=>{ if(a.name.startsWith('data-')) x.removeAttribute(a.name); }); }); } });
 function rtReadForm(){
   const dr = ui.rtDraft; if(!dr) return;
   const n = document.getElementById('rtName'); if(n) dr.name = n.value;
@@ -3661,25 +3679,41 @@ function tdActivityCard(st, isFuture){
 /* mijn taken: afgeleid uit wat Atempo al weet (geen eigen takenlijst); afvinken = dezelfde registratie als altijd */
 function tdTasks(st, ctx){
   const { d, l, planned, done, other, isToday } = st, checks = l.checks || {}, out = [];
-  /* Dagcheck (telt mee) en Slaap (optioneel) als taak: vinkje zodra ingevuld; klikken opent het paneel bij Mijn herstel.
+  /* Dagcheck en Slaap als taak (tellen allebei mee): vinkje zodra ingevuld; klikken opent het paneel bij Mijn herstel.
      Dagcheck ingevuld = dezelfde regel als het advies (energie, pijn, wandelen/traplopen); Slaap = RHR, HRV en slaap (zelf of Garmin) */
   const showOc = d <= todayISO(), g = state.garmin.daily[d] || {}, has = v => v!=null && v!=='';
-  if(showOc) out.push({ done: runPreComplete(runPre(d)), html:`<button class="td-link" data-oc-panel="dc">Dagcheck</button>` });
-  if(planned) out.push({ done:false, html:`<button class="td-link" data-run-open="${planned.id}">Hardlooptraining · ${esc(planned.name.replace(/ – .*/, ''))}</button>` });
-  if(done){ out.push({ done:true, html:'Hardlooptraining' });
-    out.push(runPostComplete(done.post) ? { done:true, html:'Training geëvalueerd' } : { done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
-  if(other) out.push({ done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
-  ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
+  if(showOc) out.push({ k:'dc', done: runPreComplete(runPre(d)), html:`<button class="td-link" data-oc-panel="dc">Dagcheck</button>` });
+  if(planned) out.push({ k:'run', done:false, html:`<button class="td-link" data-run-open="${planned.id}">Hardlooptraining · ${esc(planned.name.replace(/ – .*/, ''))}</button>` });
+  if(done){ out.push({ k:'run', done:true, html:'Hardlooptraining' });
+    out.push(runPostComplete(done.post) ? { k:'eval', done:true, html:'Training geëvalueerd' } : { k:'eval', done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
+  if(other) out.push({ k:'other', done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
+  ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ k:'reg:'+k, done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
-  routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
-  if(showOc) out.push({ done: (has(l.restingHr)||has(g.restingHr)) && (has(l.hrv)||has(g.nightHrv)) && (has(l.sleepHours)||has(g.sleepDuration)), optional:true,
-    html:`<button class="td-link" data-oc-panel="more">Slaap</button> <span class="td-opt">(optioneel)</span>` });
-  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
-  return out;
+  routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ k:'rt:'+r.id, done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
+  if(showOc) out.push({ k:'slaap', done: (has(l.restingHr)||has(g.restingHr)) && (has(l.hrv)||has(g.nightHrv)) && (has(l.sleepHours)||has(g.sleepDuration)),
+    html:`<button class="td-link" data-oc-panel="more">Slaap</button>` });
+  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ k:'extra', done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
+  return taskSort(out);
 }
+/* eigen volgorde van Mijn taken (CB.taskOrder, per gebruiker): taken die erin staan krijgen die volgorde,
+   nieuwe taken blijven op hun gewone plek */
+function taskSort(list){
+  const ord = Array.isArray(CB.taskOrder) ? CB.taskOrder : [], known = list.filter(x=> ord.includes(x.k)).sort((a,b)=> ord.indexOf(a.k) - ord.indexOf(b.k));
+  let n = 0; return list.map(x=> ord.includes(x.k) ? known[n++] : x);
+}
+function taskMove(i, to){
+  const keys = [...document.querySelectorAll('.td-tasks .td-tasklist li[data-tk-i]')].map(li=> li.dataset.tk);
+  if(!keys[i]) return false;
+  const t = Math.max(0, Math.min(keys.length, to)), j = t > i ? t-1 : t; if(j===i) return false;
+  const [m] = keys.splice(i, 1); keys.splice(j, 0, m);
+  CB.taskOrder = [...keys, ...(CB.taskOrder||[]).filter(k=> !keys.includes(k))];   // taken van andere dagen houden hun plek in de lijst
+  saveState(); renderCurrent(); return j;
+}
+const GRIP_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
 function tdTaskCard(st, ctx){
   const tasks = tdTasks(st, ctx), plannedT = tasks.filter(x=>!x.optional), n = plannedT.filter(x=>x.done).length;
-  const row = x => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''} ${x.optional?'is-opt':''}">${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.play ? `<button class="td-play" data-rt-play="${esc(x.play)}" aria-label="Start stap voor stap">${TD_ICO(TDI.play)}Start</button>` : ''}${x.go ? `<button class="td-go" ${x.goAttr || `data-td-open="${x.go}"`} aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
+  const label = x => String(x.html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  const row = (x, i) => `<li class="td-task ${x.done?'is-done':''} ${x.check?'has-check':''} ${x.optional?'is-opt':''}" data-tk-i="${i}" data-tk="${esc(x.k)}"><button type="button" class="td-grip" data-tk-grip="${i}" aria-label="${esc(label(x))} verplaatsen (pijl omhoog of omlaag)" title="Versleep om de volgorde te veranderen">${GRIP_SVG}</button>${x.check ? '' : `<span class="td-tick" aria-hidden="true">${x.done ? '✓' : ''}</span>`}<div class="td-task-in">${x.html}</div>${x.play ? `<button class="td-play" data-rt-play="${esc(x.play)}" aria-label="Start stap voor stap">${TD_ICO(TDI.play)}Start</button>` : ''}${x.go ? `<button class="td-go" ${x.goAttr || `data-td-open="${x.go}"`} aria-label="Details">${TD_ICO(TDI.chev)}</button>` : ''}${x.check || !x.done ? '' : '<span class="td-hidden-sr">gedaan</span>'}</li>`;
   return `<section class="td-card td-tasks" aria-labelledby="tdTasksH">
     <div class="td-card-head"><h3 id="tdTasksH" class="td-h-ico">${TD_ICO(TDI.list)}Mijn taken</h3><span class="td-count">${n} / ${plannedT.length}</span></div>
     <ul class="td-tasklist">${tasks.map(row).join('')}</ul>
