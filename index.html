@@ -1089,18 +1089,60 @@ body{background:var(--paper)}
   .wk-day .wk-h{font-size:11.5px}
 }
 @media(max-width:380px){ .wk-progs{grid-template-columns:minmax(0,1fr)!important} }
-/* computer (breed): kaarten links en rechts in rijen, zodat ze op dezelfde lijn beginnen en eindigen
-   rij 1: Coach over de volle breedte · rij 2: Vandaag | Volgende training · rij 3: Mijn taken + Mijn herstel | Snelle acties */
-@media(min-width:1280px){
-  .td-grid{row-gap:16px;column-gap:18px;align-items:stretch}
-  .td-grid>.td-main,.td-grid>.td-side{display:contents}
-  .td-grid>.td-main>*{grid-column:1}
-  .td-grid>.td-side>*{grid-column:2}
-  .td-grid>.td-main>.td-coach{grid-row:1;grid-column:1 / -1}
-  .td-grid>.td-main>.td-today{grid-row:2}.td-grid>.td-side>.td-next{grid-row:2}
-  .td-grid>.td-main>.td-pair{grid-row:3}.td-grid>.td-side>.td-quickcard{grid-row:3}
-  .td-grid>.td-side>.td-side-regs{grid-row:4;align-self:start}
-  .td-grid>.td-main>.td-today:only-child,.td-grid>.td-side>.td-next:only-child{grid-row:1}   /* dag in de toekomst: alleen Vandaag naast Volgende training */
+/* ===== Vandaag (Design 3.0, computer) =====
+   kop · rij 1: Vandaag | Volgende training · rij 2: Mijn taken | Mijn herstel · daarna Snelle acties over de volle breedte.
+   De telefoon houdt de volgorde van de HTML (onder elkaar). */
+.td-v3{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.td-head{display:none}
+.td-recovery{container-type:inline-size}
+.oc-panels{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
+.oc-panel,.oc-beeld{border:1px solid #D8EAF0;border-radius:12px;background:#fff;overflow:hidden}
+.oc-beeld{margin-top:12px;background:#fff}
+.oc-ph{display:flex;align-items:center;gap:8px;margin:0!important;padding:9px 14px;background:#F0F8FB;border-bottom:1px solid #D8EAF0;font-size:14px!important;font-weight:700;color:var(--td-ink)}
+.oc-ph .td-ico{width:18px;height:18px}
+.td-recovery #ocCard .oc-panel .form-grid{padding:2px 14px}
+.td-recovery #ocCard .oc-panel>.field.wide{padding:4px 14px 12px}
+.td-recovery #ocCard .oc-panel .field{padding:6px 0}
+.td-recovery #ocCard .oc-panel .field input,.td-recovery #ocCard .oc-panel .field .pq-b{min-height:36px}
+.td-recovery #ocCard .oc-panel .pq-b{padding:6px 12px}
+.td-recovery #ocCard .oc-panel>.field.wide label{margin-bottom:4px}
+.td-recovery #ocCard .oc-more textarea{min-height:58px;height:58px;resize:vertical}
+.td-recovery #ocCard .oc-dc .inj-ask{margin:4px 14px 12px}
+.oc-garmin{margin:8px 14px 0;color:var(--green)}
+.td-recovery #ocCard .oc-beeld .recovery-strip{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px 12px 12px;margin:0}
+@container (min-width:560px){
+  .oc-panels{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .td-recovery #ocCard .oc-beeld .recovery-strip{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+.td-rec-why{display:none}
+@media(max-width:860px){ .td-recovery #ocCard .oc-dc>.oc-ph{display:none} }   /* de uitklapkop heet al Dagcheck */
+@media(min-width:861px){
+  .td-hero-today{display:none}
+  .td-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;position:relative;margin:0 0 18px;padding:6px 0 4px;min-height:84px}
+  .td-head::before{content:"";position:absolute;right:0;top:-26px;width:min(520px,48%);height:96px;background:url(achtergronden/heuvels_breed.webp) right bottom/auto 150px no-repeat;opacity:.45;-webkit-mask-image:linear-gradient(90deg,transparent,#000 50%);mask-image:linear-gradient(90deg,transparent,#000 50%);pointer-events:none}
+  .oc-panels{align-items:stretch}
+  .td-head-t,.td-head .td-datesel{position:relative}
+  .td-head-h{margin:0;font-size:34px;font-weight:800;letter-spacing:-.01em;color:var(--td-ink)}
+  .td-head-p{margin:4px 0 0;font-size:16px;color:var(--td-text)}
+  .td-v3{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch}
+  .td-v3>*{grid-column:1 / -1}
+  .td-v3>.td-coach{display:none}
+  .td-v3>.td-today{order:1;grid-column:1}.td-v3>.td-next{order:2;grid-column:2}
+  .td-v3>.td-tasks{order:3}.td-v3>.td-recovery{order:4}
+  .td-v3>.rt-regcard{order:5}.td-v3>.td-quickcard{order:6}.td-v3>.td-side-regs{order:7}.td-v3>.td-week{order:8}.td-v3>.td-regs{order:9}
+  .td-v3>.td-side-regs,.td-v3>.td-regs,.td-v3>.td-week,.td-v3>.rt-regcard{align-self:start}
+  .td-rec-why{display:block;margin-top:8px}
+  .td-rec-why .toggles{display:flex;flex-wrap:wrap;gap:4px 20px}
+  .td-rec-why .toggles summary{font-size:13.5px;font-weight:600;color:var(--td-act);cursor:pointer}
+  .td-recovery #ocCard{margin-top:14px;border:0;background:none;box-shadow:none;border-radius:0}
+  .td-recovery #ocCard>summary{display:none}
+  .td-recovery #ocCard>.acc-body{padding:0}
+  .td-v3>.td-quickcard .td-quicklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+}
+@media(min-width:1180px){
+  .td-v3{grid-template-columns:minmax(0,32fr) minmax(0,30fr) minmax(0,38fr)}
+  .td-v3>.td-today{grid-column:1 / 3}.td-v3>.td-next{grid-column:3}
+  .td-v3>.td-tasks{grid-column:1}.td-v3>.td-recovery{grid-column:2 / 4}
 }
 /* beelden: computer = brede berglandschappen in de kop, eigen beeld in de kaart; telefoon = eigen beeld in de kop (staand past daar) */
 .td .td-today-art{background-position:center 35%}
@@ -1189,7 +1231,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.21.6";
+const APP_VERSION = "block2-2.22.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2850,38 +2892,50 @@ function renderToday(){
   // korte stand in de kop, zodat je ook ingeklapt ziet wat er al staat
   const ocBits = [ l.energy!=null&&l.energy!=='' ? 'energie '+l.energy : null, l.stiffness!=null&&l.stiffness!=='' ? 'stijfheid '+l.stiffness : null,
                    painQ(l)==='nee' ? 'geen pijn' : num(l.pain)>0 ? painWord(l)+' '+l.pain : null, l.walkStairs==='ja' ? 'klachten bij wandelen/traplopen' : null, l.weightKg!=null&&l.weightKg!=='' ? nl(l.weightKg)+' kg' : null ].filter(Boolean);
-  return `<details class="acc" id="ocCard"><summary>Dagcheck <span class="tny muted" style="font-weight:400">· ${ocBits.length ? esc(ocBits.join(' · ')) : 'nog niet ingevuld'}</span></summary><div class="acc-body">
-    <div class="form-grid cols-4">
-      ${fInput('Energie 1–10','currentBlock.dailyLogs.'+d+'.energy', l.energy,'number','inputmode="numeric" min="1" max="10"')}
-      ${fInput('Spierpijn/stijfheid 0–10','currentBlock.dailyLogs.'+d+'.stiffness', l.stiffness,'number','inputmode="numeric" min="0" max="10"')}
-      ${painFieldsHTML(d, l)}
-      ${fSelect('Klachten bij wandelen of traplopen?','currentBlock.dailyLogs.'+d+'.walkStairs', l.walkStairs, [['','—'],['nee','nee'],['ja','ja']])}
-      ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
+  // computer: alles direct open (geen uitklappen); telefoon: ingeklapt zoals altijd
+  const ocOpen = !!(window.matchMedia && matchMedia('(min-width:861px)').matches);
+  // klachten bij wandelen/traplopen: zelfde Nee/Ja-knop als Pijn?; zelfde veld en waarden ('nee'/'ja') als de oude keuzelijst
+  const wsQ = runBoolStr(runBool(l.walkStairs));
+  const wsSeg = (v, t) => `<button type="button" class="pq-b ${wsQ===v?'on':''}" data-ws-set="${esc(d)}|${v}" aria-pressed="${wsQ===v}">${t}</button>`;
+  return `<details class="acc" id="ocCard"${ocOpen?' open':''}><summary>Dagcheck <span class="tny muted" style="font-weight:400">· ${ocBits.length ? esc(ocBits.join(' · ')) : 'nog niet ingevuld'}</span></summary><div class="acc-body">
+    <div class="oc-panels">
+      <div class="oc-panel oc-dc"><h4 class="oc-ph">${TD_ICO(TDI.cal)}Dagcheck</h4>
+        <div class="form-grid cols-4">
+          ${fInput('Energie (1–10)','currentBlock.dailyLogs.'+d+'.energy', l.energy,'number','inputmode="numeric" min="1" max="10"')}
+          ${fInput('Spierpijn/stijfheid (0–10)','currentBlock.dailyLogs.'+d+'.stiffness', l.stiffness,'number','inputmode="numeric" min="0" max="10"')}
+          ${painFieldsHTML(d, l)}
+          <div class="field pq"><label id="wsL">Klachten bij wandelen of traplopen?</label><div class="pq-seg" role="group" aria-labelledby="wsL">${wsSeg('nee','Nee')}${wsSeg('ja','Ja')}</div></div>
+        </div>
+        ${injuryAskHTML(d)}
+      </div>
+      ${ocMoreFields()}
     </div>
-    ${injuryAskHTML(d)}
-    ${ocMoreFields()}
+    ${ocBeeld()}
   </div></details>`;
   }
-  /* slaap, HRV/RHR, notities en herstelbeeld: eigen kaart (computer: onder Snelle acties) */
-  /* slaap, HRV/RHR, notities en herstelbeeld: ingeklapt in de Dagcheck (zoals vóór 2.21.6) */
+  /* rechts naast de Dagcheck: slaap, RHR/HRV, gewicht en notities — altijd open (alleen de volgorde is anders: RHR vóór HRV) */
   function ocMoreFields(){
   const g = state.garmin.daily[d];
-  return `<details class="acc"><summary>Meer — slaap, HRV/RHR, notities</summary><div class="acc-body">
-      ${g ? `<p class="tny" style="color:var(--green)">✓ Garmin beschikbaar voor deze dag — HRV ${nl(g.nightHrv)} ms · RHR ${nl(g.restingHr)} · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
+  return `<div class="oc-panel oc-more"><h4 class="oc-ph">${TD_ICO(TDI.pulse)}Meer — slaap, RHR/HRV, notities</h4>
+      ${g ? `<p class="tny oc-garmin">✓ Garmin beschikbaar voor deze dag — RHR ${nl(g.restingHr)} · HRV ${nl(g.nightHrv)} ms · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
       <div class="form-grid cols-4">
-        ${fInput('HRV nacht (ms)','currentBlock.dailyLogs.'+d+'.hrv', l.hrv,'number','inputmode="numeric"')}
         ${fInput('RHR (bpm)','currentBlock.dailyLogs.'+d+'.restingHr', l.restingHr,'number','inputmode="numeric"')}
+        ${fInput('HRV nacht (ms)','currentBlock.dailyLogs.'+d+'.hrv', l.hrv,'number','inputmode="numeric"')}
         ${fInput('Slaap (uur)','currentBlock.dailyLogs.'+d+'.sleepHours', l.sleepHours,'number','inputmode="decimal" step="0.25"')}
         ${fInput('Slaapscore (Garmin)','currentBlock.dailyLogs.'+d+'.sleepScore', l.sleepScore,'number','inputmode="numeric"')}
+        ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
       </div>
       ${fText('Notities','currentBlock.dailyLogs.'+d+'.notes', l.notes)}
-      <h4>Herstelbeeld — 7 kalenderdagen</h4>
+    </div>`;
+  }
+  /* herstelbeeld over 7 kalenderdagen: zelfde berekening (recent7), zonder ontbrekende dagen aan te vullen */
+  function ocBeeld(){
+  return `<div class="oc-beeld"><h4 class="oc-ph">${TD_ICO(TDI.bars)}Herstelbeeld — 7 kalenderdagen</h4>
       <div class="recovery-strip">
-        ${[['HRV','hrv','ms'],['RHR','restingHr',''],['Slaap','sleepHours','u'],['Energie','energy','/10'],['Spierpijn','stiffness','/10'],['Pijn','pain','/10']]
+        ${[['RHR','restingHr','bpm'],['HRV','hrv','ms'],['Slaap','sleepHours','u'],['Energie','energy','/10'],['Spierpijn','stiffness','/10'],['Pijn','pain','/10']]
           .map(([lab,k,u])=>{ const r=recent7(k); return `<div class="rc"><b>${r.value==null?'—':nl(round(r.value, k==='sleepHours'?1:0))}</b><span>${lab} ${u}<br>${r.n}/7</span></div>`; }).join('')}
       </div>
-    </div></details>
-`;
+    </div>`;
   }
 
   /* ---- compacte cijferstrip: alleen relevant zodra het programma loopt ---- */
@@ -3622,6 +3676,7 @@ function tdRecoveryCard(st, oc){
     <div class="td-card-head"><h3 id="tdRecH" class="td-h-ico">${TD_ICO(TDI.heart)}Mijn herstel</h3>${tdChip(s)}</div>
     <div class="td-stats td-stats-4">${cell(TDI.bolt, 'Energie', v.energy, '/10')}${cell(TDI.pain, 'Pijn', v.pain, '/10')}${cell(TDI.stiff, 'Stijfheid', v.stiffness, '/10')}${cell(TDI.moon, 'Slaap', v.sleep!=null ? round(v.sleep,1) : null, ' u')}</div>
     ${st.own ? `<div class="td-sub">Je eigen beoordeling telt mee: ${esc(DAY_STATUS[st.own].label)}.</div>` : ''}
+    ${st.isToday ? `<div class="td-rec-why">${st.onlyMissing ? `<p class="td-sub">Oranje omdat ${esc(st.onlyMissing)}.</p>` : ''}${todayToggles(st)}</div>` : ''}
     ${oc}
   </section>`;
 }
@@ -3670,6 +3725,7 @@ const TDI = {
   walk:  '<circle cx="13" cy="4.5" r="1.8"></circle><path d="M10 21l2-6 2.5 2V21M8.5 12l2-4h3l2 4.5M12 15l1-7"></path>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
   layers:'<path d="m12 3 9 5-9 5-9-5z"></path><path d="m3 12.5 9 5 9-5M3 17l9 5 9-5"></path>',
+  pulse: '<path d="M3 12h4l2.5-6 5 12 2.5-6h4"/>',
   sun:   '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>',
 };
 function tdNextCard(st){
@@ -3698,6 +3754,7 @@ function tdQuickCard(st){
   return `<section class="td-card td-quickcard" aria-labelledby="tdQuickH"><h3 id="tdQuickH" class="td-h-ico">${TD_ICO(TDI.bolt)}Snelle acties</h3><div class="td-quicklist">${acts.join('')}</div></section>`;
 }
 const TD_HERO = `<svg class="td-hero-art" aria-hidden="true" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMax slice"><rect width="600" height="200" fill="#EEF5F8"></rect><circle cx="440" cy="78" r="30" fill="#FBEFD5"></circle><path d="M0 136 C90 100 170 116 260 108 C360 98 440 78 600 92 V200 H0 Z" fill="#DCEBE4"></path><path d="M0 160 C110 136 210 148 320 142 C420 136 500 124 600 132 V200 H0 Z" fill="#C7E0D2"></path><path d="M250 200 C300 172 360 160 420 150 C470 143 520 141 600 144" fill="none" stroke="#F2EDE2" stroke-width="9" stroke-linecap="round"></path><path d="M0 184 C140 170 260 176 380 172 C470 170 540 164 600 167 V200 H0 Z" fill="#A9D0B8"></path></svg><div class="td-hero-photo" aria-hidden="true"></div>`;   // foto over de tekening; ontbreekt het bestand, dan blijft de tekening
+if(window.matchMedia) matchMedia('(min-width:861px)').addEventListener('change', e=>{ const c = document.getElementById('ocCard'); if(c && e.matches) c.open = true; });
 function todayWideHTML(d, ctx, parts){
   const st = todayState(d, ctx), isFuture = d > todayISO(), hr = new Date().getHours();
   const greet = st.isToday ? (hr < 12 ? 'Goedemorgen' : hr < 18 ? 'Goedemiddag' : 'Goedenavond') + (profile().name ? ', '+String(profile().name).trim() : '') : (isFuture ? 'Vooruitkijken' : 'Terugkijken');
@@ -3708,7 +3765,7 @@ function todayWideHTML(d, ctx, parts){
   const sfeer = train ? 'ochtend' : herstel ? 'herstel' : (st.isToday && hr < 12) ? 'ochtend' : 'rust';
   const kaart = train ? 'training' : sfeer==='rust' ? 'ochtend' : 'rust';
   let h = `<div class="td sf-${sfeer} ka-${kaart}">
-    <section class="td-hero">${TD_HERO}<div class="td-hero-fade"></div>
+    <section class="td-hero td-hero-today">${TD_HERO}<div class="td-hero-fade"></div>
       <div class="td-hero-text"><div class="td-eyebrow">${esc(ctx.title)}${ctx.subtitle && ctx.period!=='program' ? ' · '+esc(ctx.subtitle) : ''}</div>
         <h2 class="td-greet">${greet}</h2><div class="td-date">${esc(dateTxt.charAt(0).toUpperCase()+dateTxt.slice(1))}</div></div>
       <div class="td-datesel no-print" role="group" aria-label="Dag kiezen">
@@ -3718,21 +3775,32 @@ function todayWideHTML(d, ctx, parts){
         ${st.isToday ? '' : '<button class="btn sm" data-nav-today>Vandaag</button>'}
       </div>
     </section>
+    <header class="td-head">
+      <div class="td-head-t"><h2 class="td-head-h">${st.isToday ? 'Vandaag' : esc(dateTxt.charAt(0).toUpperCase()+dateTxt.slice(1))}</h2>
+        <p class="td-head-p">${st.isToday ? 'Jouw herstel, taken en de volgende training in één overzicht.' : isFuture ? 'Vooruitkijken: wat er gepland staat.' : 'Terugkijken: herstel, taken en training van deze dag.'}</p></div>
+      <div class="td-datesel no-print" role="group" aria-label="Dag kiezen">
+        <button class="btn sm" data-nav-day="-1" aria-label="Vorige dag">←</button>
+        <input class="btn sm" type="date" data-bind="__date" value="${d}" aria-label="Datum kiezen">
+        <button class="btn sm" data-nav-day="1" aria-label="Volgende dag">→</button>
+        ${st.isToday ? '' : '<button class="btn sm" data-nav-today>Vandaag</button>'}
+      </div>
+    </header>
     ${ctx.period==='transition' ? '<p class="tny muted">Overgangsweek (31 aug – 6 sep): telt niet mee in het 12-weeks programma.</p>' : ''}
-    <div class="td-grid"><div class="td-main">`;
+    <div class="td-grid td-v3">`;
+  /* volgorde = telefoon (onder elkaar); de computer zet ze met CSS in rijen (zie .td-v3) */
   if(isFuture){
-    h += tdActivityCard(st, true) + `</div><aside class="td-side" aria-label="Vooruitblik">${tdNextCard(st)}</aside></div></div>`;
+    h += tdActivityCard(st, true) + tdNextCard(st) + `</div></div>`;
     return h;
   }
   h += tdCoachCard(st) + tdActivityCard(st, false)
-     + `<div class="td-pair">${tdTaskCard(st, ctx)}${tdRecoveryCard(st, parts.oc)}</div>`
+     + tdTaskCard(st, ctx) + tdRecoveryCard(st, parts.oc)
      + rtRegCard(d)
      + tdWeekCard(d, ctx)
-     + (parts.regs ? `<section class="td-regs" aria-label="Geregistreerd op deze dag"><h3 class="td-section">Geregistreerd op deze dag</h3>${parts.regs}</section>` : '');
-  h += `</div><aside class="td-side" aria-label="Volgende en registraties">${tdNextCard(st)}${tdQuickCard(st)}
-      <section class="td-side-regs" aria-labelledby="tdRegsH"><h3 id="tdRegsH" class="td-hidden-sr">Uitgebreide registraties</h3>
-        <div id="tdOther">${parts.other}</div></section>
-    </aside></div></div>`;
+     + (parts.regs ? `<section class="td-regs" aria-label="Geregistreerd op deze dag"><h3 class="td-section">Geregistreerd op deze dag</h3>${parts.regs}</section>` : '')
+     + tdNextCard(st) + tdQuickCard(st)
+     + `<section class="td-side-regs" aria-labelledby="tdRegsH"><h3 id="tdRegsH" class="td-hidden-sr">Uitgebreide registraties</h3>
+        <div id="tdOther">${parts.other}</div></section>`;
+  h += `</div></div>`;
   return h;
 }
 function latestContinuous(){ const v = allRunRecords().filter(r=>r.done===true).map(r=>num(r.continuousMin)).filter(x=>x!=null); return v[v.length-1] ?? null; }
@@ -7292,6 +7360,9 @@ document.addEventListener('click', e=>{
   const pqb = e.target.closest && e.target.closest('[data-pain-set],[data-pain-n]'); if(pqb){ e.preventDefault();
     if(pqb.dataset.painSet){ const [d, v] = pqb.dataset.painSet.split('|'); painSet(d, v); }
     else { const [d, n] = pqb.dataset.painN.split('|'), l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); l.painAny = 'ja'; l.pain = Number(n); }
+    saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
+  const wsb = e.target.closest && e.target.closest('[data-ws-set]'); if(wsb){ e.preventDefault();   // klachten bij wandelen/traplopen: zelfde veld als de oude keuzelijst
+    const [d, v] = wsb.dataset.wsSet.split('|'); (CB.dailyLogs[d] = CB.dailyLogs[d] || {}).walkStairs = v;
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
   const idl = e.target.closest && e.target.closest('[data-inj-del]'); if(idl){ e.preventDefault(); injuryDelete(idl.dataset.injDel); saveState(); renderCurrent(); return; }
   const ih = e.target.closest && e.target.closest('[data-inj-healed]'); if(ih){ e.preventDefault(); injuryHealed(ih.dataset.injHealed); saveState(); renderCurrent(); return; }
