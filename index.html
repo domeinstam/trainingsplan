@@ -1125,6 +1125,20 @@ summary.oc-ph{flex-wrap:wrap}
 .td-recovery #ocCard .oc-panel .field{padding:6px 0}
 .td-recovery #ocCard .oc-panel .field input,.td-recovery #ocCard .oc-panel .field .pq-b{min-height:36px}
 .td-recovery #ocCard .oc-panel .pq-b{padding:6px 12px}
+.td-recovery #ocCard .field.feel-f{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.feel-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.feel-b{display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--td-line,#D9E5EA);background:#fff;border-radius:10px;padding:6px 2px 5px;min-height:52px;cursor:pointer;font:600 11.5px Inter,system-ui,sans-serif;color:var(--td-sub,#4A5F72);line-height:1.15;text-align:center}
+.feel-b .feel-ico{width:22px;height:22px;color:#7F96A6}
+.feel-b:hover{background:#F0F8FB}
+.feel-b.on{background:#E0F2F5;border-color:var(--green,#04717C);color:#035A63;box-shadow:inset 0 0 0 1px var(--green,#04717C)}
+.feel-b.on .feel-ico{color:var(--green,#04717C)}
+.feel-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.feel-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:10px;background:#F4F8FA;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.2}
+.feel-day.has{background:#EAF6F7;color:var(--ink)}
+.feel-day .feel-ico{width:24px;height:24px;color:var(--green,#04717C)}
+.feel-dn{font-weight:700;text-transform:capitalize;color:var(--ink)}
+.feel-none{font-size:18px;line-height:24px;color:#A3B6C4}
+@media(max-width:420px){ .feel-day span:last-child{display:none} }
 .td-recovery #ocCard .oc-panel>.field.wide label{margin-bottom:4px}
 .td-recovery #ocCard .oc-more textarea{min-height:58px;height:58px;resize:vertical}
 .td-recovery #ocCard .oc-dc .inj-ask{margin:4px 14px 12px}
@@ -1250,7 +1264,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.22.2";
+const APP_VERSION = "block2-2.23.0";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2909,7 +2923,7 @@ function renderToday(){
   function ochtendcheckCard(){
   const g = state.garmin.daily[d];
   // korte stand in de kop, zodat je ook ingeklapt ziet wat er al staat
-  const ocBits = [ l.energy!=null&&l.energy!=='' ? 'energie '+l.energy : null, l.stiffness!=null&&l.stiffness!=='' ? 'stijfheid '+l.stiffness : null,
+  const ocBits = [ feelOf(l) ? 'gevoel: '+feelWord(feelOf(l)).toLowerCase() : null, l.energy!=null&&l.energy!=='' ? 'energie '+l.energy : null, l.stiffness!=null&&l.stiffness!=='' ? 'stijfheid '+l.stiffness : null,
                    painQ(l)==='nee' ? 'geen pijn' : num(l.pain)>0 ? painWord(l)+' '+l.pain : null, l.walkStairs==='ja' ? 'klachten bij wandelen/traplopen' : null, l.weightKg!=null&&l.weightKg!=='' ? nl(l.weightKg)+' kg' : null ].filter(Boolean);
   // computer: alles direct open (geen uitklappen); telefoon: ingeklapt zoals altijd
   const ocOpen = !!(window.matchMedia && matchMedia('(min-width:861px)').matches);
@@ -2920,6 +2934,7 @@ function renderToday(){
     <div class="oc-panels">
       <details class="oc-panel oc-dc" data-oc-p="dc"${!ocOpen || ocPanelOpen('dc') ? ' open' : ''}><summary class="oc-ph">${TD_ICO(TDI.cal)}Dagcheck<span class="oc-ph-bits">${(x=> x.length ? esc(x.join(' · ')) : 'nog niet ingevuld')(ocBits.filter(t=>!/ kg$/.test(t)))}</span>${TD_ICO(TDI.chev, 'oc-chev')}</summary>
         <div class="form-grid cols-4">
+          ${feelFieldHTML(d, l)}
           ${fInput('Energie (1–10)','currentBlock.dailyLogs.'+d+'.energy', l.energy,'number','inputmode="numeric" min="1" max="10"')}
           ${fInput('Spierpijn/stijfheid (0–10)','currentBlock.dailyLogs.'+d+'.stiffness', l.stiffness,'number','inputmode="numeric" min="0" max="10"')}
           ${painFieldsHTML(d, l)}
@@ -3153,6 +3168,18 @@ function painFieldsHTML(d, l){
   }
   return h;
 }
+/* Hoe voel je je vandaag? (dailyLogs[d].feel = 1–5, of afwezig). Optioneel en alleen voor jezelf: telt niet mee in het
+   herstel, het advies of het vinkje van de Dagcheck; gaat nooit naar Garmin of Intervals. Nogmaals klikken = wissen. */
+const FEEL = [[1,'Slecht','M8 17a4.5 4.5 0 0 1 8 0'],[2,'Minder goed','M9 16a3.5 3.5 0 0 1 6 0'],[3,'Neutraal','M9 15h6'],[4,'Goed','M9 14a3.5 3.5 0 0 0 6 0'],[5,'Heel goed','M8 13.5a4 4 0 0 0 8 0']];
+const feelOf = l => { const v = num(l && l.feel); return v>=1 && v<=5 ? Math.round(v) : null; };
+const feelWord = v => (FEEL.find(x=>x[0]===v)||[])[1] || null;
+const feelIco = v => TD_ICO('<circle cx="12" cy="12" r="9"/><path d="M9 9.5v.6M15 9.5v.6"/><path d="'+FEEL.find(x=>x[0]===v)[2]+'"/>', 'feel-ico');
+function feelFieldHTML(d, l){
+  const cur = feelOf(l);
+  return `<div class="field feel-f"><label id="feelL">Hoe voel je je vandaag? <span class="tny muted">(optioneel)</span></label>
+    <div class="feel-row" role="radiogroup" aria-labelledby="feelL">${FEEL.map(([v,t])=>`<button type="button" class="feel-b ${cur===v?'on':''}" role="radio" aria-checked="${cur===v}" data-feel-set="${esc(d)}|${v}" title="${cur===v ? t+' (nogmaals klikken om te wissen)' : t}">${feelIco(v)}<span>${t}</span></button>`).join('')}</div></div>`;
+}
+function feelSet(d, v){ const l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); if(feelOf(l)===v) delete l.feel; else l.feel = v; }
 function painSet(d, v){
   const l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); ui.painOther = null;
   if(v==='nee'){ l.painAny = 'nee'; l.pain = 0; delete l.painArea; }
@@ -4981,6 +5008,14 @@ function renderProgress(){
   html += `<div class="section-title no-print" style="margin-top:0"><h2 style="font-size:14px">Periode</h2><div class="range-toggle">
     ${[['84','12 weken'],['42','6 weken'],['28','28 dagen'],['all','Alles']].map(([v,t])=>`<button class="btn sm ${r===v?'active':''}" data-range="${v}">${t}</button>`).join('')}
   </div></div>`;
+
+  /* ---- Mijn gevoel: afgelopen 7 dagen, per dag het antwoord; geen gemiddelde of score ---- */
+  {
+    const days = Array.from({length:7}, (_,i)=> addDays(todayISO(), i-6)), vals = days.map(d=> feelOf(CB.dailyLogs[d]));
+    html += `<div class="card feel-card"><h3>Mijn gevoel <span class="sub">afgelopen 7 dagen</span></h3>
+      <div class="feel-week">${days.map((d,i)=>{ const v = vals[i]; return `<div class="feel-day ${v ? 'has' : ''}"><span class="feel-dn">${esc(fmt(d,{weekday:'short'}))}</span>${v ? feelIco(v)+`<span>${esc(feelWord(v))}</span>` : `<b class="feel-none" aria-label="niet ingevuld">—</b><span class="muted">niet ingevuld</span>`}</div>`; }).join('')}</div>
+      <p class="tny muted" style="margin-top:8px">Wat je bij de Dagcheck invult onder "Hoe voel je je vandaag?". Alleen voor jezelf; telt niet mee in het herstel of het advies.</p></div>`;
+  }
 
   /* ---- Gewicht: laatste / 7-daags gemiddelde / verandering, uitleg optioneel ---- */
   {
@@ -7413,6 +7448,9 @@ document.addEventListener('click', e=>{
     if(pqb.dataset.painSet){ const [d, v] = pqb.dataset.painSet.split('|'); painSet(d, v); }
     else { const [d, n] = pqb.dataset.painN.split('|'), l = (CB.dailyLogs[d] = CB.dailyLogs[d] || {}); l.painAny = 'ja'; l.pain = Number(n); }
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
+  const fb = e.target.closest && e.target.closest('[data-feel-set]'); if(fb){ e.preventDefault();   // gevoel: kiezen, wijzigen, nogmaals = wissen
+    const [d, v] = fb.dataset.feelSet.split('|'); feelSet(d, Number(v)); saveState(); renderCurrent();
+    const c = document.getElementById('ocCard'); if(c) c.open = true; const n = document.querySelector('[data-feel-set="'+d+'|'+v+'"]'); if(n) n.focus(); return; }
   const wsb = e.target.closest && e.target.closest('[data-ws-set]'); if(wsb){ e.preventDefault();   // klachten bij wandelen/traplopen: zelfde veld als de oude keuzelijst
     const [d, v] = wsb.dataset.wsSet.split('|'); (CB.dailyLogs[d] = CB.dailyLogs[d] || {}).walkStairs = v;
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
