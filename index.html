@@ -269,6 +269,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-since{font-size:13px;color:var(--muted)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
+.td-task.is-opt:not(.is-done) .td-tick{border-style:dashed}
+.oc-panel{scroll-margin-top:90px}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
 .td-tick{width:22px;height:22px;margin-top:0}
@@ -1100,6 +1102,14 @@ body{background:var(--paper)}
 .oc-beeld{margin-top:12px;background:#fff}
 .oc-ph{display:flex;align-items:center;gap:8px;margin:0!important;padding:9px 14px;background:#F0F8FB;border-bottom:1px solid #D8EAF0;font-size:14px!important;font-weight:700;color:var(--td-ink)}
 .oc-ph .td-ico{width:18px;height:18px}
+summary.oc-ph{cursor:pointer;list-style:none;user-select:none}
+summary.oc-ph::-webkit-details-marker{display:none}
+summary.oc-ph{flex-wrap:wrap}
+.oc-ph-bits{order:3;flex:1 1 100%;min-width:0;font-size:12.5px;font-weight:400;color:var(--td-sub);margin:2px 0 0 26px;line-height:1.4}   /* ingeklapt: korte stand onder de titel */
+.oc-panel[open]>.oc-ph .oc-ph-bits{display:none}
+.oc-ph .oc-chev{margin-left:auto;color:var(--td-sub);transform:rotate(90deg);transition:transform .15s}
+.oc-panel[open]>.oc-ph .oc-chev{transform:rotate(-90deg)}
+.oc-panel:not([open])>.oc-ph{border-bottom:0}
 .td-recovery #ocCard .oc-panel .form-grid{padding:2px 14px}
 .td-recovery #ocCard .oc-panel>.field.wide{padding:4px 14px 12px}
 .td-recovery #ocCard .oc-panel .field{padding:6px 0}
@@ -1115,12 +1125,11 @@ body{background:var(--paper)}
   .td-recovery #ocCard .oc-beeld .recovery-strip{grid-template-columns:repeat(6,minmax(0,1fr))}
 }
 .td-rec-why{display:none}
-@media(max-width:860px){ .td-recovery #ocCard .oc-dc>.oc-ph{display:none} }   /* de uitklapkop heet al Dagcheck */
+@media(max-width:860px){ .td-recovery #ocCard .oc-dc>.oc-ph{display:none} }   /* telefoon: Dagcheck staat altijd open in de uitklap */   /* de uitklapkop heet al Dagcheck */
 @media(min-width:861px){
   .td-hero-today{display:none}
   .td-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;position:relative;margin:0 0 18px;padding:6px 0 4px;min-height:84px}
   .td-head::before{content:"";position:absolute;right:0;top:-26px;width:min(520px,48%);height:96px;background:url(achtergronden/heuvels_breed.webp) right bottom/auto 150px no-repeat;opacity:.45;-webkit-mask-image:linear-gradient(90deg,transparent,#000 50%);mask-image:linear-gradient(90deg,transparent,#000 50%);pointer-events:none}
-  .oc-panels{align-items:stretch}
   .td-head-t,.td-head .td-datesel{position:relative}
   .td-head-h{margin:0;font-size:34px;font-weight:800;letter-spacing:-.01em;color:var(--td-ink)}
   .td-head-p{margin:4px 0 0;font-size:16px;color:var(--td-text)}
@@ -1231,7 +1240,7 @@ body{background:var(--paper)}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.22.0";
+const APP_VERSION = "block2-2.22.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2899,7 +2908,7 @@ function renderToday(){
   const wsSeg = (v, t) => `<button type="button" class="pq-b ${wsQ===v?'on':''}" data-ws-set="${esc(d)}|${v}" aria-pressed="${wsQ===v}">${t}</button>`;
   return `<details class="acc" id="ocCard"${ocOpen?' open':''}><summary>Dagcheck <span class="tny muted" style="font-weight:400">· ${ocBits.length ? esc(ocBits.join(' · ')) : 'nog niet ingevuld'}</span></summary><div class="acc-body">
     <div class="oc-panels">
-      <div class="oc-panel oc-dc"><h4 class="oc-ph">${TD_ICO(TDI.cal)}Dagcheck</h4>
+      <details class="oc-panel oc-dc" data-oc-p="dc"${!ocOpen || ocPanelOpen('dc') ? ' open' : ''}><summary class="oc-ph">${TD_ICO(TDI.cal)}Dagcheck<span class="oc-ph-bits">${(x=> x.length ? esc(x.join(' · ')) : 'nog niet ingevuld')(ocBits.filter(t=>!/ kg$/.test(t)))}</span>${TD_ICO(TDI.chev, 'oc-chev')}</summary>
         <div class="form-grid cols-4">
           ${fInput('Energie (1–10)','currentBlock.dailyLogs.'+d+'.energy', l.energy,'number','inputmode="numeric" min="1" max="10"')}
           ${fInput('Spierpijn/stijfheid (0–10)','currentBlock.dailyLogs.'+d+'.stiffness', l.stiffness,'number','inputmode="numeric" min="0" max="10"')}
@@ -2907,7 +2916,7 @@ function renderToday(){
           <div class="field pq"><label id="wsL">Klachten bij wandelen of traplopen?</label><div class="pq-seg" role="group" aria-labelledby="wsL">${wsSeg('nee','Nee')}${wsSeg('ja','Ja')}</div></div>
         </div>
         ${injuryAskHTML(d)}
-      </div>
+      </details>
       ${ocMoreFields()}
     </div>
     ${ocBeeld()}
@@ -2916,7 +2925,9 @@ function renderToday(){
   /* rechts naast de Dagcheck: slaap, RHR/HRV, gewicht en notities — altijd open (alleen de volgorde is anders: RHR vóór HRV) */
   function ocMoreFields(){
   const g = state.garmin.daily[d];
-  return `<div class="oc-panel oc-more"><h4 class="oc-ph">${TD_ICO(TDI.pulse)}Meer — slaap, RHR/HRV, notities</h4>
+  const has = v => v!=null && v!=='';
+  const bits = [has(l.restingHr) ? 'RHR '+nl(l.restingHr) : null, has(l.hrv) ? 'HRV '+nl(l.hrv) : null, has(l.sleepHours) ? 'slaap '+nl(l.sleepHours)+' u' : null, has(l.weightKg) ? nl(l.weightKg)+' kg' : null, has(l.notes) ? 'notitie' : null].filter(Boolean);
+  return `<details class="oc-panel oc-more" data-oc-p="more"${ocPanelOpen('more') ? ' open' : ''}><summary class="oc-ph">${TD_ICO(TDI.moon)}Slaap<span class="oc-ph-bits">${bits.length ? esc(bits.join(' · ')) : 'nog niet ingevuld'}</span>${TD_ICO(TDI.chev, 'oc-chev')}</summary>
       ${g ? `<p class="tny oc-garmin">✓ Garmin beschikbaar voor deze dag — RHR ${nl(g.restingHr)} · HRV ${nl(g.nightHrv)} ms · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
       <div class="form-grid cols-4">
         ${fInput('RHR (bpm)','currentBlock.dailyLogs.'+d+'.restingHr', l.restingHr,'number','inputmode="numeric"')}
@@ -2926,7 +2937,7 @@ function renderToday(){
         ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
       </div>
       ${fText('Notities','currentBlock.dailyLogs.'+d+'.notes', l.notes)}
-    </div>`;
+    </details>`;
   }
   /* herstelbeeld over 7 kalenderdagen: zelfde berekening (recent7), zonder ontbrekende dagen aan te vullen */
   function ocBeeld(){
@@ -3650,7 +3661,10 @@ function tdActivityCard(st, isFuture){
 /* mijn taken: afgeleid uit wat Atempo al weet (geen eigen takenlijst); afvinken = dezelfde registratie als altijd */
 function tdTasks(st, ctx){
   const { d, l, planned, done, other, isToday } = st, checks = l.checks || {}, out = [];
-  /* de Dagcheck staat niet als taak: die zit al in de coach en bij Mijn herstel */
+  /* Dagcheck (telt mee) en Slaap (optioneel) als taak: vinkje zodra ingevuld; klikken opent het paneel bij Mijn herstel.
+     Dagcheck ingevuld = dezelfde regel als het advies (energie, pijn, wandelen/traplopen); Slaap = RHR, HRV en slaap (zelf of Garmin) */
+  const showOc = d <= todayISO(), g = state.garmin.daily[d] || {}, has = v => v!=null && v!=='';
+  if(showOc) out.push({ done: runPreComplete(runPre(d)), html:`<button class="td-link" data-oc-panel="dc">Dagcheck</button>` });
   if(planned) out.push({ done:false, html:`<button class="td-link" data-run-open="${planned.id}">Hardlooptraining · ${esc(planned.name.replace(/ – .*/, ''))}</button>` });
   if(done){ out.push({ done:true, html:'Hardlooptraining' });
     out.push(runPostComplete(done.post) ? { done:true, html:'Training geëvalueerd' } : { done:false, html:`<button class="td-link" data-run-open="${done.id}">Training evalueren</button>` }); }
@@ -3658,6 +3672,8 @@ function tdTasks(st, ctx){
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
   routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
+  if(showOc) out.push({ done: (has(l.restingHr)||has(g.restingHr)) && (has(l.hrv)||has(g.nightHrv)) && (has(l.sleepHours)||has(g.sleepDuration)), optional:true,
+    html:`<button class="td-link" data-oc-panel="more">Slaap</button> <span class="td-opt">(optioneel)</span>` });
   const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return out;
 }
@@ -3754,6 +3770,8 @@ function tdQuickCard(st){
   return `<section class="td-card td-quickcard" aria-labelledby="tdQuickH"><h3 id="tdQuickH" class="td-h-ico">${TD_ICO(TDI.bolt)}Snelle acties</h3><div class="td-quicklist">${acts.join('')}</div></section>`;
 }
 const TD_HERO = `<svg class="td-hero-art" aria-hidden="true" viewBox="0 0 600 200" preserveAspectRatio="xMaxYMax slice"><rect width="600" height="200" fill="#EEF5F8"></rect><circle cx="440" cy="78" r="30" fill="#FBEFD5"></circle><path d="M0 136 C90 100 170 116 260 108 C360 98 440 78 600 92 V200 H0 Z" fill="#DCEBE4"></path><path d="M0 160 C110 136 210 148 320 142 C420 136 500 124 600 132 V200 H0 Z" fill="#C7E0D2"></path><path d="M250 200 C300 172 360 160 420 150 C470 143 520 141 600 144" fill="none" stroke="#F2EDE2" stroke-width="9" stroke-linecap="round"></path><path d="M0 184 C140 170 260 176 380 172 C470 170 540 164 600 167 V200 H0 Z" fill="#A9D0B8"></path></svg><div class="td-hero-photo" aria-hidden="true"></div>`;   // foto over de tekening; ontbreekt het bestand, dan blijft de tekening
+function ocPanelOpen(k){ const o = ui.ocP || {}; return k in o ? o[k] : false; }   // standaard ingeklapt
+document.addEventListener('toggle', e=>{ const k = e.target && e.target.dataset && e.target.dataset.ocP; if(k){ ui.ocP = { ...(ui.ocP||{}), [k]: e.target.open }; } }, true);
 if(window.matchMedia) matchMedia('(min-width:861px)').addEventListener('change', e=>{ const c = document.getElementById('ocCard'); if(c && e.matches) c.open = true; });
 function todayWideHTML(d, ctx, parts){
   const st = todayState(d, ctx), isFuture = d > todayISO(), hr = new Date().getHours();
@@ -7366,7 +7384,10 @@ document.addEventListener('click', e=>{
     saveState(); renderCurrent(); const c = document.getElementById('ocCard'); if(c) c.open = true; return; }
   const idl = e.target.closest && e.target.closest('[data-inj-del]'); if(idl){ e.preventDefault(); injuryDelete(idl.dataset.injDel); saveState(); renderCurrent(); return; }
   const ih = e.target.closest && e.target.closest('[data-inj-healed]'); if(ih){ e.preventDefault(); injuryHealed(ih.dataset.injHealed); saveState(); renderCurrent(); return; }
-  const oc = e.target.closest && e.target.closest('[data-oc-open]'); if(oc){ e.preventDefault(); ui.date = todayISO(); showView('today'); const card = document.getElementById('ocCard'); if(card){ card.open = true; setTimeout(()=>card.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
+  const ocp = e.target.closest && e.target.closest('[data-oc-panel]'); if(ocp){ e.preventDefault();   // taak Dagcheck/Slaap: open dat paneel bij Mijn herstel
+    const k = ocp.dataset.ocPanel, card = document.getElementById('ocCard'); ui.ocP = { ...(ui.ocP||{}), [k]: true };
+    if(card){ card.open = true; const p = card.querySelector('[data-oc-p="'+k+'"]'); if(p){ p.open = true; setTimeout(()=>p.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } } return; }
+  const oc = e.target.closest && e.target.closest('[data-oc-open]'); if(oc){ e.preventDefault(); ui.date = todayISO(); showView('today'); const card = document.getElementById('ocCard'); if(card){ card.open = true; const dc = card.querySelector('.oc-dc'); if(dc) dc.open = true; setTimeout(()=>card.scrollIntoView({ block:'start', behavior:'smooth' }), 30); } return; }
   const tab = e.target.closest && e.target.closest('[data-run-tab]'); if(tab){ RUI.tab = tab.dataset.runTab; RUI.msg = ''; const v = document.getElementById('view-running'); if(v) v.innerHTML = ''; /* geen open/dicht-stand meenemen naar een ander tabblad */ renderCurrent(); window.scrollTo({top:0}); return; }
   const b = e.target.closest && e.target.closest('[data-run-act]'); if(!b) return;
   e.preventDefault(); const p = b.dataset.runAct.split('|'); runAct(p[0], p.slice(1), b);
