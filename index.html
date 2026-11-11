@@ -1290,7 +1290,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.0";
+const APP_VERSION = "block2-2.24.1";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2515,6 +2515,8 @@ function strengthRoutine(wi){
   return routinesActive().find(r=> rtExercises(r).some(x=>{ const e = rtEx(x.exId); return e && (e.session==='A' || e.session==='B'); })
     && String(routineAlt(r) || r.createdAt || '').slice(0,10) <= end) || null;
 }
+/* getoond weeknummer = week van het jaar (ISO, zoals in de kalender bij Hardlopen); intern blijft wi de week van het blok */
+function weekNo(wi){ return runIsoWeek(weekDates(wi)[0]); }
 function weekStatus(wi){
   const ds = weekDates(wi);
   const cfg = weekConfig(wi), sr = strengthRoutine(wi);
@@ -2756,7 +2758,7 @@ function getTodayContext(d){
   return {
     period:'program', cfg, ws, focusEx, plannedCoach, openGoals,
     learnRelevant: !!(focusEx && !ws.learning.met), walkToday: walkPlannedToday,
-    title:`Week ${wi+1} · ${PHASE_LABEL[cfg.phase]||cfg.phase}`,
+    title:`Week ${weekNo(wi)} · ${PHASE_LABEL[cfg.phase]||cfg.phase}`,
     primary, logged,
   };
 }
@@ -4042,13 +4044,13 @@ function renderWeek(){
     : (cfg.consolidation ? 'Geen nieuwe oefening — herhalen en verankeren'
     : (cfg.phase==='integreren' ? 'Korte krachtsessies (Kracht A/B)' : 'Geen nieuwe oefening'));
 
-  let html = `<div class="pagehead"><div class="eyebrow">Week ${wi+1} van ${blockWeeks()} · <span class="phase-pill">${esc(phaseLabel)}</span></div>
-    <h2>Week ${wi+1} — ${esc(phaseLabel==='Leren'?'Leren':phaseLabel)}</h2>
+  let html = `<div class="pagehead"><div class="eyebrow">Week ${weekNo(wi)} · <span class="phase-pill">${esc(phaseLabel)}</span></div>
+    <h2>Week ${weekNo(wi)} — ${esc(phaseLabel==='Leren'?'Leren':phaseLabel)}</h2>
     <p>${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))} · ${newMoveLine}</p>
     ${cfg.learningGoal?`<p class="small muted">${esc(cfg.learningGoal)}</p>`:''}</div>`;
 
   html += `<div class="section-title no-print" style="margin-top:0"><div class="range-toggle">
-    ${Array.from({length:blockWeeks()},(_,i)=>`<button class="btn sm ${i===wi?'active':''}" data-week="${i}">W${i+1}</button>`).join('')}
+    ${Array.from({length:blockWeeks()},(_,i)=>`<button class="btn sm ${i===wi?'active':''}" data-week="${i}">W${weekNo(i)}</button>`).join('')}
   </div></div>`;
 
   const rg = goalRunGoal();
@@ -4217,11 +4219,11 @@ function weekWideHTML(wi, W){
   const goalSum = [ws.coach.target!=null ? `${ws.coach.done} van ${ws.coach.target} hardlooptrainingen` : null, kr.length ? `kracht ${kr.filter(x=>x.done).length} van ${kr.length}` : null,
     ws.longWalk.applicable ? (ws.longWalk.done ? 'lange wandeling gedaan' : 'lange wandeling nog te doen') : null, showR ? `routines ${ws.routines.reduce((a,x)=>a+x.done,0)}× afgevinkt` : null].filter(Boolean).join(' · ');
   const inner = s => s ? s.replace(/^<details class="acc"><summary>[\s\S]*?<\/summary>/, '').replace(/<\/details>\s*$/, '') : '';
-  const weekOpts = Array.from({length:blockWeeks()},(_,i)=>{ const d2 = weekDates(i); return `<option value="${i}" ${i===wi?'selected':''}>Week ${i+1} · ${esc(fmt(d2[0],{day:'numeric',month:'short'}))} – ${esc(fmt(d2[6],{day:'numeric',month:'short'}))}</option>`; }).join('');
+  const weekOpts = Array.from({length:blockWeeks()},(_,i)=>{ const d2 = weekDates(i); return `<option value="${i}" ${i===wi?'selected':''}>Week ${weekNo(i)} · ${esc(fmt(d2[0],{day:'numeric',month:'short'}))} – ${esc(fmt(d2[6],{day:'numeric',month:'short'}))}</option>`; }).join('');
   return `<div class="td wk sf-rust">
     <section class="td-hero wk-hero">${TD_HERO}<div class="td-hero-fade"></div>
-      <div class="td-hero-text"><span class="wk-pillweek">WEEK ${wi+1} VAN ${blockWeeks()}</span>
-        <h2 class="td-greet">Week ${wi+1} — ${esc(phaseLabel)}</h2>
+      <div class="td-hero-text"><span class="wk-pillweek">WEEK ${weekNo(wi)}</span>
+        <h2 class="td-greet">Week ${weekNo(wi)} — ${esc(phaseLabel)}</h2>
         <div class="td-date wk-date">${TD_ICO(TDI.cal)}${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))}</div>
         ${cfg.learningGoal ? `<p class="wk-goal">${esc(cfg.learningGoal)}</p>` : ''}</div>
     </section>
@@ -5146,7 +5148,7 @@ function renderProgress(){
     const weeks = [3,2,1,0].map(k=> wi0 - k), rs = routinesActive();
     const goalHTML = g => `<div class="goal-main"><div class="goal-name">${esc(g.name)} ${g.status==='behaald' ? `<span class="rt-pill goal-done">Behaald${g.achievedAt ? ' '+esc(fmt(g.achievedAt,{day:'numeric',month:'short'})) : ''}</span>` : ''}</div>
       ${g.kind==='hardlopen' && g.status==='actief' ? `<ul class="goal-info">${goalRunInfo().map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : ''}</div>`;
-    const rtRow = r => { const cells = weeks.map(w=>{ const ds = weekDates(w), n = ds.filter(d=> routineDoneOn(CB.dailyLogs[d], r)).length, m = routineTarget(r, ds); return { n, m, lab: 'W'+(w+1) }; });
+    const rtRow = r => { const cells = weeks.map(w=>{ const ds = weekDates(w), n = ds.filter(d=> routineDoneOn(CB.dailyLogs[d], r)).length, m = routineTarget(r, ds); return { n, m, lab: 'W'+weekNo(w) }; });
       return `<div class="goal-rrow"><span class="goal-rn"><b>${esc(r.name)}</b><small>${esc(routineFreqText(r))}</small></span>${cells.map(c=> c.m ? `<span class="goal-wk" title="${c.lab}: ${c.n} van de ${c.m} geplande momenten"><span class="td-bar"><i style="width:${Math.min(100, Math.round(100*c.n/(c.m||1)))}%"></i></span><small>${c.lab} · ${c.n}/${c.m}</small></span>` : `<span class="goal-wk"><small>${c.lab} · —</small></span>`).join('')}</div>`; };
     if(gs.length || rs.length) html += `<div class="card goals-prog"><h3>Mijn doelen</h3>
       ${gs.length ? gs.map(goalHTML).join('') : '<p class="small muted">Nog geen hoofddoel. <a href="#" data-view="profile">Stel er een in bij Mijn profiel</a>.</p>'}
@@ -5281,7 +5283,7 @@ function renderProgress(){
 
   html += `<details class="acc"><summary>Trainingstijd per week</summary><div class="acc-body">
     <div class="table-wrap"><table class="data"><thead><tr><th>Week</th><th class="num">Hardlopen</th><th class="num">Leermomenten</th><th class="num">Kracht</th><th class="num">Ochtendroutine</th><th class="num">L. wandeling</th><th class="num">${esc(extraMove() || 'Extra beweging')}</th><th class="num">Totaal uitgevoerd</th><th class="num" title="Uit geïmporteerde Garmin-activiteiten (los van de handmatige kolommen, niet opgeteld)">Garmin hardlopen</th><th class="num">Garmin wandelen</th><th class="num">Garmin overig</th></tr></thead><tbody>
-    ${Array.from({length:blockWeeks()},(_,i)=>{ const m=weekMinutes(i), gm=garminWeekMinutes(i); return `<tr><td>Week ${i+1}</td>
+    ${Array.from({length:blockWeeks()},(_,i)=>{ const m=weekMinutes(i), gm=garminWeekMinutes(i); return `<tr><td>Week ${weekNo(i)}</td>
       <td class="num">${m.done.hardlopen}</td><td class="num">${m.done.leermomenten}</td><td class="num">${m.done.kracht}</td><td class="num">${m.done.ochtendroutine}</td><td class="num">${m.done['lange wandeling']}</td><td class="num">${m.done.avondwandeling}</td>
       <td class="num">${m.doneTotal} min</td><td class="num">${gm.run}</td><td class="num">${gm.walk}</td><td class="num">${gm.other}</td></tr>`; }).join('')}
     </tbody></table></div>
@@ -6302,7 +6304,7 @@ function buildPrint(mode){
     goalBits.push(`Lange wandeling ${ws.longWalk.applicable?(ws.longWalk.done?'✓':'nog te doen'):'niet deze week'}`);
     ws.routines.forEach(x=> goalBits.push(`${esc(x.r.name)} ${x.done}/${x.target}`));
     t.innerHTML = `<div class="print-page">
-      <h1>Atempo — week ${wi+1} van ${blockWeeks()} · ${esc(PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
+      <h1>Atempo — week ${weekNo(wi)} · ${esc(PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
       <p>${fmt(ds[0],{day:'numeric',month:'long'})} – ${fmt(ds[6],{day:'numeric',month:'long'})}${goalMain() ? ' · '+esc(goalMain().name) : ''}</p>
       ${cfg.learningGoal?`<p><i>${esc(cfg.learningGoal)}</i></p>`:''}
       <p><b>Weekdoelen:</b> ${goalBits.join(' · ')}</p>
