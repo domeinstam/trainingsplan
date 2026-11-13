@@ -270,7 +270,9 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task.is-opt:not(.is-done) .td-tick{border-style:dashed}
-.td-grip{flex:0 0 auto;align-self:center;border:0;background:none;color:#A3B6C4;cursor:grab;touch-action:none;width:18px;min-height:32px;padding:0;margin:0 -4px 0 -8px;border-radius:6px;display:grid;place-items:center}
+.td-task-in{font-weight:600}                                   /* alle taaknamen even dik als Dagcheck en Slaap */
+.td-task-in small,.td-task-in .rt-sub,.td-task-in .td-opt,.td-task-in .td-dur,.td-task-in .td-dur label{font-weight:400}
+.td-grip{flex:0 0 auto;align-self:center;border:0;background:none;color:#A3B6C4;cursor:grab;touch-action:auto;-webkit-touch-callout:none;width:18px;min-height:32px;padding:0;margin:0 -4px 0 -8px;border-radius:6px;display:grid;place-items:center}
 .td-grip svg{width:16px;height:16px}
 .td-grip:hover,.td-grip:focus-visible{color:var(--td-act);background:#F0F8FB}
 @media(hover:hover){ .td-grip{opacity:0;transition:opacity .12s} .td-task:hover .td-grip,.td-grip:focus-visible{opacity:1} }   /* computer: greepje bij aanwijzen */
@@ -1158,6 +1160,13 @@ summary.oc-ph{flex-wrap:wrap}
 .td-goal{display:inline-flex;align-items:center;gap:6px;margin-top:8px;background:none;border:0;padding:0;font:600 13.5px Inter,system-ui,sans-serif;color:var(--td-act);cursor:pointer}
 .td-goal .td-ico{width:16px;height:16px}
 .td-goal:hover{text-decoration:underline}
+.feel-stats{margin-top:4px}
+.feel-dist{display:flex;flex-direction:column;gap:6px;margin-top:12px;max-width:520px}
+.feel-dr{display:grid;grid-template-columns:24px 96px minmax(0,1fr) 34px;gap:10px;align-items:center;font-size:13.5px;color:var(--ink)}
+.feel-dr .feel-ico{width:22px;height:22px;color:var(--green,#04717C)}
+.feel-dr .td-bar{display:block;height:8px;border-radius:999px;background:#E8EEF2;overflow:hidden}
+.feel-dr .td-bar i{display:block;height:100%;background:#028C99;border-radius:999px}
+.feel-dr b{text-align:right}
 .feel-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .feel-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:10px;background:#F4F8FA;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.2}
 .feel-day.has{background:#EAF6F7;color:var(--ink)}
@@ -1290,7 +1299,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.1";
+const APP_VERSION = "block2-2.24.2";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2369,6 +2378,7 @@ function recoveryTimeline(){
   for(const [d,l] of Object.entries(CB.dailyLogs)){
     const g = state.garmin.daily[d] || {};
     put(d,'energy', num(l.energy)); put(d,'stiffness', num(l.stiffness)); put(d,'pain', num(l.pain));
+    put(d,'feel', feelOf(l));                                    // gevoel 1–5 (meting en statistiek; telt niet mee in het hersteladvies)
     put(d,'restingHr', num(l.restingHr) ?? num(g.restingHr));
     put(d,'hrv', num(l.hrv) ?? num(g.nightHrv));
     put(d,'sleepHours', num(l.sleepHours) ?? num(g.sleepDuration));
@@ -2674,7 +2684,8 @@ function lineChart(rows, opts={}){
   const all = rows.concat(s2);
   const xs=all.map(r=>parseDate(r.x).getTime()), ys=all.map(r=>r.y);
   let ymin=Math.min(...ys), ymax=Math.max(...ys); if(ymin===ymax){ymin-=1;ymax+=1;}
-  const p=(ymax-ymin)*0.12; ymin-=p; ymax+=p;
+  if(opts.yfix){ ymin = opts.yfix[0]; ymax = opts.yfix[1]; }                 // vaste schaal (bijv. gevoel 1–5)
+  else { const p=(ymax-ymin)*0.12; ymin-=p; ymax+=p; }
   const xmin=Math.min(...xs), xmax=Math.max(...xs);
   const X=t=>pl+(t-xmin)/((xmax-xmin)||1)*(w-pl-pr);
   const Y=v=>pt+(ymax-v)/((ymax-ymin)||1)*(h-pt-pb);
@@ -3659,8 +3670,8 @@ function listDrag(c){
     const li = e.target.closest && e.target.closest(liSel); if(!li || e.button>0) return;
     const grip = e.target.closest('['+c.grip+']'); if(!grip && e.target.closest('select,button,input,textarea,a')) return;
     D.i = idx(li); D.x0 = e.clientX; D.y0 = e.clientY; D.active = false; D.touch = e.pointerType!=='mouse';
-    if(D.touch && grip){ e.preventDefault(); start(); }
-    else if(D.touch) D.timer = setTimeout(start, 380);
+    if(D.touch && grip && !c.hold){ e.preventDefault(); start(); }
+    else if(D.touch) D.timer = setTimeout(start, c.hold || 380);          // c.hold: ook aan het greepje eerst even vasthouden
   });
   document.addEventListener('pointermove', e=>{
     if(D.i==null) return;
@@ -3684,7 +3695,7 @@ function listDrag(c){
 }
 const RT_DRAG = listDrag({ list:'#rtForm .rt-exl', attr:'data-rt-i', grip:'data-rt-grip', ghost:'rt-ghost', move:(i, to)=> rtExMove(i, to),
   prep:(g, li)=>{ g.querySelectorAll('select').forEach((x,k)=>{ x.removeAttribute('data-rt-ex-sets'); x.value = li.querySelectorAll('select')[k].value; }); g.querySelectorAll('[data-rt-ex-del]').forEach(x=> x.removeAttribute('data-rt-ex-del')); } });
-const TK_DRAG = listDrag({ list:'.td-tasks .td-tasklist', attr:'data-tk-i', grip:'data-tk-grip', ghost:'td-task tk-ghost', host:'.td', move:(i, to)=> taskMove(i, to),
+const TK_DRAG = listDrag({ list:'.td-tasks .td-tasklist', attr:'data-tk-i', grip:'data-tk-grip', ghost:'td-task tk-ghost', host:'.td', hold:500, move:(i, to)=> taskMove(i, to),   // telefoon: een halve seconde vasthouden (ging te makkelijk per ongeluk)
   prep:(g)=>{ g.querySelectorAll('[data-check],[data-bind],[data-rt-play],[data-rt-reg],[data-oc-panel],[data-run-open],[data-add],[data-rt-check]').forEach(x=>{ [...x.attributes].forEach(a=>{ if(a.name.startsWith('data-')) x.removeAttribute(a.name); }); }); } });
 function rtReadForm(){
   const dr = ui.rtDraft; if(!dr) return;
@@ -4659,6 +4670,7 @@ const DD_ADVICE = { green:'🟢 Normaal', orange:'🟠 Rustiger', red:'🔴 Hers
 function dagdataColumns(){
   const core = [
     { key:'weightKg',   label:'Gewicht in kg',                 short:'kg',      m:'weightKg',  g:'weightKg',      h:'weightKg',        step:'0.1', num:true },
+    { key:'feel',       label:'Gevoel: hoe voel je je? (1 slecht – 5 heel goed)', short:'Gevoel', m:'feel', g:null,          h:null,              sel:[['','—'],['5','5'],['4','4'],['3','3'],['2','2'],['1','1']] },
     { key:'energy',     label:'Ochtendenergie 1–10',           short:'Energie', m:'energy',    g:null,            h:'morningEnergy',   num:true },
     { key:'stiffness',  label:'Stijfheid / spierpijn 0–10',    short:'Stijfheid', m:'stiffness', g:null,          h:'morningStiffness', num:true },
     { key:'pain',       label:'Pijn 0–10',                     short:'Pijn',    m:'pain',      g:null,            h:'morningPain',     num:true },
@@ -5161,7 +5173,21 @@ function renderProgress(){
     const days = Array.from({length:7}, (_,i)=> addDays(todayISO(), i-6)), vals = days.map(d=> feelOf(CB.dailyLogs[d]));
     html += `<div class="card feel-card"><h3>Mijn gevoel <span class="sub">afgelopen 7 dagen</span></h3>
       <div class="feel-week">${days.map((d,i)=>{ const v = vals[i]; return `<div class="feel-day ${v ? 'has' : ''}"><span class="feel-dn">${esc(fmt(d,{weekday:'short'}))}</span>${v ? feelIco(v)+`<span>${esc(feelWord(v))}</span>` : `<b class="feel-none" aria-label="niet ingevuld">—</b><span class="muted">niet ingevuld</span>`}</div>`; }).join('')}</div>
-      <p class="tny muted" style="margin-top:8px">Wat je bij de Dagcheck invult onder "Hoe voel je je vandaag?". Alleen voor jezelf; telt niet mee in het herstel of het advies.</p></div>`;
+      ${(()=>{ const PL = { '84':'laatste 12 weken', '42':'laatste 6 weken', '28':'laatste 28 dagen', all:'alles' }, t = todayISO();
+        const from = r==='all' ? '0000-00-00' : addDays(t, -(Number(r)-1)), per = recoveryTimeline().filter(x=> x.feel!=null && x.date >= from && x.date <= t);
+        if(!per.length) return '<p class="small muted" style="margin-top:10px">Nog geen gevoel ingevuld in deze periode.</p>';
+        const n = per.length, mean = avg(per.map(x=> x.feel)), w7 = recent7('feel'), max = Math.max(...FEEL.map(([v])=> per.filter(x=> x.feel===v).length));
+        const first = per[0].date, span = Math.round((Date.parse(t) - Date.parse(r==='all' ? first : (from > first ? from : first))) / 864e5) + 1;
+        return `<h4 class="goal-h">${TD_ICO(TDI.bars)}Statistiek <span class="tny muted">${PL[r] || ''}</span></h4>
+        <div class="grid cols-3 feel-stats">
+          <div class="metric"><div class="label">Ingevuld</div><div class="value">${n}</div><div class="sub">van ${span} dagen</div></div>
+          <div class="metric"><div class="label">Gemiddeld</div><div class="value">${nl(round(mean,1))}</div><div class="sub">van 5 · rond ${esc(feelWord(Math.round(mean)).toLowerCase())}</div></div>
+          <div class="metric"><div class="label">Laatste 7 dagen</div><div class="value">${w7.value==null ? '—' : nl(round(w7.value,1))}</div><div class="sub">${w7.n}/7 dagen ingevuld</div></div>
+        </div>
+        <div class="feel-dist" role="list" aria-label="Verdeling van je antwoorden">${[...FEEL].reverse().map(([v,lab])=>{ const c = per.filter(x=> x.feel===v).length;
+          return `<div class="feel-dr" role="listitem">${feelIco(v)}<span class="feel-dl">${lab}</span><span class="td-bar"><i style="width:${max ? Math.round(100*c/max) : 0}%"></i></span><b>${c}×</b></div>`; }).join('')}</div>
+        ${n >= 2 ? `<div class="chart-wrap" style="margin-top:10px">${lineChart(per.map(x=>({ x:x.date, y:x.feel })), { color:'#04717C', yfix:[1,5] })}</div><p class="tny muted" style="margin:4px 0 0">Per dag je antwoord (1 = slecht, 5 = heel goed). Dagen zonder antwoord tellen niet mee.</p>` : ''}`; })()}
+      <p class="tny muted" style="margin-top:8px">Wat je bij de Dagcheck invult onder "Hoe voel je je vandaag?". Staat ook bij Metingen › Dagdata. Alleen voor jezelf; telt niet mee in het herstel of het advies.</p></div>`;
   }
 
   /* ---- Gewicht: laatste / 7-daags gemiddelde / verandering, uitleg optioneel ---- */
