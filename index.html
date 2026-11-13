@@ -1167,6 +1167,10 @@ summary.oc-ph{flex-wrap:wrap}
 .feel-dr .td-bar{display:block;height:8px;border-radius:999px;background:#E8EEF2;overflow:hidden}
 .feel-dr .td-bar i{display:block;height:100%;background:#028C99;border-radius:999px}
 .feel-dr b{text-align:right}
+.feel-top{font-size:20px!important}
+.per-nav{display:inline-flex;align-items:center;gap:6px;margin-left:10px}
+.per-nav .btn{min-width:36px;justify-content:center}
+.per-lab{min-width:120px;text-align:center;font-size:14.5px;color:var(--ink);text-transform:capitalize}
 .feel-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
 .feel-day{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 2px;border-radius:10px;background:#F4F8FA;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.2}
 .feel-day.has{background:#EAF6F7;color:var(--ink)}
@@ -1299,7 +1303,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.2";
+const APP_VERSION = "block2-2.24.3";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -2336,7 +2340,7 @@ function saveState(){
 var WAS_PRISTINE = !localStorage.getItem(STORAGE_KEY);
 let state = loadState();
 let CB = state.currentBlock;
-let ui = { view:'today', date: clampToBlock(todayISO()), weekIdx:0, progressRange:'all', strengthEx:'goblet-squat', addOn:null, addType:null, garminPreview:null, moveOn:null,
+let ui = { view:'today', date: clampToBlock(todayISO()), weekIdx:0, progressRange:'year', progressOff:0, strengthEx:'goblet-squat', addOn:null, addType:null, garminPreview:null, moveOn:null,
   measureTab:'dagdata', dagdataRange:'30', dagdataView:'kern', collapsedCards:{} };
 
 /* ===========================================================================
@@ -5089,7 +5093,7 @@ function strengthWeightRows(exId, range, side){
   return strengthHistory(exId).map(h=>{
     const g = loadKey(h.e, side);
     return { x:h.date, y:g.w, reps:g.reps, rir:num(h.e.rir), rpe:num(h.e.rpeLast), tech:h.e.tech };
-  }).filter(r=> r.y!=null && (range==='all' || r.x >= addDays(todayISO(),-Number(range))));
+  }).filter(r=> r.y!=null && rangeHas(range, r.x));
 }
 function fmtStrengthPoint(r){
   return `${nl(r.y)} kg · ${r.reps.length?r.reps.join('+'):'–'}${r.rir!=null?` · RIR ${r.rir}`:r.rpe!=null?` · RPE ${r.rpe}`:''}${r.tech==='minder'?' · techniek minder':''}`;
@@ -5134,11 +5138,28 @@ function lastNAvg(rows, n=3){
   return out;
 }
 /* grafiek met dagwaarde + 7-daags gemiddelde; gemiddelde eerst over ALLE data berekend, daarna pas op de periode gefilterd */
+/* periode van Voortgang: kalendermaand of kalenderjaar (ui.progressRange 'month' | 'year'), ui.progressOff = aantal perioden terug.
+   Alle kaarten (grafieken, gewicht, dagadvies, kracht, gevoel) gebruiken dezelfde periode. */
+function progressPeriod(){
+  const t = todayISO(), off = Math.max(0, num(ui.progressOff) || 0), y0 = Number(t.slice(0,4)), m0 = Number(t.slice(5,7));
+  const p2 = n => String(n).padStart(2,'0');
+  if(ui.progressRange==='month'){
+    const idx = y0*12 + (m0-1) - off, y = Math.floor(idx/12), m = idx%12 + 1, last = new Date(y, m, 0).getDate();
+    const from = `${y}-${p2(m)}-01`; return { kind:'month', off, from, to:`${y}-${p2(m)}-${p2(last)}`, label: fmt(from,{month:'long',year:'numeric'}), year:String(y) };
+  }
+  const y = y0 - off; return { kind:'year', off, from:`${y}-01-01`, to:`${y}-12-31`, label:String(y), year:String(y) };
+}
+/* valt een datum in de periode? 'all' = alles; een getal (oude aanroep) = zoveel dagen terug */
+function rangeHas(range, d){
+  if(range==='all' || range==null) return true;
+  if(typeof range==='object') return d >= range.from && d <= range.to;
+  return d >= addDays(todayISO(), -Number(range));
+}
 function chartWithAvg(key, range, o, minN){
   const full = seriesFor(key,'all');
   const last3 = minN==='last3';
   let rows = full, avg = last3 ? lastNAvg(full, 3) : rollingAvg(full, minN||4);
-  if(range!=='all'){ const cut = addDays(todayISO(), -Number(range)); rows = rows.filter(r=>r.x>=cut); avg = avg.filter(r=>r.x>=cut); }
+  if(range!=='all'){ rows = rows.filter(r=> rangeHas(range, r.x)); avg = avg.filter(r=> rangeHas(range, r.x)); }
   return lineChart(rows, { ...o, series2: avg, color2:'#2A4560', name1:'meting', name2: last3 ? 'gemiddelde laatste 3 metingen' : '7-daags gemiddelde' });
 }
 function weightAvgWindow(endDate){
@@ -5147,11 +5168,13 @@ function weightAvgWindow(endDate){
   return { value: vals.length>=4 ? round(vals.reduce((a,b)=>a+b,0)/vals.length,1) : null, n:vals.length };
 }
 function renderProgress(){
-  const r = ui.progressRange;
+  if(ui.progressRange!=='month') ui.progressRange = 'year';
+  const r = progressPeriod(), firstData = (recoveryTimeline()[0] || {}).date || todayISO();
   let html = `<div class="pagehead"><div class="eyebrow">Word ik aantoonbaar beter?</div><h2>Voortgang</h2>
     <p>Geen samengestelde fitnessscore. 100% uitvoering zonder progressie is geen succes.</p></div>`;
   html += `<div class="section-title no-print" style="margin-top:0"><h2 style="font-size:14px">Periode</h2><div class="range-toggle">
-    ${[['84','12 weken'],['42','6 weken'],['28','28 dagen'],['all','Alles']].map(([v,t])=>`<button class="btn sm ${r===v?'active':''}" data-range="${v}">${t}</button>`).join('')}
+    ${[['month','Maand'],['year','Jaar']].map(([v,t])=>`<button class="btn sm ${r.kind===v?'active':''}" data-range="${v}" aria-pressed="${r.kind===v}">${t}</button>`).join('')}
+    <span class="per-nav" role="group" aria-label="Periode kiezen"><button class="btn sm" data-range-nav="1" aria-label="Vorige ${r.kind==='month'?'maand':'jaar'}" ${r.from <= firstData ? 'disabled' : ''}>‹</button><b class="per-lab" id="perLab">${esc(r.label)}</b><button class="btn sm" data-range-nav="-1" aria-label="Volgende ${r.kind==='month'?'maand':'jaar'}" ${r.off===0 ? 'disabled' : ''}>›</button></span>
   </div></div>`;
 
   /* ---- Mijn doelen: waar werk ik naartoe (geen percentage) en hoe regelmatig gaan mijn routines (laatste 4 weken) ---- */
@@ -5173,39 +5196,43 @@ function renderProgress(){
     const days = Array.from({length:7}, (_,i)=> addDays(todayISO(), i-6)), vals = days.map(d=> feelOf(CB.dailyLogs[d]));
     html += `<div class="card feel-card"><h3>Mijn gevoel <span class="sub">afgelopen 7 dagen</span></h3>
       <div class="feel-week">${days.map((d,i)=>{ const v = vals[i]; return `<div class="feel-day ${v ? 'has' : ''}"><span class="feel-dn">${esc(fmt(d,{weekday:'short'}))}</span>${v ? feelIco(v)+`<span>${esc(feelWord(v))}</span>` : `<b class="feel-none" aria-label="niet ingevuld">—</b><span class="muted">niet ingevuld</span>`}</div>`; }).join('')}</div>
-      ${(()=>{ const PL = { '84':'laatste 12 weken', '42':'laatste 6 weken', '28':'laatste 28 dagen', all:'alles' }, t = todayISO();
-        const from = r==='all' ? '0000-00-00' : addDays(t, -(Number(r)-1)), per = recoveryTimeline().filter(x=> x.feel!=null && x.date >= from && x.date <= t);
-        if(!per.length) return '<p class="small muted" style="margin-top:10px">Nog geen gevoel ingevuld in deze periode.</p>';
-        const n = per.length, mean = avg(per.map(x=> x.feel)), w7 = recent7('feel'), max = Math.max(...FEEL.map(([v])=> per.filter(x=> x.feel===v).length));
-        const first = per[0].date, span = Math.round((Date.parse(t) - Date.parse(r==='all' ? first : (from > first ? from : first))) / 864e5) + 1;
-        return `<h4 class="goal-h">${TD_ICO(TDI.bars)}Statistiek <span class="tny muted">${PL[r] || ''}</span></h4>
+      ${(()=>{ /* statistiek over de gekozen periode van Voortgang (kalendermaand of kalenderjaar) */
+        const t = todayISO(), per = recoveryTimeline().filter(x=> x.feel!=null && x.date <= t && rangeHas(r, x.date));
+        const head = `<h4 class="goal-h">${TD_ICO(TDI.bars)}Statistiek <span class="tny muted">${esc(r.label)}</span></h4>`;
+        if(!per.length) return head + `<p class="small muted" style="margin-top:10px">Nog geen gevoel ingevuld in ${esc(r.label)}.</p>`;
+        const n = per.length, mean = avg(per.map(x=> x.feel)), w7 = recent7('feel'), cnt = v => per.filter(x=> x.feel===v).length, max = Math.max(...FEEL.map(([v])=> cnt(v)));
+        const last = r.to < t ? r.to : t, span = Math.round((Date.parse(last) - Date.parse(per[0].date)) / 864e5) + 1;
+        const top = [...FEEL].reverse().sort((p,q)=> cnt(q[0]) - cnt(p[0]))[0];
+        return head + `
         <div class="grid cols-3 feel-stats">
-          <div class="metric"><div class="label">Ingevuld</div><div class="value">${n}</div><div class="sub">van ${span} dagen</div></div>
+          <div class="metric"><div class="label">Ingevuld</div><div class="value">${n}</div><div class="sub">van ${span} ${span===1 ? 'dag' : 'dagen'} sinds je eerste antwoord in ${esc(r.label)}</div></div>
           <div class="metric"><div class="label">Gemiddeld</div><div class="value">${nl(round(mean,1))}</div><div class="sub">van 5 · rond ${esc(feelWord(Math.round(mean)).toLowerCase())}</div></div>
-          <div class="metric"><div class="label">Laatste 7 dagen</div><div class="value">${w7.value==null ? '—' : nl(round(w7.value,1))}</div><div class="sub">${w7.n}/7 dagen ingevuld</div></div>
+          ${r.off===0 ? `<div class="metric"><div class="label">Laatste 7 dagen</div><div class="value">${w7.value==null ? '—' : nl(round(w7.value,1))}</div><div class="sub">${w7.n}/7 dagen ingevuld</div></div>`
+                      : `<div class="metric"><div class="label">Meest gekozen</div><div class="value feel-top">${esc(top[1])}</div><div class="sub">${cnt(top[0])}× in ${esc(r.label)}</div></div>`}
         </div>
-        <div class="feel-dist" role="list" aria-label="Verdeling van je antwoorden">${[...FEEL].reverse().map(([v,lab])=>{ const c = per.filter(x=> x.feel===v).length;
+        <div class="feel-dist" role="list" aria-label="Verdeling van je antwoorden in ${esc(r.label)}">${[...FEEL].reverse().map(([v,lab])=>{ const c = cnt(v);
           return `<div class="feel-dr" role="listitem">${feelIco(v)}<span class="feel-dl">${lab}</span><span class="td-bar"><i style="width:${max ? Math.round(100*c/max) : 0}%"></i></span><b>${c}×</b></div>`; }).join('')}</div>
-        ${n >= 2 ? `<div class="chart-wrap" style="margin-top:10px">${lineChart(per.map(x=>({ x:x.date, y:x.feel })), { color:'#04717C', yfix:[1,5] })}</div><p class="tny muted" style="margin:4px 0 0">Per dag je antwoord (1 = slecht, 5 = heel goed). Dagen zonder antwoord tellen niet mee.</p>` : ''}`; })()}
+        ${n >= 2 ? `<div class="chart-wrap" style="margin-top:10px">${lineChart(per.map(x=>({ x:x.date, y:x.feel })), { color:'#04717C', yfix:[1,5] })}</div><p class="tny muted" style="margin:4px 0 0">Per dag je antwoord in ${esc(r.label)} (1 = slecht, 5 = heel goed). Dagen zonder antwoord tellen niet mee.</p>` : ''}`; })()}
       <p class="tny muted" style="margin-top:8px">Wat je bij de Dagcheck invult onder "Hoe voel je je vandaag?". Staat ook bij Metingen › Dagdata. Alleen voor jezelf; telt niet mee in het herstel of het advies.</p></div>`;
   }
 
   /* ---- Gewicht: laatste / 7-daags gemiddelde / verandering, uitleg optioneel ---- */
   {
-    const daily = weightDailyRows();
-    const avg7 = weightRollingAvg(daily);
+    const dailyAll = weightDailyRows();
+    const daily = dailyAll.filter(x=> rangeHas(r, x.x));                      // alleen de gekozen maand of het gekozen jaar
+    const avg7 = weightRollingAvg(dailyAll).filter(x=> rangeHas(r, x.x));     // 7-daags gemiddelde mag de dagen ervoor meerekenen
     const first = daily[0], last = daily[daily.length-1];
-    const cur = weightAvgWindow(todayISO());
+    const cur = weightAvgWindow(last ? last.x : todayISO());
     const diff = (first && last) ? round(last.y - first.y, 1) : null;
-    html += `<div class="card"><h3>Gewicht</h3>
-      <p class="small">Laatste: <b>${last?`${nl(last.y)} kg`:'—'}</b> · 7-daags gemiddelde: <b>${cur.value==null?'—':`${nl(cur.value)} kg`}</b> · verandering sinds eerste meting: <b>${diff==null?'—':`${diff>0?'+':''}${nl(diff)} kg`}</b></p>
+    html += `<div class="card"><h3>Gewicht <span class="sub">${esc(r.label)}</span></h3>
+      <p class="small">Laatste: <b>${last?`${nl(last.y)} kg`:'—'}</b> · 7-daags gemiddelde: <b>${cur.value==null?'—':`${nl(cur.value)} kg`}</b> · verandering in deze periode: <b>${diff==null?'—':`${diff>0?'+':''}${nl(diff)} kg`}</b></p>
       ${daily.length>=2
         ? `<div class="chart-wrap">${lineChart(daily, { color:'#A7CBEA', color2:'#3D6A92', series2:avg7 })}
         <div class="legend" style="margin-top:8px">
           <span><i class="swatch" style="background:#A7CBEA"></i>Daggewicht</span>
           <span><i class="swatch" style="background:#3D6A92"></i>7-daags gemiddelde</span>
         </div></div>`
-        : `<p class="small muted">Nog onvoldoende gewichtsmetingen (${daily.length}).</p>`}
+        : `<p class="small muted">Nog onvoldoende gewichtsmetingen in ${esc(r.label)} (${daily.length}).</p>`}
       <p class="tny muted" style="margin-top:6px">${daily.length} werkelijke metingen · eerste ${first?esc(fmt(first.x,{day:'numeric',month:'short',year:'numeric'})):'—'} · laatste ${last?esc(fmt(last.x,{day:'numeric',month:'short',year:'numeric'})):'—'}. De lijn verbindt opeenvolgende meetpunten; er worden geen tussenliggende daggewichten getekend of berekend (10–24 aug = vakantie). Het 7-daags gemiddelde bestaat alleen op een meetdatum met ≥ 4 werkelijk gemeten dagen in het venster. Gewicht is context — het telt niet mee in uitvoering, herstelbeeld of trainingsbeslissingen.
         <br><a href="#" data-view="measure">Bekijk de ruwe meetdata → Metingen › Dagdata</a></p>
     </div>`;
@@ -5279,7 +5306,7 @@ function renderProgress(){
     const hasW12 = Object.keys(W12o).some(k=>W12o[k]!=null&&W12o[k]!=='');
     const W = hasW12 ? W12o : W6;
     const endLbl = hasW12 ? 'W12' : 'W6';
-    const rr = ui.progressRange;
+    const rr = r;
     html += `<div class="card"><h3>Balans &amp; mobiliteit <span class="sub">dagelijkse routine-waarden</span></h3>
       <p class="small">Uit het routine-detail op Vandaag (vooroverbuiging, beenheffing, toe-touch, balans-reik, kettlebell-press), met gemiddelde van je laatste 3 metingen (je vult deze niet elke dag in). Een grafiek verschijnt zodra er minstens 2 waarden zijn.</p>
       <details class="acc"><summary>Grafieken bekijken</summary><div class="acc-body"><div class="grid cols-2">
@@ -5328,8 +5355,8 @@ function anyStatusCard(){
 /* Dagadvies per week: één balk per week (aandeel normaal / rustiger / herstel); alleen weken met gegevens */
 function adviceStatsHTML(range){
   const dates = new Set([...Object.keys(HISTORICAL.logs||{}), ...Object.keys(CB.dailyLogs)]);
-  const today = todayISO(), cut = range==='all' ? '0000' : addDays(today, -Number(range));
-  const days = [...dates].filter(d=> d<=today && d>=cut).sort();
+  const today = todayISO();
+  const days = [...dates].filter(d=> d<=today && rangeHas(range, d)).sort();
   const monday = d=>{ const x=parseDate(d); return addDays(d, -((x.getDay()+6)%7)); };
   const isoWeek = d=>{ const x=parseDate(d); const th=new Date(x.getFullYear(),x.getMonth(),x.getDate()+3-((x.getDay()+6)%7)); const w1=new Date(th.getFullYear(),0,4); return 1+Math.round(((th-w1)/86400000-3+((w1.getDay()+6)%7))/7); };
   const weeks = {};
@@ -6474,7 +6501,8 @@ document.addEventListener('click', e=>{
   const od = e.target.closest('[data-open-day]'); if(od){ ui.date = od.dataset.openDay; ui.addOn=null; ui.addType=null; ui.moveOn=null; showView('today'); return; }
   const wk = e.target.closest('[data-week]'); if(wk && !wk.disabled){ ui.weekIdx = Number(wk.dataset.week); renderWeek(); return; }
   if(e.target.closest('[data-adv-more]')){ ui.adviceMore = !ui.adviceMore; renderProgress(); return; }
-  const rg = e.target.closest('[data-range]'); if(rg){ ui.progressRange = rg.dataset.range; renderProgress(); return; }
+  const rg = e.target.closest('[data-range]'); if(rg){ ui.progressRange = rg.dataset.range==='month' ? 'month' : 'year'; ui.progressOff = 0; renderProgress(); return; }
+  const rn = e.target.closest('[data-range-nav]'); if(rn){ ui.progressOff = Math.max(0, (num(ui.progressOff)||0) + Number(rn.dataset.rangeNav)); renderProgress(); return; }
   const mt = e.target.closest('[data-measure-tab]'); if(mt){ ui.measureTab = mt.dataset.measureTab; renderMeasure(); return; }
   const ddr = e.target.closest('[data-dd-range]'); if(ddr){ ui.dagdataRange = ddr.dataset.ddRange; renderMeasure(); return; }
   const ddv = e.target.closest('[data-dd-view]'); if(ddv){ ui.dagdataView = ddv.dataset.ddView; renderMeasure(); return; }
