@@ -269,6 +269,8 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-since input:focus{outline:2px solid var(--green2,#028C99);outline-offset:1px;border-color:transparent}
 .prof-since{font-size:13px;color:var(--muted)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.prof-acct-btns{display:flex;gap:8px;margin-top:10px}
+@media(max-width:420px){.prof-acct-btns{flex-direction:column}}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task.is-opt:not(.is-done) .td-tick{border-style:dashed}
 .td-task-in{font-weight:600}                                   /* alle taaknamen even dik als Dagcheck en Slaap */
@@ -1304,7 +1306,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.6";
+const APP_VERSION = "block2-2.24.7";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
 const HIST_KEY = "atempo-hist";
@@ -6431,7 +6433,7 @@ function accountHTML(){
   if(!s.auth) return `<div class="card prof-acct"><h3>Account</h3><p class="small" style="margin-top:0">Log in om je gegevens te delen tussen telefoon en computer, of maak een nieuw account aan.</p>
     <div class="form-grid cols-3"><div class="field"><label for="syncEmail">E-mail</label><input type="email" id="syncEmail" autocomplete="username"></div>
       <div class="field"><label for="syncPw">Wachtwoord</label><input type="password" id="syncPw" autocomplete="current-password"></div></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" data-sync="login">Inloggen</button><button class="btn" data-sync="signup">Account aanmaken</button></div>
+    <div class="prof-acct-btns"><button class="btn sm primary" data-sync="login">Inloggen</button><button class="btn sm" data-sync="signup">Account aanmaken</button></div>
     <p class="tny" style="margin-top:8px"><a href="#" data-sync="forgot">Wachtwoord vergeten?</a></p>
     <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p></div>`;
   return `<div class="card prof-acct"><h3>Account</h3><div class="prof-acct-row"><p class="small" style="margin:0">Ingelogd als <b>${esc(s.auth.email||'')}</b></p><button class="btn sm" data-sync="logout">Uitloggen</button></div>
