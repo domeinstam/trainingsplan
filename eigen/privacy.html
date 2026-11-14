@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Atempo — Privacy</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>
+  :root{--ink:#2A4560;--text:#2B3F52;--muted:#5D7183;--line:#DCE6EC;--paper:#FAFAF7;--ice:#E6F3F7}
+  body{margin:0;background:var(--paper);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+  main{max-width:720px;margin:0 auto;padding:32px 16px 48px}
+  h1{color:var(--ink);font-size:26px;margin:0 0 4px}
+  h2{color:var(--ink);font-size:18px;margin:28px 0 6px}
+  p.sub{color:var(--muted);margin:0 0 20px}
+  ul{padding-left:20px}
+  .en{margin-top:36px;padding:16px 18px;background:var(--ice);border:1px solid var(--line);border-radius:12px}
+  .en h2{margin-top:0}
+  footer{color:var(--muted);font-size:13px;margin-top:32px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Atempo — privacyverklaring</h1>
+  <p class="sub">Move. Recover. Grow. · Laatst bijgewerkt: 3 november 2026</p>
+
+  <h2>Wat Atempo is</h2>
+  <p>Atempo is een persoonlijke trainingsapp, gemaakt voor en gebruikt door één persoon (de eigenaar). De app is nog in ontwikkeling. Er is geen openbare registratie en er worden geen gegevens van andere personen verwerkt.</p>
+
+  <h2>Welke gegevens en waar</h2>
+  <ul>
+    <li>Trainings- en herstelgegevens staan in de browser van de gebruiker en, na inloggen, in een eigen beveiligde Firebase-opslag. Alleen het eigen account kan die gegevens lezen of wijzigen.</li>
+    <li>De openbare versie van de app op GitHub Pages bevat geen persoonlijke gegevens.</li>
+    <li>Er worden geen cookies voor tracking of advertenties gebruikt en er is geen analysesoftware.</li>
+  </ul>
+
+  <h2>Koppeling met Intervals.icu</h2>
+  <ul>
+    <li>De gebruiker kan Atempo zelf verbinden met het eigen Intervals.icu-account (OAuth met PKCE). Atempo vraagt alleen het recht om de trainingsagenda te beheren (CALENDAR:WRITE) en de eigen activiteiten en dagwaarden te lezen (ACTIVITY:READ en WELLNESS:READ), zodat een gelopen training aan de geplande training gekoppeld kan worden en herstelwaarden (zoals HRV, rustpols en slaap) in de grafieken verschijnen.</li>
+    <li>Atempo plaatst, wijzigt en verwijdert alleen geplande trainingen die Atempo zelf heeft aangemaakt. Andere agenda-items worden niet aangeraakt.</li>
+    <li>Het toegangsbewijs wordt alleen tijdelijk in het geopende browsertabblad bewaard en niet opgeslagen in back-ups, exports of de cloud. De verbinding kan op elk moment worden verbroken, in Atempo of in Intervals.icu.</li>
+  </ul>
+
+  <h2>Delen</h2>
+  <p>Gegevens worden niet verkocht en niet met derden gedeeld, behalve de geplande trainingen die de gebruiker zelf naar Intervals.icu stuurt (en die Intervals.icu op verzoek van de gebruiker doorstuurt naar Garmin Connect).</p>
+
+  <h2>Contact</h2>
+  <p>Vragen over deze app: via de eigenaar van de GitHub-account <a href="https://github.com/RensStam">RensStam</a>.</p>
+
+  <section class="en" lang="en">
+    <h2>Summary in English</h2>
+    <p>Atempo is a personal training app (in development) used by a single person, its owner. Training data stays in the owner's browser and in the owner's own secured Firebase storage. The optional Intervals.icu connection uses OAuth with PKCE and requests only the CALENDAR:WRITE, ACTIVITY:READ and WELLNESS:READ scopes (to link completed runs to planned workouts and show recovery values such as HRV, resting heart rate and sleep); Atempo only creates, updates or deletes planned workouts it created itself (external_id "atempo-…"). The access token is kept only in the open browser tab and is never stored in backups, exports or the cloud. No tracking, no analytics, no data is sold or shared.</p>
+  </section>
+
+  <footer>Atempo · <a href="./">naar de app</a></footer>
+</main>
+</body>
+</html>
