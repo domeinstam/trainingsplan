@@ -1304,7 +1304,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.7";
+const APP_VERSION = "block2-2.24.8";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
 const HIST_KEY = "atempo-hist";
@@ -7818,7 +7818,10 @@ document.addEventListener('contextmenu', e=>{ if(RUN_DRAG.sid && e.target.closes
    Koppelgegevens per training staan in session.ext.intervals, los van garminExternalId (uitgevoerde activiteiten).
    =========================================================================== */
 var COACH_CLIENT_ID = '1644';                                   // Client ID van de Atempo-app bij Intervals.icu (openbaar, geen geheim)
-const COACH_REDIRECT = 'https://apps.domeinstam.nl/trainingsplan/';
+/* zowel de openbare hoofdpagina als de eigen /eigen/-pagina draaien dezelfde code; Intervals.icu moet voor
+   beide een geregistreerde redirect-URL zien. coachHere() geeft steeds het exacte huidige adres terug; dat
+   wordt ook als redirect_uri gebruikt, zodat het altijd overeenkomt met waar de gebruiker al is. */
+const COACH_REDIRECTS = ['https://apps.domeinstam.nl/trainingsplan/', 'https://apps.domeinstam.nl/trainingsplan/eigen/'];
 const COACH_API = 'https://intervals.icu/api/v1/athlete/0';
 const COACH_SCOPE = 'CALENDAR:WRITE,ACTIVITY:READ,WELLNESS:READ';   // agenda beheren + activiteiten lezen (runs koppelen) + dagwaarden lezen (grafieken)
 const COACH_SS = 'atempo-intervals';                        // sessionStorage-sleutel (alleen dit tabblad, tijdelijk)
@@ -7844,7 +7847,7 @@ function coachState(s){
 function coachSess(){ try { return JSON.parse(sessionStorage.getItem(COACH_SS)||'{}'); } catch(e){ return {}; } }
 function coachSessSave(o){ try { sessionStorage.setItem(COACH_SS, JSON.stringify(o)); } catch(e){} }
 const coachHere = () => location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
-const coachCanConnect = () => !!COACH_CLIENT_ID && coachHere()===COACH_REDIRECT;
+const coachCanConnect = () => !!COACH_CLIENT_ID && COACH_REDIRECTS.includes(coachHere());
 const coachConnected = () => !!coachSess().token;
 function coachRnd(n){ const a = new Uint8Array(n); crypto.getRandomValues(a); return Array.from(a, b=>('0'+b.toString(16)).slice(-2)).join(''); }
 async function coachChallenge(verifier){
@@ -7855,12 +7858,12 @@ async function coachChallenge(verifier){
 async function coachAuthUrl(){
   const verifier = coachRnd(48), state = coachRnd(16);
   coachSessSave({ ...coachSess(), pkce:{ verifier, state, at:Date.now() } });
-  return 'https://intervals.icu/oauth/authorize?' + new URLSearchParams({ client_id:COACH_CLIENT_ID, redirect_uri:COACH_REDIRECT, scope:COACH_SCOPE,
+  return 'https://intervals.icu/oauth/authorize?' + new URLSearchParams({ client_id:COACH_CLIENT_ID, redirect_uri:coachHere(), scope:COACH_SCOPE,
     state, code_challenge: await coachChallenge(verifier), code_challenge_method:'S256' });
 }
 async function coachConnect(){
   if(!COACH_CLIENT_ID) return runMsg('De Atempo-app is nog niet goedgekeurd door Intervals.icu.', 'err');
-  if(coachHere()!==COACH_REDIRECT) return runMsg('Verbinden met Intervals.icu kan alleen in de webversie (apps.domeinstam.nl/trainingsplan).', 'err');
+  if(!coachCanConnect()) return runMsg('Verbinden met Intervals.icu kan alleen in de webversie (apps.domeinstam.nl/trainingsplan).', 'err');
   const url = await coachAuthUrl();
   coachSessSave({ ...coachSess(), back:{ view:ui.view, tab:RUI.tab, openId:RUI.openId } });
   location.href = url;
@@ -7875,7 +7878,7 @@ async function coachHandleRedirect(search){
   if(err){ c.lastError = 'Geen toestemming gegeven bij Intervals.icu'; return true; }
   if(!p || p.state!==st || Date.now()-p.at > 10*60*1000){ c.lastError = 'Verbinden mislukt (onbekende of verlopen poging) — probeer opnieuw'; return true; }
   try {
-    const r = await fetch('https://intervals.icu/api/oauth/token', { method:'POST', body:new URLSearchParams({ client_id:COACH_CLIENT_ID, code, code_verifier:p.verifier, redirect_uri:COACH_REDIRECT }) });
+    const r = await fetch('https://intervals.icu/api/oauth/token', { method:'POST', body:new URLSearchParams({ client_id:COACH_CLIENT_ID, code, code_verifier:p.verifier, redirect_uri:coachHere() }) });
     const j = await r.json().catch(()=>null);
     if(!r.ok || !j || !j.access_token) throw new Error((j && j.error) || ('fout '+r.status));
     coachSessSave({ ...coachSess(), token:j.access_token, at:Date.now() });
@@ -8112,7 +8115,7 @@ function coachLineHTML(s){
 function coachSettingsHTML(){
   const c = coachSet(), con = coachConnected(), busy = RUI.coachBusy==='runs';
   const when = x => x ? esc(new Date(x).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : '—';
-  const conTxt = con ? 'verbonden' : !COACH_CLIENT_ID ? 'nog niet beschikbaar' : coachHere()!==COACH_REDIRECT ? 'alleen in de webversie' : 'niet verbonden';
+  const conTxt = con ? 'verbonden' : !COACH_CLIENT_ID ? 'nog niet beschikbaar' : !coachCanConnect() ? 'alleen in de webversie' : 'niet verbonden';
   return `<h3>Garmin via Intervals.icu</h3>${RUI.msg?`<div class="run-msg ${RUI.msgKind==='err'?'err':''}">${esc(RUI.msg)}</div>`:''}
     <div class="week-track">
       <div class="row"><span class="k">Verbinding</span><span class="v ${con?'ok':'na'}">${conTxt}</span></div>
