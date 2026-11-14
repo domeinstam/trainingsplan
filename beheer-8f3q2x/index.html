@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Atempo — beheer</title>
+<style>
+  :root{--ink:#2A4560;--text:#2B3F52;--muted:#5D7183;--line:#DCE6EC;--paper:#FAFAF7;--ice:#E6F3F7;--green:#04717C;--neg:#A0442F}
+  body{margin:0;background:var(--paper);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+  main{max-width:900px;margin:0 auto;padding:28px 16px 60px}
+  h1{color:var(--ink);font-size:22px;margin:0 0 4px}
+  h2{color:var(--ink);font-size:16px;margin:0 0 10px}
+  p.sub{color:var(--muted);margin:0 0 24px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px}
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+  label{font-size:12.5px;font-weight:600;color:var(--muted)}
+  input,textarea,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+  textarea{min-height:160px;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+  button{font:inherit;font-weight:700;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--text);cursor:pointer}
+  button.primary{background:var(--green);border-color:var(--green);color:#fff}
+  button.danger{color:var(--neg);border-color:#e6c9c4}
+  button:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600}
+  tr.disabled td{color:var(--muted);text-decoration:line-through}
+  .msg{font-size:13px;margin-top:8px;white-space:pre-wrap}
+  .msg.err{color:var(--neg)}
+  .msg.ok{color:var(--green)}
+  pre{white-space:pre-wrap;word-break:break-word;background:var(--ice);border-radius:8px;padding:10px;font-size:12.5px;max-height:320px;overflow:auto}
+  .hidden{display:none}
+  a.lnk{color:var(--green);cursor:pointer}
+</style>
+</head>
+<body>
+<main>
+  <h1>Atempo — beheer</h1>
+  <p class="sub">Alleen voor het eigen, toegestane admin-account. Niets hiervan is gekoppeld aan Rens' eigen trainingsgegevens.</p>
+
+  <section class="card" id="loginCard">
+    <h2>Inloggen</h2>
+    <div class="field"><label for="email">E-mail</label><input id="email" type="email" autocomplete="username"></div>
+    <div class="field"><label for="pw">Wachtwoord</label><input id="pw" type="password" autocomplete="current-password"></div>
+    <div class="row"><button class="primary" id="loginBtn">Inloggen</button></div>
+    <div class="msg" id="loginMsg"></div>
+  </section>
+
+  <div id="app" class="hidden">
+    <div class="row" style="justify-content:space-between;margin-bottom:14px">
+      <span class="sub" id="whoami"></span>
+      <button id="logoutBtn">Uitloggen</button>
+    </div>
+
+    <section class="card">
+      <h2>Gebruikers</h2>
+      <div class="row"><button class="primary" id="refreshBtn">Vernieuwen</button><span id="countMsg" class="sub"></span></div>
+      <div style="overflow:auto;margin-top:10px">
+        <table id="userTable"><thead><tr><th>E-mail</th><th>Aangemaakt</th><th>Laatst ingelogd</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="msg" id="listMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Eén gebruiker inzien</h2>
+      <div class="row">
+        <input id="lookupEmail" type="text" placeholder="e-mailadres of uid" style="flex:1;min-width:220px">
+        <button class="primary" id="lookupBtn">Bekijken</button>
+      </div>
+      <div id="userDetail" class="hidden" style="margin-top:12px">
+        <div class="row" style="justify-content:space-between">
+          <b id="detEmail"></b>
+          <div class="row">
+            <button id="disableBtn">Blokkeren</button>
+            <button id="enableBtn">Deblokkeren</button>
+            <button class="danger" id="deleteBtn">Account + gegevens verwijderen</button>
+          </div>
+        </div>
+        <pre id="detData"></pre>
+      </div>
+      <div class="msg" id="detailMsg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Standaardplan voor nieuwe gebruikers</h2>
+      <p class="sub" style="margin:0 0 10px">Leeg = de app gebruikt zijn eigen ingebouwde standaard. Alleen invullen als je iets wilt overschrijven; moet geldige JSON zijn.</p>
+      <div class="row"><button id="loadPlanBtn">Laden</button><button class="primary" id="savePlanBtn">Opslaan</button></div>
+      <div class="field" style="margin-top:10px"><textarea id="planText" placeholder="{}"></textarea></div>
+      <div class="msg" id="planMsg"></div>
+    </section>
+  </div>
+</main>
+<script>
+const FB_API_KEY = 'AIzaSyAWFMv5x6GPWC4eDpsCRe8paqVSJZ9O0lk';
+const FB_PROJECT = 'atempo-openbaar';
+const FB_AUTH_BASE = 'https://identitytoolkit.googleapis.com';
+const FN_BASE = 'https://europe-west1-' + FB_PROJECT + '.cloudfunctions.net';
+const LS_KEY = 'atempo-beheer-auth';
+let auth = null;
+try { auth = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); } catch (e) {}
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setMsg(el, text, ok) { el.textContent = text || ''; el.className = 'msg' + (ok === true ? ' ok' : ok === false ? ' err' : ''); }
+
+async function fbLogin(email, password) {
+  const r = await fetch(FB_AUTH_BASE + '/v1/accounts:signInWithPassword?key=' + encodeURIComponent(FB_API_KEY), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, returnSecureToken: true }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || 'Inloggen mislukt');
+  auth = { idToken: j.idToken, refreshToken: j.refreshToken, exp: Date.now() + (Number(j.expiresIn) || 3600) * 1000, email: j.email, uid: j.localId };
+  localStorage.setItem(LS_KEY, JSON.stringify(auth));
+  return auth;
+}
+async function fbRefresh() {
+  if (!auth) throw new Error('Niet ingelogd');
+  const r = await fetch('https://securetoken.googleapis.com/v1/token?key=' + encodeURIComponent(FB_API_KEY), {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(auth.refreshToken) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error('Sessie verlopen, log opnieuw in');
+  auth = { idToken: j.id_token, refreshToken: j.refresh_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000, email: auth.email, uid: j.user_id };
+  localStorage.setItem(LS_KEY, JSON.stringify(auth));
+  return auth;
+}
+async function fbToken() {
+  if (!auth) throw new Error('Niet ingelogd');
+  if (auth.exp - Date.now() > 60000) return auth;
+  return fbRefresh();
+}
+/* roept een gen2 callable Cloud Function aan (hetzelfde protocol als de officiële Firebase SDK gebruikt,
+   hier met gewone fetch zodat er geen zware SDK geladen hoeft te worden) */
+async function callFn(name, data) {
+  const a = await fbToken();
+  const r = await fetch(FN_BASE + '/' + name, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.idToken },
+    body: JSON.stringify({ data: data || {} }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error((j.error && (j.error.message || j.error.status)) || ('Serverfout ' + r.status));
+  return j.result;
+}
+
+function showApp() {
+  $('#loginCard').classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#whoami').textContent = 'Ingelogd als ' + (auth.email || auth.uid);
+}
+function showLogin() {
+  $('#loginCard').classList.remove('hidden'); $('#app').classList.add('hidden');
+}
+if (auth) showApp();
+
+$('#loginBtn').onclick = async () => {
+  setMsg($('#loginMsg'), 'Bezig…');
+  try { await fbLogin($('#email').value, $('#pw').value); setMsg($('#loginMsg'), ''); showApp(); loadUsers(); }
+  catch (e) { setMsg($('#loginMsg'), e.message, false); }
+};
+$('#logoutBtn').onclick = () => { localStorage.removeItem(LS_KEY); auth = null; showLogin(); };
+
+async function loadUsers() {
+  setMsg($('#listMsg'), 'Laden…');
+  try {
+    const { users, count } = await callFn('adminListUsers', {});
+    $('#countMsg').textContent = count + ' account' + (count === 1 ? '' : 's');
+    $('#userTable tbody').innerHTML = users.map(u => `<tr class="${u.disabled ? 'disabled' : ''}">
+      <td>${esc(u.email)}</td><td>${esc(fmtDate(u.createdAt))}</td><td>${esc(fmtDate(u.lastSignIn))}</td>
+      <td>${u.disabled ? 'geblokkeerd' : 'actief'}</td>
+      <td><a class="lnk" data-uid="${esc(u.uid)}">bekijken</a></td></tr>`).join('') || '<tr><td colspan="5">Nog geen gebruikers.</td></tr>';
+    setMsg($('#listMsg'), '');
+  } catch (e) { setMsg($('#listMsg'), e.message, false); }
+}
+function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+$('#refreshBtn').onclick = loadUsers;
+$('#userTable').addEventListener('click', e => { const a = e.target.closest('a[data-uid]'); if (a) { $('#lookupEmail').value = a.dataset.uid; lookupUser(); } });
+
+let currentUid = null;
+async function lookupUser() {
+  const v = $('#lookupEmail').value.trim(); if (!v) return;
+  setMsg($('#detailMsg'), 'Laden…'); $('#userDetail').classList.add('hidden');
+  try {
+    const q = v.includes('@') ? { email: v } : { uid: v };
+    const u = await callFn('adminGetUser', q);
+    currentUid = u.uid;
+    $('#detEmail').textContent = u.email + (u.disabled ? ' (geblokkeerd)' : '') + ' — uid ' + u.uid;
+    $('#detData').textContent = JSON.stringify(u.data, null, 2);
+    $('#userDetail').classList.remove('hidden'); setMsg($('#detailMsg'), '');
+  } catch (e) { setMsg($('#detailMsg'), e.message, false); }
+}
+$('#lookupBtn').onclick = lookupUser;
+$('#disableBtn').onclick = () => setStatus('disable');
+$('#enableBtn').onclick = () => setStatus('enable');
+$('#deleteBtn').onclick = () => {
+  if (!currentUid) return;
+  if (!confirm('Dit account en AL zijn/haar gegevens definitief verwijderen?\n\nDit kan niet ongedaan worden gemaakt.')) return;
+  if (!confirm('Laatste controle: echt verwijderen?')) return;
+  setStatus('delete');
+};
+async function setStatus(action) {
+  if (!currentUid) return;
+  setMsg($('#detailMsg'), 'Bezig…');
+  try { await callFn('adminSetUserStatus', { uid: currentUid, action }); setMsg($('#detailMsg'), 'Gelukt.', true); if (action === 'delete') { $('#userDetail').classList.add('hidden'); currentUid = null; } loadUsers(); }
+  catch (e) { setMsg($('#detailMsg'), e.message, false); }
+}
+
+$('#loadPlanBtn').onclick = async () => {
+  setMsg($('#planMsg'), 'Laden…');
+  try { const { plan } = await callFn('adminGetDefaultPlan', {}); $('#planText').value = plan ? JSON.stringify(plan, null, 2) : ''; setMsg($('#planMsg'), ''); }
+  catch (e) { setMsg($('#planMsg'), e.message, false); }
+};
+$('#savePlanBtn').onclick = async () => {
+  let plan;
+  try { plan = $('#planText').value.trim() ? JSON.parse($('#planText').value) : {}; }
+  catch (e) { return setMsg($('#planMsg'), 'Ongeldige JSON: ' + e.message, false); }
+  setMsg($('#planMsg'), 'Opslaan…');
+  try { await callFn('adminSetDefaultPlan', { plan }); setMsg($('#planMsg'), 'Opgeslagen.', true); }
+  catch (e) { setMsg($('#planMsg'), e.message, false); }
+};
+
+if (auth) loadUsers();
+</script>
+</body>
+</html>
