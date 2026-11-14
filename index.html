@@ -1303,7 +1303,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.3";
+const APP_VERSION = "block2-2.24.4";
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "trainingsplan-rens-blok2";
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
@@ -7740,7 +7740,7 @@ document.addEventListener('contextmenu', e=>{ if(RUN_DRAG.sid && e.target.closes
    Koppelgegevens per training staan in session.ext.intervals, los van garminExternalId (uitgevoerde activiteiten).
    =========================================================================== */
 var COACH_CLIENT_ID = '1644';                                   // Client ID van de Atempo-app bij Intervals.icu (openbaar, geen geheim)
-const COACH_REDIRECT = 'https://rensstam.github.io/trainingsplan/';
+const COACH_REDIRECT = 'https://apps.domeinstam.nl/trainingsplan/';
 const COACH_API = 'https://intervals.icu/api/v1/athlete/0';
 const COACH_SCOPE = 'CALENDAR:WRITE,ACTIVITY:READ,WELLNESS:READ';   // agenda beheren + activiteiten lezen (runs koppelen) + dagwaarden lezen (grafieken)
 const COACH_SS = 'atempo-intervals';                        // sessionStorage-sleutel (alleen dit tabblad, tijdelijk)
@@ -7782,7 +7782,7 @@ async function coachAuthUrl(){
 }
 async function coachConnect(){
   if(!COACH_CLIENT_ID) return runMsg('De Atempo-app is nog niet goedgekeurd door Intervals.icu.', 'err');
-  if(coachHere()!==COACH_REDIRECT) return runMsg('Verbinden met Intervals.icu kan alleen in de webversie (rensstam.github.io/trainingsplan).', 'err');
+  if(coachHere()!==COACH_REDIRECT) return runMsg('Verbinden met Intervals.icu kan alleen in de webversie (apps.domeinstam.nl/trainingsplan).', 'err');
   const url = await coachAuthUrl();
   coachSessSave({ ...coachSess(), back:{ view:ui.view, tab:RUI.tab, openId:RUI.openId } });
   location.href = url;
