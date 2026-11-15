@@ -1311,7 +1311,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.8";
+const APP_VERSION = "block2-2.24.9";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -5854,7 +5854,7 @@ async function bkRender(){
   const lastTxt = last ? new Date(last).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) : 'nog nooit';
   const st = document.getElementById('bkStatus');
   if(st) st.innerHTML = `Laatste back-up: <b>${lastTxt}</b> · back-upmap: <b>${h?esc(h.name):'niet gekoppeld'}</b> · automatisch elke ${BK_DAYS} dagen`;
-  if(bkMobile() || !bkDue()){ bar.hidden = true; return; }
+  if(bkMobile() || !bkDue() || syncEmpty(state)){ bar.hidden = true; return; }   // nog niets ingevuld: niets om te back-uppen, geen balk
   // telefoon/tablet: geen mapkeuze/automatische back-up mogelijk -> hierboven al weggehaald (nooit een balk)
   bar.hidden = false;
   bar.innerHTML = h
