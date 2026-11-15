@@ -1310,7 +1310,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.9";
+const APP_VERSION = "block2-2.24.10";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -3005,12 +3005,11 @@ function renderToday(){
   const has = v => v!=null && v!=='';
   const bits = [has(l.restingHr) ? 'RHR '+nl(l.restingHr) : null, has(l.hrv) ? 'HRV '+nl(l.hrv) : null, has(l.sleepHours) ? 'slaap '+nl(l.sleepHours)+' u' : null, has(l.weightKg) ? nl(l.weightKg)+' kg' : null, has(l.notes) ? 'notitie' : null].filter(Boolean);
   return `<details class="oc-panel oc-more" data-oc-p="more"${ocPanelOpen('more') ? ' open' : ''}><summary class="oc-ph">${TD_ICO(TDI.moon)}Slaap<span class="oc-ph-bits">${bits.length ? esc(bits.join(' · ')) : 'nog niet ingevuld'}</span>${TD_ICO(TDI.chev, 'oc-chev')}</summary>
-      ${g ? `<p class="tny oc-garmin">✓ Garmin beschikbaar voor deze dag — RHR ${nl(g.restingHr)} · HRV ${nl(g.nightHrv)} ms · slaap ${nl(g.sleepDuration)} u. Hieronder alleen invullen als je handmatig wilt afwijken/aanvullen.</p>` : ''}
       <div class="form-grid cols-4">
-        ${fInput('RHR (bpm)','currentBlock.dailyLogs.'+d+'.restingHr', l.restingHr,'number','inputmode="numeric"')}
-        ${fInput('HRV nacht (ms)','currentBlock.dailyLogs.'+d+'.hrv', l.hrv,'number','inputmode="numeric"')}
-        ${fInput('Slaap (uur)','currentBlock.dailyLogs.'+d+'.sleepHours', l.sleepHours,'number','inputmode="decimal" step="0.25"')}
-        ${fInput('Slaapscore (Garmin)','currentBlock.dailyLogs.'+d+'.sleepScore', l.sleepScore,'number','inputmode="numeric"')}
+        ${fInput('RHR (bpm)','currentBlock.dailyLogs.'+d+'.restingHr', l.restingHr,'number','inputmode="numeric"'+(has(g&&g.restingHr)&&!has(l.restingHr)?' placeholder="'+esc(nl(g.restingHr))+'"':''))}
+        ${fInput('HRV nacht (ms)','currentBlock.dailyLogs.'+d+'.hrv', l.hrv,'number','inputmode="numeric"'+(has(g&&g.nightHrv)&&!has(l.hrv)?' placeholder="'+esc(nl(g.nightHrv))+'"':''))}
+        ${fInput('Slaap (uur)','currentBlock.dailyLogs.'+d+'.sleepHours', l.sleepHours,'number','inputmode="decimal" step="0.25"'+(has(g&&g.sleepDuration)&&!has(l.sleepHours)?' placeholder="'+esc(nl(round(g.sleepDuration,2)))+'"':''))}
+        ${fInput('Slaapscore (Garmin)','currentBlock.dailyLogs.'+d+'.sleepScore', l.sleepScore,'number','inputmode="numeric"'+(has(g&&g.sleepScore)&&!has(l.sleepScore)?' placeholder="'+esc(nl(g.sleepScore))+'"':''))}
         ${fInput('Gewicht (kg)','currentBlock.dailyLogs.'+d+'.weightKg', l.weightKg,'number','inputmode="decimal" step="0.1"')}
       </div>
       ${fText('Notities','currentBlock.dailyLogs.'+d+'.notes', l.notes)}
@@ -7520,7 +7519,12 @@ function runViewOverview(){
       ${up && injuriesActive().length ? `<div class="tny muted">Je hebt een blessure (${esc(injuriesActive().map(x=>x.area.toLowerCase()).join(', '))}). Een beoordeling door een sportfysiotherapeut is verstandig voordat je verder opbouwt.</div>` : ''}
       <div class="small">Huidig niveau: <b>${esc(ev.level.name)}</b>. Jij beslist.</div>
       <div class="run-actions">${runBtn('level|'+ev.level.id+'|handhaven',TD_ICO(RUN_ICO.tick)+'Niveau handhaven',up?'':'primary')}${ev.nextTpl && !noUp?runBtn('level|'+ev.nextTpl.id+'|opbouwen','<span aria-hidden="true">→</span> Naar '+esc(ev.nextTpl.name),up?'primary':'rv-discouraged'):''}${ev.prevTpl?runBtn('level|'+ev.prevTpl.id+'|verlagen','Terug naar '+esc(ev.prevTpl.name),''):''}</div>
-      ${ev.nextTpl && noUp ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Advies: wacht met een hoger niveau tot je herstel groen is en je vorige training goed ging.</div>` : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
+      ${ev.nextTpl && noUp ? (()=>{ const dagNietGroen = rd.shown!=='green', vorigeNietGoed = /herstel afwachten|verminderen/i.test(ev.advice);
+        const reden = dagNietGroen && vorigeNietGoed ? `je Dagcheck van vandaag (${esc(runStatusHeadline(rd).replace(/ — .*/,''))}) en je vorige training`
+          : dagNietGroen ? `je Dagcheck van vandaag (${esc(runStatusHeadline(rd).replace(/ — .*/,''))})`
+          : 'je vorige training';
+        return `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Advies: wacht met een hoger niveau tot ${reden} weer goed is.${dagNietGroen?' Klopt de Dagcheck niet meer? Pas hem hierboven aan.':''}</div>`; })()
+      : ev.nextTpl && !up ? `<div class="tny rv-advise-no">${TD_ICO(RUN_ICO.info)}Opbouwen naar ${esc(ev.nextTpl.name)} wordt nu afgeraden.</div>` : ''}</div></div>`;
   }
 
   /* runs die nog bij geen training horen */
