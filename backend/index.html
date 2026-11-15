@@ -93,10 +93,10 @@
     <section class="card">
       <h2>Trainingsprogramma's</h2>
       <p class="sub" style="margin:0 0 10px">Elk programma is een eigen weekschema (fases, oefeningen) dat in de app te kiezen is. Het ingebouwde standaardprogramma (id "standaard-12weken") hoeft hier niet te staan — dat zit al in de app.</p>
-      <div class="row"><select id="progSelect"><option value="">— nieuw programma —</option></select><button id="loadProgsBtn">Vernieuw lijst</button></div>
+      <div class="row"><select id="progSelect"><option value="">— nieuw programma —</option><option value="__template__">— standaardsjabloon laden (12-weken opbouw) —</option></select><button id="loadProgsBtn">Vernieuw lijst</button></div>
       <div class="field" style="margin-top:10px"><label>Id (bv. "5km")</label><input id="progId" placeholder="5km"></div>
       <div class="field" style="margin-top:10px"><textarea id="progText" placeholder='{"naam":"5 km","weken":[...],"vervolg":{...}}'></textarea></div>
-      <div class="row"><button class="primary" id="saveProgBtn">Opslaan</button><button id="deleteProgBtn">Verwijderen</button></div>
+      <div class="row"><button class="primary" id="saveProgBtn">Opslaan</button><button id="deleteProgBtn">Verwijderen</button><button id="exportProgBtn">Exporteren…</button><button id="importProgBtn">Importeren…</button><input type="file" id="importProgFile" accept="application/json" style="display:none"></div>
       <div class="msg" id="progMsg"></div>
     </section>
   </div>
@@ -227,6 +227,10 @@ $('#savePlanBtn').onclick = async () => {
   catch (e) { setMsg($('#planMsg'), e.message, false); }
 };
 
+/* Startpunt voor een nieuw programma: een kopie van het ingebouwde 12-weken-schema, zodat je niet vanaf
+   niets hoeft te beginnen. Puur een hulpmiddel hier in het beheer — heeft geen effect op de app zelf. */
+const BUILTIN_PROGRAMMA_TEMPLATE = {"naam":"12-weken opbouw","weken":[{"week":1,"phase":"leren","faseLabel":"Leren","focusExercise":"goblet-squat","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Squatpatroon leren: eerst naar een stoel zonder gewicht, dan lichaamsgewicht, dan de kettlebell als het past."},{"week":2,"phase":"leren","faseLabel":"Leren","focusExercise":"rdl","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Heupscharnier (RDL) leren. Goblet squat mag kort terugkomen als herhaling."},{"week":3,"phase":"leren","faseLabel":"Leren","focusExercise":"row-a","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Trekbeweging (single-arm row) leren. Squat en RDL blijven bekende bewegingen om kort te herhalen."},{"week":4,"phase":"leren","faseLabel":"Leren","focusExercise":"split-squat","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Split squat leren met extra aandacht voor links/rechts-controle. Geen prestatiedruk."},{"week":5,"phase":"consolideren","faseLabel":"Consolideren","focusExercise":null,"learningTarget":0,"strengthA":false,"strengthB":false,"consolidation":true,"learningGoal":"Geen nieuwe oefening. Squat, RDL, row en split squat herhalen. Eén korte combinatiesessie met 2–3 bekende oefeningen mag."},{"week":6,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"side-plank","learningTarget":1,"strengthA":false,"strengthB":false,"checkpoint":"tussenmeting","learningGoal":"Side plank leren, links/rechts apart. Technische kwaliteit boven tijd. Deze week ook de tussenmeting (Week 6)."},{"week":7,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"suitcase-carry","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Suitcase carry leren: rompstabiliteit, grip, rechtop lopen onder asymmetrische belasting."},{"week":8,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"calf-a","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Eén eenvoudige kuitvariant (staande calf raise). Kuiten/enkels rustig ondersteunen naast het hardlopen."},{"week":9,"phase":"consolideren","faseLabel":"Consolideren","focusExercise":null,"learningTarget":0,"strengthA":false,"strengthB":false,"consolidation":true,"learningGoal":"Geen nieuwe oefening. Beoordelen: welke bewegingen voelen vertrouwd, welke nog niet, hoe verdraagt de combinatie met Garmin Coach. Vanaf hier mag de overgang naar Kracht A/B beginnen."},{"week":10,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":false,"learningGoal":"Eén korte geïntegreerde krachtsessie (Kracht A) proberen. Geen eis van twee volledige sessies."},{"week":11,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"learningGoal":"Als herstel en planning goed zijn: Kracht A én Kracht B, beide kort."},{"week":12,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"checkpoint":"eindmeting","learningGoal":"Uitvoeren, observeren, evalueren. Geen piekweek, geen eindspurt. Deze week ook de eindmeting (Week 12)."}],"vervolg":{"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"learningGoal":"Vervolg na week 12: structureel trainen op basis van wat aantoonbaar goed werkt."}};
+
 let allProgrammas = {};
 async function loadProgs() {
   setMsg($('#progMsg'), 'Laden…');
@@ -241,8 +245,35 @@ async function loadProgs() {
 $('#loadProgsBtn').onclick = loadProgs;
 $('#progSelect').onchange = () => {
   const id = $('#progSelect').value;
+  if (id === '__template__') { $('#progId').value = ''; $('#progText').value = JSON.stringify(BUILTIN_PROGRAMMA_TEMPLATE, null, 2); setMsg($('#progMsg'), 'Sjabloon geladen — pas aan en kies een eigen id voor je het opslaat.', true); return; }
   $('#progId').value = id;
   $('#progText').value = id ? JSON.stringify(allProgrammas[id] || {}, null, 2) : '';
+};
+$('#exportProgBtn').onclick = () => {
+  let data;
+  try { data = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {}; }
+  catch (e) { return setMsg($('#progMsg'), 'Ongeldige JSON: ' + e.message, false); }
+  const naam = ($('#progId').value.trim() || 'programma') + '.json';
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = naam;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  setMsg($('#progMsg'), 'Gedownload als ' + naam + '.', true);
+};
+$('#importProgBtn').onclick = () => $('#importProgFile').click();
+$('#importProgFile').onchange = () => {
+  const file = $('#importProgFile').files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      $('#progText').value = JSON.stringify(data, null, 2);
+      if (!$('#progId').value.trim()) $('#progId').value = file.name.replace(/\.json$/i, '');
+      setMsg($('#progMsg'), 'Bestand ingeladen — controleer het id en klik op Opslaan.', true);
+    } catch (e) { setMsg($('#progMsg'), 'Ongeldige JSON in dit bestand: ' + e.message, false); }
+  };
+  reader.readAsText(file);
+  $('#importProgFile').value = '';
 };
 $('#saveProgBtn').onclick = async () => {
   const id = $('#progId').value.trim();
