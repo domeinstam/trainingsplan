@@ -89,6 +89,16 @@
       <div class="field" style="margin-top:10px"><textarea id="planText" placeholder="{}"></textarea></div>
       <div class="msg" id="planMsg"></div>
     </section>
+
+    <section class="card">
+      <h2>Trainingsprogramma's</h2>
+      <p class="sub" style="margin:0 0 10px">Elk programma is een eigen weekschema (fases, oefeningen) dat in de app te kiezen is. Het ingebouwde standaardprogramma (id "standaard-12weken") hoeft hier niet te staan — dat zit al in de app.</p>
+      <div class="row"><select id="progSelect"><option value="">— nieuw programma —</option></select><button id="loadProgsBtn">Vernieuw lijst</button></div>
+      <div class="field" style="margin-top:10px"><label>Id (bv. "5km")</label><input id="progId" placeholder="5km"></div>
+      <div class="field" style="margin-top:10px"><textarea id="progText" placeholder='{"naam":"5 km","weken":[...],"vervolg":{...}}'></textarea></div>
+      <div class="row"><button class="primary" id="saveProgBtn">Opslaan</button><button id="deleteProgBtn">Verwijderen</button></div>
+      <div class="msg" id="progMsg"></div>
+    </section>
   </div>
 </main>
 <script>
@@ -217,7 +227,43 @@ $('#savePlanBtn').onclick = async () => {
   catch (e) { setMsg($('#planMsg'), e.message, false); }
 };
 
-if (auth) loadUsers();
+let allProgrammas = {};
+async function loadProgs() {
+  setMsg($('#progMsg'), 'Laden…');
+  try {
+    const { programmas } = await callFn('adminListProgrammas', {});
+    allProgrammas = programmas || {};
+    const sel = $('#progSelect');
+    sel.innerHTML = '<option value="">— nieuw programma —</option>' + Object.keys(allProgrammas).map(id => `<option value="${id}">${id}</option>`).join('');
+    setMsg($('#progMsg'), '');
+  } catch (e) { setMsg($('#progMsg'), e.message, false); }
+}
+$('#loadProgsBtn').onclick = loadProgs;
+$('#progSelect').onchange = () => {
+  const id = $('#progSelect').value;
+  $('#progId').value = id;
+  $('#progText').value = id ? JSON.stringify(allProgrammas[id] || {}, null, 2) : '';
+};
+$('#saveProgBtn').onclick = async () => {
+  const id = $('#progId').value.trim();
+  if (!id) return setMsg($('#progMsg'), 'Vul een id in.', false);
+  let programma;
+  try { programma = JSON.parse($('#progText').value || '{}'); }
+  catch (e) { return setMsg($('#progMsg'), 'Ongeldige JSON: ' + e.message, false); }
+  setMsg($('#progMsg'), 'Opslaan…');
+  try { await callFn('adminSetProgramma', { id, programma }); setMsg($('#progMsg'), 'Opgeslagen.', true); loadProgs(); }
+  catch (e) { setMsg($('#progMsg'), e.message, false); }
+};
+$('#deleteProgBtn').onclick = async () => {
+  const id = $('#progId').value.trim();
+  if (!id) return;
+  if (!confirm('Programma "' + id + '" verwijderen?')) return;
+  setMsg($('#progMsg'), 'Verwijderen…');
+  try { await callFn('adminDeleteProgramma', { id }); setMsg($('#progMsg'), 'Verwijderd.', true); $('#progId').value = ''; $('#progText').value = ''; loadProgs(); }
+  catch (e) { setMsg($('#progMsg'), e.message, false); }
+};
+
+if (auth) { loadUsers(); loadProgs(); }
 </script>
 </body>
 </html>
