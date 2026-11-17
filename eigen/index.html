@@ -449,6 +449,7 @@ body.rtp-open{overflow:hidden}
 .td #routineCard .field.wide label{margin-bottom:6px}
 .td #routineCard .field.wide textarea{width:100%}
 .rt-sub::before{content:" · "}
+.td-tasks .rt-txt{font-weight:600}
 .td-tasks .rt-txt small{display:block;font-size:12.5px;color:var(--td-sub);line-height:1.3}
 .td-tasks .rt-sub::before{content:none}
 .lines .rt-sub{font-size:12.5px;color:var(--muted)}
@@ -876,7 +877,7 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 /* intensiteit (hartslagdoel) bij een training */
 :is(#view-running,#view-program) .run-hr{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:8px 0}
 :is(#view-running,#view-program) .run-hr-pick{display:flex;align-items:center;gap:8px;font-size:14px;width:auto;margin:0}
-:is(#view-running,#view-program) .run-hr-pick select{width:auto;min-width:0;max-width:170px;flex:0 0 auto}
+:is(#view-running,#view-program) .run-hr-pick select{width:auto;min-width:0;max-width:170px;flex:0 0 auto;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px;min-height:34px;background:var(--card);color:inherit}
 :is(#view-running,#view-program) .run-hr-bpm{font-size:15px}
 :is(#view-running,#view-program) .run-hr-ask{max-width:320px;margin:4px 0 8px}
 :is(#view-running,#view-program) .run-hrset{margin-top:12px}
@@ -1057,7 +1058,7 @@ body{background:var(--paper)}
 .wk-ico{background:#E0F2F5}.wk-ico::after{background:#04717C}
 .wk-ico.wk-walk{background:#F3EBDA}.wk-ico.wk-walk::after{background:#9A6A12}.wk-bar-walk{background:#C08A2E!important}
 .td-eyebrow{color:#04717C}
-.td-link,.td-more summary,.td-coach .toggles summary{color:#04717C}
+.td-link,.td-more summary,.td-coach .toggles summary,.td-tasks .rt-txt{color:#04717C}
 .td-quick:hover,.wk-day:hover{background:#F2F8FB}
 .td button:focus-visible,.td a:focus-visible,.td input:focus-visible,.td summary:focus-visible,.td select:focus-visible,.nav-btn:focus-visible,.btn:focus-visible{outline:3px solid #10A5B0;outline-offset:2px}
 /* ===== Telefoon (V5): zelfde indeling als de computer, onder elkaar ===== */
@@ -1310,7 +1311,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.12";
+const APP_VERSION = "block2-2.24.14";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -2182,8 +2183,17 @@ function runRestWarnings(s){
 /* ---------- handelingen (alles via één plek, zodat validatie en opslag overal gelijk zijn) ---------- */
 const RUI = { tab:'overview', openId:null, editId:null, msg:'', msgKind:'', scrollTo:null };
 function runMsg(t,k){ RUI.msg = t||''; RUI.msgKind = k||''; }
+/* niet meer dan 1 geplande training per dag: staat er op een datum al een andere geplande
+   training, dan gaat die weg zodra er een nieuwe bij komt of een training ernaartoe wordt verzet — de
+   meest recente actie is leidend. Staat de oude al in Garmin/Intervals.icu, dan gaat hij daar ook weg. */
+function runClearConflicting(date, exceptId){
+  const rp = RP(), conflict = rp.sessions.filter(s=> s.status==='planned' && s.date===date && s.id!==exceptId);
+  conflict.forEach(s=> coachAutoRemove(s));
+  rp.sessions = rp.sessions.filter(s=> !conflict.includes(s));
+}
 function runPlanOn(date, tpl){
   if(!runValidDate(date)) return runMsg('Ongeldige datum.','err');
+  runClearConflicting(date, null);
   const s = runNewSession(date, tpl || runCurrentTpl()); RP().sessions.push(s); RP().sessions.sort(runByDate);
   return s;
 }
@@ -3892,7 +3902,7 @@ function tdTasks(st, ctx){
   routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ k:'rt:'+r.id, done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
   if(showOc) out.push({ k:'slaap', done: (has(l.restingHr)||has(g.restingHr)) && (has(l.hrv)||has(g.nightHrv)) && (has(l.sleepHours)||has(g.sleepDuration)),
     html:`<button class="td-link" data-oc-panel="more">Slaap</button>` });
-  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ k:'extra', done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> ${esc(xm || 'Extra beweging')} <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
+  const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ k:'extra', done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> <span class="rt-txt">${esc(xm || 'Extra beweging')}</span> <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
   return taskSort(out);
 }
 /* eigen volgorde van Mijn taken (CB.taskOrder, per gebruiker): taken die erin staan krijgen die volgorde,
@@ -7825,6 +7835,7 @@ const RUN_DRAG = { sid:null, active:false, timer:null, x0:0, y0:0, dx:0, dy:0, g
 function runMoveTo(id, d){
   const s = runSes(id); if(!s || s.status!=='planned' || !runValidDate(d) || d===s.date) return false;
   if(d < todayISO()){ runMsg('Een training verzet je niet naar een dag die al voorbij is.', 'err'); return false; }
+  runClearConflicting(d, id);
   const open = RUI.openId; runSet(['ses', id, 'date'], d); RUI.openId = open; RUI.scrollTo = null;
   runMsg(s.name.replace(/ – .*/,'')+' verzet naar '+runDateShort(d)+'.'); return true;
 }
