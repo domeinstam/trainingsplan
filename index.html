@@ -1311,7 +1311,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.10";
+const APP_VERSION = "block2-2.24.12";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -1427,39 +1427,55 @@ const DAY_STATUS = {
   orange: { emoji:'🟠', label:'Oranje' },
   red:    { emoji:'🔴', label:'Rood' },
 };
-function blockCurriculum(){
-  return [
-    {week:1,  phase:'leren',        focusExercise:'goblet-squat',   learningTarget:1, strengthA:false, strengthB:false,
+/* Ingebouwd standaardprogramma: het vangnet wanneer er (nog) geen ander trainingsprogramma via het
+   back-office is ingeladen, of een account nog niets heeft gekozen. phase is een vaste, kleine set
+   (leren/consolideren/uitbreiden/integreren) waar app-logica op let; faseLabel is de tekst die getoond
+   wordt en die je per programma vrij kunt aanpassen. */
+const BUILTIN_PROGRAMMA_ID = 'standaard-12weken';
+function builtinProgramma(){
+  return { id:BUILTIN_PROGRAMMA_ID, naam:'12-weken opbouw', weken:[
+    {week:1,  phase:'leren',        faseLabel:PHASE_LABEL.leren,        focusExercise:'goblet-squat',   learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Squatpatroon leren: eerst naar een stoel zonder gewicht, dan lichaamsgewicht, dan de kettlebell als het past.'},
-    {week:2,  phase:'leren',        focusExercise:'rdl',            learningTarget:1, strengthA:false, strengthB:false,
+    {week:2,  phase:'leren',        faseLabel:PHASE_LABEL.leren,        focusExercise:'rdl',            learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Heupscharnier (RDL) leren. Goblet squat mag kort terugkomen als herhaling.'},
-    {week:3,  phase:'leren',        focusExercise:'row-a',          learningTarget:1, strengthA:false, strengthB:false,
+    {week:3,  phase:'leren',        faseLabel:PHASE_LABEL.leren,        focusExercise:'row-a',          learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Trekbeweging (single-arm row) leren. Squat en RDL blijven bekende bewegingen om kort te herhalen.'},
-    {week:4,  phase:'leren',        focusExercise:'split-squat',    learningTarget:1, strengthA:false, strengthB:false,
+    {week:4,  phase:'leren',        faseLabel:PHASE_LABEL.leren,        focusExercise:'split-squat',    learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Split squat leren met extra aandacht voor links/rechts-controle. Geen prestatiedruk.'},
-    {week:5,  phase:'consolideren', focusExercise:null,             learningTarget:0, strengthA:false, strengthB:false, consolidation:true,
+    {week:5,  phase:'consolideren', faseLabel:PHASE_LABEL.consolideren, focusExercise:null,             learningTarget:0, strengthA:false, strengthB:false, consolidation:true,
               learningGoal:'Geen nieuwe oefening. Squat, RDL, row en split squat herhalen. Eén korte combinatiesessie met 2–3 bekende oefeningen mag.'},
-    {week:6,  phase:'uitbreiden',   focusExercise:'side-plank',     learningTarget:1, strengthA:false, strengthB:false, checkpoint:'tussenmeting',
+    {week:6,  phase:'uitbreiden',   faseLabel:PHASE_LABEL.uitbreiden,   focusExercise:'side-plank',     learningTarget:1, strengthA:false, strengthB:false, checkpoint:'tussenmeting',
               learningGoal:'Side plank leren, links/rechts apart. Technische kwaliteit boven tijd. Deze week ook de tussenmeting (Week 6).'},
-    {week:7,  phase:'uitbreiden',   focusExercise:'suitcase-carry', learningTarget:1, strengthA:false, strengthB:false,
+    {week:7,  phase:'uitbreiden',   faseLabel:PHASE_LABEL.uitbreiden,   focusExercise:'suitcase-carry', learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Suitcase carry leren: rompstabiliteit, grip, rechtop lopen onder asymmetrische belasting.'},
-    {week:8,  phase:'uitbreiden',   focusExercise:'calf-a',         learningTarget:1, strengthA:false, strengthB:false,
+    {week:8,  phase:'uitbreiden',   faseLabel:PHASE_LABEL.uitbreiden,   focusExercise:'calf-a',         learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Één eenvoudige kuitvariant (staande calf raise). Kuiten/enkels rustig ondersteunen naast het hardlopen.'},
-    {week:9,  phase:'consolideren', focusExercise:null,             learningTarget:0, strengthA:false, strengthB:false, consolidation:true,
+    {week:9,  phase:'consolideren', faseLabel:PHASE_LABEL.consolideren, focusExercise:null,             learningTarget:0, strengthA:false, strengthB:false, consolidation:true,
               learningGoal:'Geen nieuwe oefening. Beoordelen: welke bewegingen voelen vertrouwd, welke nog niet, hoe verdraagt de combinatie met Garmin Coach. Vanaf hier mag de overgang naar Kracht A/B beginnen.'},
-    {week:10, phase:'integreren',   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:false,
+    {week:10, phase:'integreren',   faseLabel:PHASE_LABEL.integreren,   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:false,
               learningGoal:'Eén korte geïntegreerde krachtsessie (Kracht A) proberen. Geen eis van twee volledige sessies.'},
-    {week:11, phase:'integreren',   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:true,
+    {week:11, phase:'integreren',   faseLabel:PHASE_LABEL.integreren,   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:true,
               learningGoal:'Als herstel en planning goed zijn: Kracht A én Kracht B, beide kort.'},
-    {week:12, phase:'integreren',   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:true, checkpoint:'eindmeting',
+    {week:12, phase:'integreren',   faseLabel:PHASE_LABEL.integreren,   focusExercise:null,             learningTarget:0, strengthA:true,  strengthB:true, checkpoint:'eindmeting',
               learningGoal:'Uitvoeren, observeren, evalueren. Geen piekweek, geen eindspurt. Deze week ook de eindmeting (Week 12).'},
-  ];
+  ], vervolg:{ phase:'integreren', faseLabel:PHASE_LABEL.integreren, focusExercise:null, learningTarget:0, strengthA:true, strengthB:true,
+           learningGoal:'Vervolg na week 12: structureel trainen op basis van wat aantoonbaar goed werkt.' } };
+}
+/* Programma-catalogus: los van de gewone account-sync lokaal gecachet (zie syncProgrammasMaybe()).
+   Leeg/onbereikbaar -> alleen het ingebouwde standaardprogramma, dus zonder back-office-programma's
+   verandert er niets aan het bestaande gedrag. */
+var PROGRAMMA_CACHE_LS = 'atempo-programmas';
+function programmaCacheLoad(){ try{ const v = JSON.parse(localStorage.getItem(PROGRAMMA_CACHE_LS)||'null'); return (v && typeof v==='object') ? v : null; }catch(e){ return null; } }
+function programmaCacheSave(o){ try{ localStorage.setItem(PROGRAMMA_CACHE_LS, JSON.stringify(o)); }catch(e){} }
+function programmaCatalogus(){ return programmaCacheLoad() || {}; }
+function activeProgramma(){
+  const cat = programmaCatalogus(), id = CB.programmaId;
+  return (id && cat[id]) || cat[BUILTIN_PROGRAMMA_ID] || builtinProgramma();
 }
 function weekConfig(wi){
-  const c = blockCurriculum();
+  const p = activeProgramma(), c = Array.isArray(p.weken) ? p.weken : [];
   if(wi>=0 && wi<c.length) return c[wi];
-  return { week:wi+1, phase:'integreren', focusExercise:null, learningTarget:0, strengthA:true, strengthB:true,
-           learningGoal:'Vervolg na week 12: structureel trainen op basis van wat aantoonbaar goed werkt.' };
+  return p.vervolg || builtinProgramma().vervolg;
 }
 function exName(exId){ const e = (state.exercises||[]).find(x=>x.id===exId); return e ? e.name : exId; }
 /* per-oefening stadium: leren -> vertrouwd -> trainen. Default 'leren'. Alleen 'trainen' krijgt progressie-advies. */
@@ -2094,6 +2110,18 @@ function runStatusHeadline(rd){
   }
   return 'Geen waarschuwingen. Opbouwen blijft jouw keuze.';
 }
+/* welke reden (indien van toepassing) letterlijk in runStatusHeadline() terugkomt, zodat de
+   "Waarom?"-lijst diezelfde reden niet nog een keer laat zien. Alleen de twee takken hierboven die
+   first.text letterlijk in de kop zetten tellen mee; de pijn-tak en "eigen beoordeling" parafraseren
+   juist, dus daar blijft de reden alleen in de lijst staan. */
+function runHeadlineReason(rd){
+  if(rd.own && rd.shown===rd.own && rd.own!==rd.auto) return null;
+  const first = rd.reasons.find(r=>r.sev==='red') || rd.reasons.find(r=>r.sev==='orange');
+  if(!first) return null;
+  if(rd.auto==='red') return first;
+  if(rd.auto==='orange' && !first.pain) return first;
+  return null;
+}
 
 /* evaluatie na twee uitgevoerde trainingen + voorstel (altijd handmatige beslissing) */
 function runEvaluation(){
@@ -2215,6 +2243,7 @@ function defaultState(){
     currentBlock:{
       startDate: todayISO(),            // begint op de dag dat de gebruiker start (aanpasbaar); blijft daarna gewoon bewaard
       durationWeeks:12,                 // 12-weeks opbouw- en integratieblok
+      programmaId: BUILTIN_PROGRAMMA_ID, // welk trainingsprogramma actief is (zie activeProgramma())
       goalDistanceKm:5,
       routineMinutesTarget:45,          // richttijd voor de ochtendroutine (configureerbaar)
       // flexibele weekdoelen (geen vaste weekdagen)
@@ -2775,7 +2804,7 @@ function getTodayContext(d){
   return {
     period:'program', cfg, ws, focusEx, plannedCoach, openGoals,
     learnRelevant: !!(focusEx && !ws.learning.met), walkToday: walkPlannedToday,
-    title:`Week ${weekNo(wi)} · ${PHASE_LABEL[cfg.phase]||cfg.phase}`,
+    title:`Week ${weekNo(wi)} · ${cfg.faseLabel||PHASE_LABEL[cfg.phase]||cfg.phase}`,
     primary, logged,
   };
 }
@@ -4054,7 +4083,7 @@ function renderWeek(){
 
   const cfg = weekConfig(wi);
   const focusEx = cfg.focusExercise ? state.exercises.find(x=>x.id===cfg.focusExercise) : null;
-  const phaseLabel = PHASE_LABEL[cfg.phase] || cfg.phase;
+  const phaseLabel = cfg.faseLabel || PHASE_LABEL[cfg.phase] || cfg.phase;
   const parts = {};                 // stukken die de desktopindeling (weekWideHTML) ongewijzigd hergebruikt
   const newMoveLine = focusEx ? `Nieuwe beweging: ${esc(focusEx.name)}`
     : (cfg.consolidation ? 'Geen nieuwe oefening — herhalen en verankeren'
@@ -4142,7 +4171,9 @@ function renderWeek(){
     </tbody></table></div>
     <p class="tny muted">Gepland is bewust vaak "—": hardloopduur komt uit je trainingen bij Hardlopen, krachtduur uit je eigen invoer, wandelingen uit de geregistreerde tijd. De <b>ochtendroutine wordt geteld in dagen</b> (${mins.routineDays}/7), niet in minuten — de ±${mins.routineTarget} min is een richttijd, geen meting. Alleen een handmatig ingevulde routineduur telt in de minuten.</p></div></details>`;
 
+  const progCat = programmaCatalogus(), progIds = Object.keys(progCat);
   html += parts.blok = `<details class="acc"><summary>Blok-instellingen</summary><div class="acc-body"><div class="form-grid cols-4">
+    ${progIds.length>1 ? fSelect('Trainingsprogramma','currentBlock.programmaId', CB.programmaId||BUILTIN_PROGRAMMA_ID, progIds.map(id=>[id, progCat[id].naam||id])) : ''}
     ${fInput('Startdatum blok','currentBlock.startDate', CB.startDate,'date')}
     ${fInput('Aantal weken','currentBlock.durationWeeks', CB.durationWeeks,'number','inputmode="numeric"')}
     ${fInput('Hoofddoel afstand (km)','currentBlock.goalDistanceKm', CB.goalDistanceKm,'number','inputmode="numeric"')}
@@ -6385,7 +6416,7 @@ function buildPrint(mode){
     goalBits.push(`Lange wandeling ${ws.longWalk.applicable?(ws.longWalk.done?'✓':'nog te doen'):'niet deze week'}`);
     ws.routines.forEach(x=> goalBits.push(`${esc(x.r.name)} ${x.done}/${x.target}`));
     t.innerHTML = `<div class="print-page">
-      <h1>Atempo — week ${weekNo(wi)} · ${esc(PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
+      <h1>Atempo — week ${weekNo(wi)} · ${esc(cfg.faseLabel||PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
       <p>${fmt(ds[0],{day:'numeric',month:'long'})} – ${fmt(ds[6],{day:'numeric',month:'long'})}${goalMain() ? ' · '+esc(goalMain().name) : ''}</p>
       ${cfg.learningGoal?`<p><i>${esc(cfg.learningGoal)}</i></p>`:''}
       <p><b>Weekdoelen:</b> ${goalBits.join(' · ')}</p>
@@ -6823,6 +6854,16 @@ async function fbGetCurrent(uid){
   if(!raw || !raw.state) return null;
   return { state:JSON.parse(raw.state), hist: raw.hist ? JSON.parse(raw.hist) : null, updated_at:raw.updated_at, device:raw.device };
 }
+/* Trainingsprogramma-catalogus (gedeeld, via het back-office beheerd): hoeft maar één keer per sessie
+   opgehaald te worden, los van de gewone account-synchronisatie hierboven. Mislukt het (geen internet,
+   niet ingelogd) dan blijft het laatst gecachete programma staan; is er nog nooit iets opgehaald, dan
+   gebruikt de app gewoon het ingebouwde standaardprogramma. */
+var PROGRAMMAS_FETCHED = false;
+async function syncProgrammasMaybe(){
+  if(PROGRAMMAS_FETCHED || !fbConfigured() || !syncLoggedIn()) return;
+  PROGRAMMAS_FETCHED = true;
+  try{ const raw = await fbDb('programmas'); if(raw && typeof raw==='object') programmaCacheSave(raw); }catch(e){}
+}
 async function syncPrune(uid){
   const keys = await fbDb('trainingsplan/'+uid+'/versies', 'GET', null, '&shallow=true');
   if(!keys) return;
@@ -6858,6 +6899,7 @@ async function syncNow(retry){
   retry = retry || 0;
   if(!fbConfigured() || SYNC.busy) return;
   const s0 = syncLoad(); if(!s0.auth) return;
+  syncProgrammasMaybe();
   SYNC.busy = true; syncSetMsg('☁ Synchroniseren…');
   try{
     if(s0.dataUid && s0.dataUid !== s0.auth.uid){ await syncSwitchAccount(s0); return; }     // ander account: nooit samenvoegen of uploaden
@@ -7505,7 +7547,8 @@ function runViewOverview(){
     ${runStatusSources(rd, pre)}
     ${runPreComplete(pre) ? '' : `<div class="run-actions"><button class="btn sm primary" data-oc-open>Dagcheck invullen</button></div>`}
     <details class="acc"><summary>Waarom?</summary><div class="acc-body">
-      ${rd.reasons.length?`<ul class="small">${rd.reasons.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>`:''}
+      ${(()=>{ const hide = runHeadlineReason(rd), rest = rd.reasons.filter(r=>r!==hide);
+        return rest.length?`<ul class="small">${rest.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>`:''; })()}
       ${rd.missing.length?`<div class="tny muted">Ontbrekend: ${rd.missing.map(esc).join('; ')}.</div>`:''}
       ${!rd.reasons.length && !rd.missing.length?'<div class="small muted">Geen aandachtspunten. Groen geldt bij geen pijn, energie boven 5, weinig spierpijn of stijfheid en geen klachten bij wandelen of traplopen.</div>':''}
       <div class="tny muted">Ondersteunend advies, geen medische beoordeling.</div>
