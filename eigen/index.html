@@ -85,6 +85,7 @@ a{color:var(--green)}
 
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
 .card + .card{margin-top:16px}
+.grid > .card + .card{margin-top:0}   /* in een raster zorgt de gap al voor ruimte; anders staan de kaarten naast elkaar scheef */
 .card h3{margin:0 0 14px;font-size:16px}
 .card h3 .sub{font-weight:500;color:var(--muted);font-size:12.5px}
 .card h4{margin:16px 0 8px;color:var(--green);font-size:13.5px}
@@ -1311,7 +1312,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.14";
+const APP_VERSION = "block2-2.24.15";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -1433,6 +1434,9 @@ const DAY_STATUS = {
    wordt en die je per programma vrij kunt aanpassen. */
 const BUILTIN_PROGRAMMA_ID = 'standaard-12weken';
 function builtinProgramma(){
+  /* de openbare versie begint neutraal: geen vooraf ingebouwd schema, tot er een programma uit het back-office wordt geladen */
+  if(PUBLIC_BUILD) return { id:BUILTIN_PROGRAMMA_ID, naam:'Geen programma geladen', weken:[],
+    vervolg:{ phase:'', faseLabel:'', focusExercise:null, learningTarget:0, strengthA:false, strengthB:false, learningGoal:'' } };
   return { id:BUILTIN_PROGRAMMA_ID, naam:'12-weken opbouw', weken:[
     {week:1,  phase:'leren',        faseLabel:PHASE_LABEL.leren,        focusExercise:'goblet-squat',   learningTarget:1, strengthA:false, strengthB:false,
               learningGoal:'Squatpatroon leren: eerst naar een stoel zonder gewicht, dan lichaamsgewicht, dan de kettlebell als het past.'},
@@ -1470,8 +1474,9 @@ function programmaCacheSave(o){ try{ localStorage.setItem(PROGRAMMA_CACHE_LS, JS
 function programmaCatalogus(){ return programmaCacheLoad() || {}; }
 function activeProgramma(){
   const cat = programmaCatalogus(), id = CB.programmaId;
-  return (id && cat[id]) || cat[BUILTIN_PROGRAMMA_ID] || builtinProgramma();
+  return (id && cat[id]) || cat[BUILTIN_PROGRAMMA_ID] || (PUBLIC_BUILD && cat[Object.keys(cat)[0]]) || builtinProgramma();
 }
+const weekFase = cfg => cfg.faseLabel || PHASE_LABEL[cfg.phase] || cfg.phase || '';
 function weekConfig(wi){
   const p = activeProgramma(), c = Array.isArray(p.weken) ? p.weken : [];
   if(wi>=0 && wi<c.length) return c[wi];
@@ -2252,8 +2257,8 @@ function defaultState(){
     currentBlock:{
       startDate: todayISO(),            // begint op de dag dat de gebruiker start (aanpasbaar); blijft daarna gewoon bewaard
       durationWeeks:12,                 // 12-weeks opbouw- en integratieblok
-      programmaId: BUILTIN_PROGRAMMA_ID, // welk trainingsprogramma actief is (zie activeProgramma())
-      goalDistanceKm:5,
+      programmaId: PUBLIC_BUILD ? "" : BUILTIN_PROGRAMMA_ID, // welk trainingsprogramma actief is (zie activeProgramma())
+      goalDistanceKm: PUBLIC_BUILD ? null : 5,
       routineMinutesTarget:45,          // richttijd voor de ochtendroutine (configureerbaar)
       // flexibele weekdoelen (geen vaste weekdagen)
       weekGoals:{ strengthA:1, strengthB:1, longWalkEveryOtherWeek:true, coachFollowsGreg:true },
@@ -2813,7 +2818,7 @@ function getTodayContext(d){
   return {
     period:'program', cfg, ws, focusEx, plannedCoach, openGoals,
     learnRelevant: !!(focusEx && !ws.learning.met), walkToday: walkPlannedToday,
-    title:`Week ${weekNo(wi)} · ${cfg.faseLabel||PHASE_LABEL[cfg.phase]||cfg.phase}`,
+    title:`Week ${weekNo(wi)}${weekFase(cfg) ? ' · '+weekFase(cfg) : ''}`,
     primary, logged,
   };
 }
@@ -3070,7 +3075,7 @@ function renderToday(){
     const e7 = recent7('energy');
     const bits = [];
     if(latestVo2()!=null) bits.push({label:'VO₂-max', value:nl(latestVo2()), sub:'laatste meting '+fmt(latestVo2Point().x,{day:'numeric',month:'short'})});
-    if(latestContinuous()!=null) bits.push({label:'Aaneengesloten looptijd', value:nl(latestContinuous()), sub:`min · richting ${nl(CB.goalDistanceKm)} km`});
+    if(latestContinuous()!=null) bits.push({label:'Aaneengesloten looptijd', value:nl(latestContinuous()), sub:`min`+(num(CB.goalDistanceKm)!=null ? ` · richting ${nl(CB.goalDistanceKm)} km` : "")});
     if(e7.value!=null) bits.push({label:'Ochtendenergie', value:nl(round(e7.value,1)), sub:`${e7.n}/7 dagen`});
     if(asym) bits.push({label:'Grootste asymmetrie W0', value:nl(asym.val), sub:esc(asym.label)});
     if(bits.length) html += `<div class="grid cols-4">${bits.map(b=>`<div class="metric"><div class="label">${esc(b.label)}</div><div class="value">${b.value}</div><div class="sub">${b.sub}</div></div>`).join('')}</div>`;
@@ -4092,14 +4097,14 @@ function renderWeek(){
 
   const cfg = weekConfig(wi);
   const focusEx = cfg.focusExercise ? state.exercises.find(x=>x.id===cfg.focusExercise) : null;
-  const phaseLabel = cfg.faseLabel || PHASE_LABEL[cfg.phase] || cfg.phase;
+  const phaseLabel = weekFase(cfg);
   const parts = {};                 // stukken die de desktopindeling (weekWideHTML) ongewijzigd hergebruikt
   const newMoveLine = focusEx ? `Nieuwe beweging: ${esc(focusEx.name)}`
     : (cfg.consolidation ? 'Geen nieuwe oefening — herhalen en verankeren'
     : (cfg.phase==='integreren' ? 'Korte krachtsessies (Kracht A/B)' : 'Geen nieuwe oefening'));
 
-  let html = `<div class="pagehead"><div class="eyebrow">Week ${weekNo(wi)} · <span class="phase-pill">${esc(phaseLabel)}</span></div>
-    <h2>Week ${weekNo(wi)} — ${esc(phaseLabel==='Leren'?'Leren':phaseLabel)}</h2>
+  let html = `<div class="pagehead"><div class="eyebrow">Week ${weekNo(wi)}${phaseLabel ? ` · <span class="phase-pill">${esc(phaseLabel)}</span>` : ''}</div>
+    <h2>Week ${weekNo(wi)}${phaseLabel ? ' — '+esc(phaseLabel) : ''}</h2>
     <p>${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))} · ${newMoveLine}</p>
     ${cfg.learningGoal?`<p class="small muted">${esc(cfg.learningGoal)}</p>`:''}</div>`;
 
@@ -4279,7 +4284,7 @@ function weekWideHTML(wi, W){
   return `<div class="td wk sf-rust">
     <section class="td-hero wk-hero">${TD_HERO}<div class="td-hero-fade"></div>
       <div class="td-hero-text"><span class="wk-pillweek">WEEK ${weekNo(wi)}</span>
-        <h2 class="td-greet">Week ${weekNo(wi)} — ${esc(phaseLabel)}</h2>
+        <h2 class="td-greet">Week ${weekNo(wi)}${phaseLabel ? ' — '+esc(phaseLabel) : ''}</h2>
         <div class="td-date wk-date">${TD_ICO(TDI.cal)}${esc(fmt(ds[0],{day:'numeric',month:'long'}))} – ${esc(fmt(ds[6],{day:'numeric',month:'long'}))}</div>
         ${cfg.learningGoal ? `<p class="wk-goal">${esc(cfg.learningGoal)}</p>` : ''}</div>
     </section>
@@ -5742,12 +5747,6 @@ function renderMethod(){
       <br><span class="small">${esc(rt.text)}</span><br><span class="small muted">Bronnen: ${(rt.sources||[]).join(', ')||'—'}</span></div>`).join('')}
   </div>`;
 
-  html += `<div class="section-title"><h2>Bronnen (uit de oude app)</h2></div><div class="card">
-    ${state.sources.map(s=>`<div style="padding:10px 0;border-bottom:1px solid var(--line)">
-      <b>${esc(s.code)} · ${esc(s.title)}</b><br><span class="small">${esc(s.application)}</span><br>
-      <a class="small" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></div>`).join('')}
-    <p class="notice" style="margin-top:12px">Nieuwe bronnen worden alleen toegevoegd wanneer ze werkelijk gecontroleerd zijn. Niets verzinnen.</p>
-  </div>`;
   setViewHTML('#view-method', html);
 }
 
@@ -6425,7 +6424,7 @@ function buildPrint(mode){
     goalBits.push(`Lange wandeling ${ws.longWalk.applicable?(ws.longWalk.done?'✓':'nog te doen'):'niet deze week'}`);
     ws.routines.forEach(x=> goalBits.push(`${esc(x.r.name)} ${x.done}/${x.target}`));
     t.innerHTML = `<div class="print-page">
-      <h1>Atempo — week ${weekNo(wi)} · ${esc(cfg.faseLabel||PHASE_LABEL[cfg.phase]||cfg.phase)}</h1>
+      <h1>Atempo — week ${weekNo(wi)}${weekFase(cfg) ? ' · '+esc(weekFase(cfg)) : ''}</h1>
       <p>${fmt(ds[0],{day:'numeric',month:'long'})} – ${fmt(ds[6],{day:'numeric',month:'long'})}${goalMain() ? ' · '+esc(goalMain().name) : ''}</p>
       ${cfg.learningGoal?`<p><i>${esc(cfg.learningGoal)}</i></p>`:''}
       <p><b>Weekdoelen:</b> ${goalBits.join(' · ')}</p>
