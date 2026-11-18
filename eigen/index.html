@@ -1316,7 +1316,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.18";
+const APP_VERSION = "block2-2.24.20";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -2246,8 +2246,10 @@ function runApplyProgramLevels(){
   const lv = (Array.isArray(p.niveaus) ? p.niveaus : []).filter(n=> n && n.id!=null && num(n.reps)>0 && num(n.runMin)>0).map(runTemplateFrom);
   rp.levelSets = rp.levelSets || {};
   const stored = rp.levelSets[key];
+  const dagen = Array.isArray(p.trainingsdagen) ? p.trainingsdagen.filter(d=> ['mon','tue','wed','thu','fri','sat','sun'].includes(d)) : [];   // optioneel: de vaste trainingsdagen van dit programma
+  const zetDagen = ()=>{ if(dagen.length) rp.settings.trainingDays = dagen.slice(); };
   if(!had){                                      // eerste keer: de huidige niveaus (eigen of standaard) horen bij dit programma
-    if(!rp.templates.length && lv.length){ rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; }
+    if(!rp.templates.length && lv.length){ rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; zetDagen(); }
     rp.levelSetFor = key; if(CB && !CB.programmaId) CB.programmaId = key;
     return true;
   }
@@ -2259,9 +2261,9 @@ function runApplyProgramLevels(){
   }
   open.forEach(s=> coachAutoRemove(s));
   rp.sessions = rp.sessions.filter(s=> !open.includes(s));
-  rp.levelSets[had] = { templates: rp.templates, currentTemplateId: rp.settings.currentTemplateId };
-  if(stored){ rp.templates = stored.templates; rp.settings.currentTemplateId = stored.currentTemplateId; }
-  else { rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; }
+  rp.levelSets[had] = { templates: rp.templates, currentTemplateId: rp.settings.currentTemplateId, trainingDays: rp.settings.trainingDays.slice() };
+  if(stored){ rp.templates = stored.templates; rp.settings.currentTemplateId = stored.currentTemplateId; if(Array.isArray(stored.trainingDays) && stored.trainingDays.length) rp.settings.trainingDays = stored.trainingDays.slice(); }
+  else { rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; zetDagen(); }
   rp.levelSetFor = key;
   return true;
 }
@@ -7000,7 +7002,8 @@ async function syncNow(retry){
     // beide gewijzigd (bv. op twee apparaten runs opgehaald): vanzelf samenvoegen; de vorige cloudversie wordt bewaard
     let merged = null;
     try { merged = syncMerge(state, row.state, Date.parse(state.meta.updatedAt||0) >= Date.parse((row.state.meta||{}).updatedAt||row.updated_at||0)); } catch(e){ merged = null; }
-    if(merged && !syncEmpty(merged)){
+    // twee lege standen (geen enkele registratie) hoeven nooit tot een keuze te leiden: samenvoegen verliest dan niets (profiel e.d. blijft van beide kanten)
+    if(merged && (!syncEmpty(merged) || (syncEmpty(state) && syncEmpty(row.state)))){
       state = mergeState(defaultState(), merged); CB = state.currentBlock; fixOldRunsAsLevelA(); saveState();
       await syncPush(row, true);
       syncSetMsg('☁ Samengevoegd met de cloud '+syncTime()); if(typeof renderCurrent==='function') renderCurrent(); return;
