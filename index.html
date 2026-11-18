@@ -1315,13 +1315,13 @@ const SCHEMA_VERSION = 6;
 const APP_VERSION = "block2-2.24.14";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
-const STORAGE_KEY = "atempo-state";
-const HIST_KEY = "atempo-hist";
+const STORAGE_KEY = "atempo-openbaar-state";
+const HIST_KEY = "atempo-openbaar-hist";
 /* eenmalige, niet-destructieve migratie van de oude (persoonsgebonden) sleutelnamen naar neutrale namen;
    de oude sleutel wordt nooit verwijderd, dus er is geen risico op dataverlies */
 function lsMigrate(oldKey, newKey){ try{ if(localStorage.getItem(newKey)==null){ const v = localStorage.getItem(oldKey); if(v!=null) localStorage.setItem(newKey, v); } }catch(e){} }
-lsMigrate("trainingsplan-rens-blok2", STORAGE_KEY);
-lsMigrate("trainingsplan-rens-hist", HIST_KEY);
+
+
 /* Overgangsweek (vaste historische periode): het programma en de registratiemethode waren nog
    niet definitief. Geen officiële trainingsweek, geen adherence, geen achteraf-reconstructie. */
 const TRANSITION_START = '2026-08-31';
@@ -1465,7 +1465,7 @@ function builtinProgramma(){
 /* Programma-catalogus: los van de gewone account-sync lokaal gecachet (zie syncProgrammasMaybe()).
    Leeg/onbereikbaar -> alleen het ingebouwde standaardprogramma, dus zonder back-office-programma's
    verandert er niets aan het bestaande gedrag. */
-var PROGRAMMA_CACHE_LS = 'atempo-programmas';
+var PROGRAMMA_CACHE_LS = 'atempo-openbaar-programmas';
 function programmaCacheLoad(){ try{ const v = JSON.parse(localStorage.getItem(PROGRAMMA_CACHE_LS)||'null'); return (v && typeof v==='object') ? v : null; }catch(e){ return null; } }
 function programmaCacheSave(o){ try{ localStorage.setItem(PROGRAMMA_CACHE_LS, JSON.stringify(o)); }catch(e){} }
 function programmaCatalogus(){ return programmaCacheLoad() || {}; }
@@ -5836,18 +5836,18 @@ function setByPath(path, raw, quiet){
    Eenmalig een map kiezen; de app onthoudt die (IndexedDB) en schrijft daarna elke 7 dagen zelf
    Atempo_backup_JJJJ-MM-DD.json weg. Chrome vraagt na het openen soms 1 klik om
    toestemming te bevestigen — dan verschijnt bovenaan een balk. Verandert niets aan je data. */
-const BK_KEY = 'atempo-lastbackup';
-lsMigrate('trainingsplan-rens-lastbackup', BK_KEY);
+const BK_KEY = 'atempo-openbaar-lastbackup';
+
 const BK_DAYS = 7;
 function bkLast(){ try{ return localStorage.getItem(BK_KEY) || null; }catch(e){ return null; } }
 function bkDue(){ const l = bkLast(); return !l || (Date.now() - new Date(l).getTime()) > BK_DAYS*86400000; }
-function bkDB(){ return new Promise((res,rej)=>{ const r = indexedDB.open('atempo-backup',1); r.onupgradeneeded = ()=> r.result.createObjectStore('h'); r.onsuccess = ()=> res(r.result); r.onerror = ()=> rej(r.error); }); }
-function bkDBOld(){ return new Promise((res,rej)=>{ const r = indexedDB.open('trainingsplan-rens-backup',1); r.onupgradeneeded = ()=> r.result.createObjectStore('h'); r.onsuccess = ()=> res(r.result); r.onerror = ()=> rej(r.error); }); }
+function bkDB(){ return new Promise((res,rej)=>{ const r = indexedDB.open('atempo-openbaar-backup',1); r.onupgradeneeded = ()=> r.result.createObjectStore('h'); r.onsuccess = ()=> res(r.result); r.onerror = ()=> rej(r.error); }); }
+function bkDBOld(){ return new Promise((res,rej)=>{ const r = indexedDB.open('atempo-openbaar-backup-oud',1); r.onupgradeneeded = ()=> r.result.createObjectStore('h'); r.onsuccess = ()=> res(r.result); r.onerror = ()=> rej(r.error); }); }
 /* beste-poging migratie van de oude back-upmap-koppeling (andere databasenaam); mislukt dit, dan kiest de
    gebruiker eenmalig opnieuw een map — er gaat geen eigen data verloren, alleen de koppeling zelf */
 async function bkOldHandle(){
   try{
-    if(indexedDB.databases){ const list = await indexedDB.databases(); if(!list.some(d=>d.name==='trainingsplan-rens-backup')) return null; }
+    if(indexedDB.databases){ const list = await indexedDB.databases(); if(!list.some(d=>d.name==='atempo-openbaar-backup-oud')) return null; }
     const old = await bkDBOld();
     return await new Promise(res=>{ const q = old.transaction('h').objectStore('h').get('dir'); q.onsuccess = ()=> res(q.result||null); q.onerror = ()=> res(null); });
   }catch(e){ return null; }
@@ -5874,7 +5874,7 @@ async function bkWrite(h){
 async function bkPickFolder(){
   if(!window.showDirectoryPicker){ alert('Deze browser ondersteunt geen map-koppeling. Gebruik Chrome of Edge, of maak een handmatige JSON-back-up.'); return false; }
   try{
-    const h = await window.showDirectoryPicker({ id:'atempo-backup', mode:'readwrite', startIn:'documents' });
+    const h = await window.showDirectoryPicker({ id:'atempo-openbaar-backup', mode:'readwrite', startIn:'documents' });
     await bkSetHandle(h); await bkWrite(h); bkRender(); return true;
   }catch(e){ if(e && e.name!=='AbortError') alert('Map koppelen mislukt: ' + e.message); return false; }
 }
@@ -5904,10 +5904,10 @@ async function bkRender(){
 function alfaInit(){
   if(!PUBLIC_BUILD) return;
   const bar = document.getElementById('alfaBar'); if(!bar) return;
-  try{ if(localStorage.getItem('atempo-alfa-gezien')) return; }catch(e){}
+  try{ if(localStorage.getItem('atempo-openbaar-alfa-gezien')) return; }catch(e){}
   bar.hidden = false;
   bar.innerHTML = `<span>✏️ <b>Alfaversie</b> — deze app is nog in ontwikkeling en kan fouten bevatten.</span><button type="button" aria-label="Sluiten" data-alfa-close>✕</button>`;
-  bar.querySelector('[data-alfa-close]').addEventListener('click', ()=>{ bar.hidden = true; try{ localStorage.setItem('atempo-alfa-gezien','1'); }catch(e){} });
+  bar.querySelector('[data-alfa-close]').addEventListener('click', ()=>{ bar.hidden = true; try{ localStorage.setItem('atempo-openbaar-alfa-gezien','1'); }catch(e){} });
 }
 async function bkInit(){
   if(bkDue()){ const ok = await bkRunNow(false); if(ok) bkRender(); }
@@ -6758,8 +6758,8 @@ var FB_API_KEY = "AIzaSyAWFMv5x6GPWC4eDpsCRe8paqVSJZ9O0lk";                     
 var FB_DB = "https://atempo-openbaar-default-rtdb.europe-west1.firebasedatabase.app";  // Realtime Database URL
 var FB_AUTH_BASE = 'https://identitytoolkit.googleapis.com';
 var FB_TOKEN_BASE = 'https://securetoken.googleapis.com';
-var SYNC_LS = 'atempo-sync';
-lsMigrate('trainingsplan-rens-sync', SYNC_LS);
+var SYNC_LS = 'atempo-openbaar-sync';
+
 var SYNC = { busy:false, msg:'', timer:null, conflict:null };
 function fbConfigured(){ return !/VUL_IN/.test(FB_API_KEY) && !/VUL_IN/.test(FB_DB); }
 function syncLoad(){ try{ return JSON.parse(localStorage.getItem(SYNC_LS)||'{}'); }catch(e){ return {}; } }
@@ -6944,7 +6944,7 @@ async function syncSwitchAccount(s0){
   const row = await fbGetCurrent(s0.auth.uid);
   if(state.meta.updatedAt !== s0.lastLocalAt && !syncEmpty(state))
     dl(new Blob([JSON.stringify({ ...state, historicalData:HISTORICAL },null,2)],{type:'application/json'}), 'Atempo_vorige_gebruiker_'+todayISO()+'.json');
-  try { sessionStorage.removeItem('atempo-intervals'); } catch(e){}                       // Garmin-koppeling is per gebruiker
+  try { sessionStorage.removeItem('atempo-openbaar-intervals'); } catch(e){}                       // Garmin-koppeling is per gebruiker
   if(row){ const s = syncLoad(); s.dataUid = s0.auth.uid; syncSave(s); syncApplyCloud(row); return; }
   localStorage.removeItem(STORAGE_KEY); localStorage.removeItem(HIST_KEY);
   const s = syncLoad(); s.dataUid = s0.auth.uid; s.lastCloudAt = null; s.lastLocalAt = null; s.lastVersionAt = null; syncSave(s);
@@ -7042,7 +7042,7 @@ Dit kan niet ongedaan worden gemaakt: je trainingsgeschiedenis, profiel en inste
   try{ await fbDeleteAccountAndData(); alert('Je account en gegevens zijn verwijderd.'); syncReload(); }
   catch(e){ syncSetMsg(e.message); }
 }
-function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-intervals'); } catch(e){} syncSetMsg(''); renderCurrent(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
+function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-openbaar-intervals'); } catch(e){} syncSetMsg(''); renderCurrent(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
 function syncCardHTML(){
   if(!fbConfigured()) return `<div class="card"><h3>Synchronisatie</h3><p class="small muted">Nog niet ingesteld op dit apparaat.</p></div>`;
   const s = syncLoad();
@@ -7898,7 +7898,7 @@ var COACH_CLIENT_ID = '1644';                                   // Client ID van
 const COACH_REDIRECTS = ['https://apps.domeinstam.nl/trainingsplan/', 'https://apps.domeinstam.nl/trainingsplan/eigen/'];
 const COACH_API = 'https://intervals.icu/api/v1/athlete/0';
 const COACH_SCOPE = 'CALENDAR:WRITE,ACTIVITY:READ,WELLNESS:READ';   // agenda beheren + activiteiten lezen (runs koppelen) + dagwaarden lezen (grafieken)
-const COACH_SS = 'atempo-intervals';                        // sessionStorage-sleutel (alleen dit tabblad, tijdelijk)
+const COACH_SS = 'atempo-openbaar-intervals';                        // sessionStorage-sleutel (alleen dit tabblad, tijdelijk)
 const COACH_EXT_RE = /^atempo-[A-Za-z0-9_-]{1,64}$/;
 
 function coachSet(){ const st = RP().settings; st.coach = { variant:'text', lastOkAt:null, lastError:null, athlete:null, test:null, ...(st.coach||{}) }; return st.coach; }
