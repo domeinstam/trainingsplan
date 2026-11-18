@@ -1313,7 +1313,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.16";
+const APP_VERSION = "block2-2.24.17";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -1473,10 +1473,14 @@ var PROGRAMMA_CACHE_LS = 'atempo-openbaar-programmas';
 function programmaCacheLoad(){ try{ const v = JSON.parse(localStorage.getItem(PROGRAMMA_CACHE_LS)||'null'); return (v && typeof v==='object') ? v : null; }catch(e){ return null; } }
 function programmaCacheSave(o){ try{ localStorage.setItem(PROGRAMMA_CACHE_LS, JSON.stringify(o)); }catch(e){} }
 function programmaCatalogus(){ return programmaCacheLoad() || {}; }
-function activeProgramma(){
+function activeProgrammaKey(){
   const cat = programmaCatalogus(), id = CB.programmaId;
-  return (id && cat[id]) || cat[BUILTIN_PROGRAMMA_ID] || (PUBLIC_BUILD && cat[Object.keys(cat)[0]]) || builtinProgramma();
+  if(id && cat[id]) return id;
+  if(cat[BUILTIN_PROGRAMMA_ID]) return BUILTIN_PROGRAMMA_ID;
+  if(PUBLIC_BUILD && Object.keys(cat)[0]) return Object.keys(cat)[0];
+  return BUILTIN_PROGRAMMA_ID;
 }
+function activeProgramma(){ return programmaCatalogus()[activeProgrammaKey()] || builtinProgramma(); }
 const weekFase = cfg => cfg.faseLabel || PHASE_LABEL[cfg.phase] || cfg.phase || '';
 function weekConfig(wi){
   const p = activeProgramma(), c = Array.isArray(p.weken) ? p.weken : [];
@@ -1838,9 +1842,16 @@ function runShortStructure(steps){            // "4 × 3 min hardlopen" / "20 mi
 }
 
 /* ---------- standaardprogramma ---------- */
+/* de openbare versie begint zonder hardloopniveaus: een programma (back-office) brengt zijn eigen niveaus mee */
+const runNeutral = () => (typeof PUBLIC_BUILD!=='undefined' && PUBLIC_BUILD) || (typeof window!=='undefined' && window.__runNeutral===true);
+const RUN_TPL_BASE = { description:'', warmupMin:5, cooldownMin:5, intensity:'rustig', target:{ type:'none', low:null, high:null }, minRestDays:2, goodSessionsToProceed:2, notes:'' };
+function runTemplateFrom(n){
+  return { ...RUN_TPL_BASE, ...n, id:String(n.id), name:n.name || 'Niveau '+n.id, label:n.label || '', walkMin:num(n.walkMin) ?? 0, target:{ ...RUN_TPL_BASE.target, ...(n.target||{}) } };
+}
+const RUN_TPL_FALLBACK = runTemplateFrom({ id:'A', reps:4, runMin:3, walkMin:2 });
 function runDefaultTemplates(){
-  const T = (id,label,reps,runMin,walkMin)=>({ id, name:'Niveau '+id, label, description:'', warmupMin:5, cooldownMin:5, reps, runMin, walkMin,
-    intensity:'rustig', target:{ type:'none', low:null, high:null }, minRestDays:2, goodSessionsToProceed:2, notes:'' });
+  if(runNeutral()) return [];
+  const T = (id,label,reps,runMin,walkMin)=>runTemplateFrom({ id, label, reps, runMin, walkMin });
   return [
     T('A','Herstart',4,3,2), T('B','',4,3.5,2), T('C','',4,4,2), T('D','',4,5,1),
     T('E','',2,10,2), T('F','20 min aaneengesloten',1,20,0), T('G','25 min aaneengesloten',1,25,0), T('H','30 min aaneengesloten',1,30,0),
@@ -1849,7 +1860,7 @@ function runDefaultTemplates(){
 function runDefaultSettings(){
   return {
     trainingDays:['tue','sat'],         // voorlopige standaarddagen (aanpasbaar)
-    currentTemplateId:'A',
+    currentTemplateId: runNeutral() ? '' : 'A',
     paused:false, pausedFrom:null,
     planWeeksAhead:2,
     thresholds:{ greenPainMax:0, painOrange:1, painRed:6, energyOrange:5, energyRed:2, painDuringBad:5, goodMaxPain:3, staleDays:28 },   // vaste grenzen (niet meer in beeld)
@@ -1868,7 +1879,7 @@ function runNormalize(rp){
   m.settings = { ...d.settings, ...(rp.settings||{}) };
   m.settings.thresholds = { ...d.settings.thresholds, ...((rp.settings||{}).thresholds||{}) };
   if(!Array.isArray(m.settings.trainingDays)) m.settings.trainingDays = d.settings.trainingDays.slice();
-  m.templates = Array.isArray(rp.templates) && rp.templates.length ? rp.templates.filter(t=>t && t.id).map(t=>({ ...runDefaultTemplates()[0], ...t, target:{ ...(t.target||{type:'none',low:null,high:null}) } })) : d.templates;
+  m.templates = Array.isArray(rp.templates) && rp.templates.length ? rp.templates.filter(t=>t && t.id).map(t=>({ ...RUN_TPL_FALLBACK, ...t, target:{ ...(t.target||{type:'none',low:null,high:null}) } })) : d.templates;
   m.sessions = Array.isArray(rp.sessions) ? rp.sessions.filter(s=>s && s.id).map(s=>({ status:'planned', steps:[], notes:'', garminExternalId:null, ...s,
       steps:(Array.isArray(s.steps)?s.steps:[]).filter(x=>x && RUN_STEP[x.t] && Number.isFinite(x.sec) && x.sec>0).map(x=>({ ...x })) })) : [];
   m.checks = (rp.checks && typeof rp.checks==='object') ? { ...rp.checks } : {};
@@ -1887,11 +1898,11 @@ function runNormalize(rp){
       m.settings.currentTemplateId = next.templateId;
     }
   }
-  if(!m.templates.some(t=>t.id===m.settings.currentTemplateId)) m.settings.currentTemplateId = m.templates[0].id;
+  if(!m.templates.some(t=>t.id===m.settings.currentTemplateId)) m.settings.currentTemplateId = m.templates.length ? m.templates[0].id : '';
   return m;
 }
 const runTpl = id => RP().templates.find(t=>t.id===id) || null;
-const runCurrentTpl = () => runTpl(RP().settings.currentTemplateId) || RP().templates[0];
+const runCurrentTpl = () => runTpl(RP().settings.currentTemplateId) || RP().templates[0] || null;
 const runSes = id => RP().sessions.find(s=>s.id===id) || null;
 const runByDate = (a,b) => (a.date||'').localeCompare(b.date||'') || (a.createdAt||'').localeCompare(b.createdAt||'');
 
@@ -2132,6 +2143,7 @@ function runHeadlineReason(rd){
 /* evaluatie na twee uitgevoerde trainingen + voorstel (altijd handmatige beslissing) */
 function runEvaluation(){
   const rp = RP(), lvl = runCurrentTpl(), done = runDoneSessions();
+  if(!lvl) return { advice:'', why:[], streak:0, need:0, level:null, nextTpl:null, prevTpl:null, doneCount:0 };
   const rd = runReadiness(todayISO());
   const idx = rp.templates.findIndex(t=>t.id===lvl.id), nextTpl = rp.templates[idx+1] || null, prevTpl = idx>0 ? rp.templates[idx-1] : null;
   const atLevel = done.filter(s=> s.templateId===lvl.id);
@@ -2162,7 +2174,7 @@ const runOverdue = () => RP().sessions.filter(s=> s.status==='planned' && s.date
    dan vervalt het voorstel op die oude dag (de training is er al, alleen op een andere dag) */
 function runSuggestionDates(from, weeks){
   const rp = RP(), out = [];
-  if(rp.settings.paused) return out;
+  if(rp.settings.paused || !runCurrentTpl()) return out;
   const start = runMonday(from);
   for(let i=0;i<weeks*7;i++){
     const d = addDays(start,i); if(d<todayISO()) continue;
@@ -2199,9 +2211,40 @@ function runClearConflicting(date, exceptId){
 }
 function runPlanOn(date, tpl){
   if(!runValidDate(date)) return runMsg('Ongeldige datum.','err');
+  const t = tpl || runCurrentTpl(); if(!t) return runMsg('Er is nog geen hardloopprogramma geladen.','err');
   runClearConflicting(date, null);
-  const s = runNewSession(date, tpl || runCurrentTpl()); RP().sessions.push(s); RP().sessions.sort(runByDate);
+  const s = runNewSession(date, t); RP().sessions.push(s); RP().sessions.sort(runByDate);
   return s;
+}
+/* Elk programma heeft zijn eigen hardloopniveaus en voortgang (rp.levelSets). rp.templates en currentTemplateId blijven de
+   werkset van het actieve programma, zodat de rest van de code gelijk blijft. Wissel je van programma, dan gaat de werkset
+   van het vorige opzij en komt die van het nieuwe terug (of de niveaus uit programma.niveaus). Gedane trainingen blijven altijd
+   staan; de nog geplande trainingen gaan weg, maar pas nadat de gebruiker daarmee akkoord is. Nooit stilzwijgend iets wissen. */
+function runApplyProgramLevels(){
+  if(typeof activeProgrammaKey!=='function') return false;
+  const rp = RP(), key = activeProgrammaKey(), p = activeProgramma(), had = rp.levelSetFor;
+  if(had===key) return false;
+  const lv = (Array.isArray(p.niveaus) ? p.niveaus : []).filter(n=> n && n.id!=null && num(n.reps)>0 && num(n.runMin)>0).map(runTemplateFrom);
+  rp.levelSets = rp.levelSets || {};
+  const stored = rp.levelSets[key];
+  if(!had){                                      // eerste keer: de huidige niveaus (eigen of standaard) horen bij dit programma
+    if(!rp.templates.length && lv.length){ rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; }
+    rp.levelSetFor = key; if(CB && !CB.programmaId) CB.programmaId = key;
+    return true;
+  }
+  if(!stored && !lv.length){ rp.levelSetFor = key; return true; }      // dit programma heeft geen eigen niveaus: de huidige blijven
+  const open = rp.sessions.filter(s=> s.status==='planned' && s.date>=todayISO());
+  if(open.length && typeof confirm==='function' &&
+     !confirm('Je wisselt van programma. '+(open.length===1 ? 'Je nog geplande training van het vorige programma wordt' : 'Je '+open.length+' nog geplande trainingen van het vorige programma worden')+' verwijderd; gedane trainingen blijven staan. Doorgaan?')){
+    if(CB) CB.programmaId = had; return false;
+  }
+  open.forEach(s=> coachAutoRemove(s));
+  rp.sessions = rp.sessions.filter(s=> !open.includes(s));
+  rp.levelSets[had] = { templates: rp.templates, currentTemplateId: rp.settings.currentTemplateId };
+  if(stored){ rp.templates = stored.templates; rp.settings.currentTemplateId = stored.currentTemplateId; }
+  else { rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; }
+  rp.levelSetFor = key;
+  return true;
 }
 function runSetLevel(id, reason){
   const rp = RP(), t = runTpl(id); if(!t) return;
@@ -6510,7 +6553,9 @@ function renderMore(){
     <p class="tny muted" style="text-align:center;margin-top:12px">Atempo · ${esc(APP_VERSION.replace('block2-','versie '))}</p>`);
 }
 function renderCurrent(){
-  CB = state.currentBlock; (RENDERERS[ui.view]||renderToday)(); progSubnav();
+  CB = state.currentBlock;
+  if(typeof runApplyProgramLevels==='function' && runApplyProgramLevels()) saveState();   // niveaus uit het actieve programma, als je zelf nog geen hebt
+  (RENDERERS[ui.view]||renderToday)(); progSubnav();
   const g = VIEW_GROUPS[GROUP_OF[ui.view]];
   $('#pageTitle').textContent = g ? g.title : (TITLES[ui.view]||'Vandaag');
   if(ui.view==='data' && typeof bkRender==='function') bkRender();
@@ -6873,7 +6918,7 @@ var PROGRAMMAS_FETCHED = false;
 async function syncProgrammasMaybe(){
   if(PROGRAMMAS_FETCHED || !fbConfigured() || !syncLoggedIn()) return;
   PROGRAMMAS_FETCHED = true;
-  try{ const raw = await fbDb('programmas'); if(raw && typeof raw==='object') programmaCacheSave(raw); }catch(e){}
+  try{ const raw = await fbDb('programmas'); if(raw && typeof raw==='object'){ programmaCacheSave(raw); if(typeof renderCurrent==='function') renderCurrent(); } }catch(e){}
 }
 async function syncPrune(uid){
   const keys = await fbDb('trainingsplan/'+uid+'/versies', 'GET', null, '&shallow=true');
@@ -7545,7 +7590,7 @@ function runViewOverview(){
       <div class="rv-next-foot">${coachLineHTML(nx)}<div class="run-actions">${runBtn('open|'+nx.id,TD_ICO(TDI.pen)+'Bekijken of aanpassen','primary')}</div></div>`;
   } else {
     const sug = runSuggestionDates(today, 3)[0], lvl = runCurrentTpl();
-    h += `<p class="small">Er is geen training gepland.</p>`;
+    h += `<p class="small">${lvl ? 'Er is geen training gepland.' : 'Er is nog geen hardloopprogramma geladen.'}</p>`;
     if(sug) h += `<div class="run-actions big">${runBtn('plan|'+sug+'|'+lvl.id,'Plan '+esc(lvl.name)+' op '+esc(runDateShort(sug)),'primary')}</div>`;
   }
   h += `</div></div>`;
@@ -7608,6 +7653,7 @@ function runLevelEditor(t){
 /* niveaus (A–H): op de pagina Hardlopen, onderaan en standaard ingeklapt */
 function runLevelsHTML(){
   const rp = RP(), cur = runCurrentTpl(); let h = '';
+  if(!cur) return `<div class="card"><h3>Niveaus</h3><p class="small muted">Er is nog geen hardloopprogramma geladen. Zodra er een programma met niveaus actief is, verschijnen ze hier.</p></div>`;
   /* niveaus: standaard ingeklapt */
   h += `<details class="acc run-levels" ${RUI.manage?'open':''}><summary>Niveaus <span class="tny muted">· huidig: ${esc(cur.name)} — ${esc(runShortStructure(runStepsFromParams(cur)))} · ${runMinLabel(runTotals(runStepsFromParams(cur)).total)}</span></summary><div class="acc-body"><div class="run-ladder">`;
   rp.templates.forEach(t=>{
