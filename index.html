@@ -1313,7 +1313,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.15";
+const APP_VERSION = "block2-2.24.16";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -3311,6 +3311,8 @@ function profileCardHTML(){
         ${sw && !sw.own ? `<div class="tny muted" style="margin-top:4px">${esc(nl(sw.kg))} kg uit je eerste weging (${esc(fmt(sw.date,{day:'numeric',month:'short'}))}). Vul zelf in om dit te wijzigen.</div>` : ''}</div>
     </div>
     ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
+    <h4 style="margin:14px 0 6px">Mijn hartslag</h4>
+    ${typeof runHrSettingsHTML==='function' ? runHrSettingsHTML() : ''}
     <h4 style="margin:14px 0 6px">Blessures</h4>
     ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span class="prof-inj-n"><b>${esc(x.area)}</b> <label class="tny muted prof-since">sinds <input type="date" data-inj-since="${esc(x.id)}" value="${esc(x.since||'')}" min="1900-01-01" max="${todayISO()}" aria-label="${esc(x.area)}: sinds wanneer"></label></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
       : ''}
@@ -7455,9 +7457,9 @@ function runHrLine(s){
   const z = runHrZoneOf(s), b = '__run.ses.'+s.id+'.';
   if(s.status!=='planned') return z ? `<div class="small run-hr"><b>Intensiteit:</b> ${esc(runHrZone(z)[1])} · ${runBpm(s.target)}</div>` : '';
   const opts = [['','Geen hartslagdoel'], ...RUN_HR_ZONES.map(x=>[x[0], x[1]])];
-  let h = `<div class="run-hr"><label class="run-hr-pick">Intensiteit <select data-bind="${b}zone">${opts.map(([v,t])=>`<option value="${v}" ${v===(RUI.hrAsk===s.id ? RUI.hrAskZone : z)?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`
+  let h = `<div class="run-hr"><label class="run-hr-pick">Intensiteit <select data-bind="${b}zone">${opts.map(([v,t])=>`<option value="${v}" ${v===(RUI.hrAsk===s.id && !runHrOn() ? RUI.hrAskZone : z)?'selected':''}>${esc(t)}</option>`).join('')}</select></label>`
     + (z ? `<b class="run-hr-bpm">${runBpm(s.target)}</b>` : '') + `</div>`;
-  if(RUI.hrAsk===s.id) h += `<div class="run-hr-ask">${runInp('Je leeftijd (één keer invullen)', '__run.set.hrAge', '', { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1], ph:'bijv. 45' })}<div class="tny muted">Daarmee berekent Atempo je hartslagbereik. Aanpassen kan later bij Instellingen.</div></div>`;
+  if(RUI.hrAsk===s.id && !runHrOn()) h += `<div class="run-hr-ask"><div class="small">Vul je geboortedatum in bij Mijn profiel; daarmee berekent Atempo je hartslagbereik.</div><div class="run-actions"><button class="btn sm" data-view="profile">Naar Mijn profiel</button></div></div>`;
   if(z==='zeerintensief') h += `<div class="warnline">Zeer intensief is een zeer zware belasting. Kies dit alleen als je dit gewend bent en goed hersteld bent.</div>`;
   if(z && runHrHeavy(z) && s.date===todayISO()){
     const rd = runReadiness(s.date).shown;
@@ -7656,22 +7658,17 @@ function runViewProgram(){
     <div class="small"><b>Trainingsdagen</b> <span class="tny muted">(daar komen de voorstellen)</span></div>
     <div class="run-chips">${DOW.map(k=>runBtn('day|'+k, esc(DOW_NL[k]), 'sm'+(rp.settings.trainingDays.includes(k)?' active':''))).join('')}</div>
     <div class="form-grid cols-4">${runInp('Weken vooruit plannen','__run.set.planWeeksAhead',rp.settings.planWeeksAhead,{type:'number',inputmode:'numeric',min:1,max:8})}</div>
-    ${runHrSettingsHTML()}
   </div></details>`;
   return h;
 }
 
 /* ---------- invoer-verwerking (komt binnen via setByPath voor '__run.*'-velden) ---------- */
-/* Instellingen › Mijn hartslag: leeftijd, de maximale hartslag (geschat of eigen) en de bevestiging na een wijziging */
+/* Mijn profiel › Mijn hartslag: de maximale hartslag (geschat uit de leeftijd in je profiel, of eigen waarde) en de bevestiging na een wijziging */
 function runHrSettingsHTML(){
   const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
-  const ageOld = profileAge()==null && mx && mx.basis==='leeftijd' && h.ageSetAt && (Date.now()-Date.parse(h.ageSetAt)) > 365*86400000;
-  return `<div class="small run-hrset"><b>Mijn hartslag</b></div>
-    <div class="form-grid cols-4">${profileAge()!=null ? `<div class="field"><label>Leeftijd</label><div class="small" style="padding:8px 0">${profileAge()} jaar <span class="muted">(uit Mijn profiel)</span></div></div>` : runInp('Leeftijd', '__run.set.hrAge', h.age, { type:'number', inputmode:'numeric', min:RUN_HR_AGE[0], max:RUN_HR_AGE[1] })}
-      ${h.useOwn ? runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] }) : ''}</div>
-    <div class="small">${mx ? `Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span>` : '<span class="muted">Vul je leeftijd in om met een hartslagdoel te trainen.</span>'}</div>
-    ${ageOld ? `<div class="small">Klopt je leeftijd (${esc(h.age)}) nog? ${runBtn('hrAgeOk','Ja, klopt','sm')}</div>` : ''}
+  return `<div class="small">${mx ? `Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span>` : '<span class="muted">Vul hierboven je geboortedatum in om met een hartslagdoel te trainen.</span>'}</div>
     <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
+    ${h.useOwn ? `<div class="form-grid cols-3">${runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] })}</div>` : ''}
     ${old.length && h.dismissed!==runHrSig() ? runHrUpdateHTML(old.length) : ''}`;
 }
 const runHrSig = () => { const m = runHrMax(); return m ? m.bpm+'/'+m.basis : ''; };
