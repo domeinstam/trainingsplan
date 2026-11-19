@@ -30,6 +30,10 @@
   .msg.err{color:var(--neg)}
   .msg.ok{color:var(--green)}
   pre{white-space:pre-wrap;word-break:break-word;background:var(--ice);border-radius:8px;padding:10px;font-size:12.5px;max-height:320px;overflow:auto}
+  .pwwrap{position:relative;display:flex}
+  .pwwrap input{flex:1;padding-right:44px}
+  button.eye{position:absolute;right:3px;top:3px;bottom:3px;width:38px;padding:0;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center}
+  button.eye[aria-pressed="true"]{color:var(--green)}
   .hidden{display:none}
   a.lnk{color:var(--green);cursor:pointer}
 </style>
@@ -42,8 +46,9 @@
   <section class="card" id="loginCard">
     <h2>Inloggen</h2>
     <div class="field"><label for="email">E-mail</label><input id="email" type="email" autocomplete="username"></div>
-    <div class="field"><label for="pw">Wachtwoord</label><input id="pw" type="password" autocomplete="current-password"></div>
-    <div class="row"><button class="primary" id="loginBtn">Inloggen</button></div>
+    <div class="field"><label for="pw">Wachtwoord</label>
+      <div class="pwwrap"><input id="pw" type="password" autocomplete="current-password"><button type="button" class="eye" id="pwEye" aria-label="Wachtwoord tonen" aria-pressed="false" title="Wachtwoord tonen of verbergen"><svg id="pwEyeIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+    <div class="row"><button class="primary" id="loginBtn">Inloggen</button><button type="button" id="resetBtn">Wachtwoord herstellen</button></div>
     <div class="msg" id="loginMsg"></div>
   </section>
 
@@ -161,10 +166,41 @@ function showLogin() {
 }
 if (auth) showApp();
 
+function loginFout(code) {
+  const c = String(code || '');
+  if (/INVALID_LOGIN_CREDENTIALS|INVALID_PASSWORD|EMAIL_NOT_FOUND/.test(c)) return 'E-mailadres of wachtwoord klopt niet. Gebruik "Wachtwoord herstellen" als je het kwijt bent.';
+  if (/TOO_MANY_ATTEMPTS/.test(c)) return 'Te veel pogingen. Wacht een paar minuten of herstel je wachtwoord.';
+  if (/USER_DISABLED/.test(c)) return 'Dit account is geblokkeerd.';
+  if (/INVALID_EMAIL|MISSING_EMAIL/.test(c)) return 'Vul een geldig e-mailadres in.';
+  return c;
+}
+$('#pwEye').onclick = () => {
+  const p = $('#pw'), toon = p.type === 'password';
+  p.type = toon ? 'text' : 'password';
+  $('#pwEye').setAttribute('aria-pressed', toon ? 'true' : 'false');
+  $('#pwEye').setAttribute('aria-label', toon ? 'Wachtwoord verbergen' : 'Wachtwoord tonen');
+  $('#pwEyeIcon').innerHTML = toon
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>'
+    : '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>';
+};
 $('#loginBtn').onclick = async () => {
   setMsg($('#loginMsg'), 'Bezig…');
-  try { await fbLogin($('#email').value, $('#pw').value); setMsg($('#loginMsg'), ''); showApp(); loadUsers(); }
-  catch (e) { setMsg($('#loginMsg'), e.message, false); }
+  try { await fbLogin($('#email').value.trim(), $('#pw').value); setMsg($('#loginMsg'), ''); showApp(); loadUsers(); }
+  catch (e) { setMsg($('#loginMsg'), loginFout(e.message), false); }
+};
+$('#pw').addEventListener('keydown', e => { if (e.key === 'Enter') $('#loginBtn').click(); });
+$('#resetBtn').onclick = async () => {
+  const mail = $('#email').value.trim();
+  if (!mail) { setMsg($('#loginMsg'), 'Vul eerst je e-mailadres in; daar sturen we de herstellink naartoe.', false); return; }
+  setMsg($('#loginMsg'), 'Bezig…');
+  try {
+    const r = await fetch(FB_AUTH_BASE + '/v1/accounts:sendOobCode?key=' + encodeURIComponent(FB_API_KEY), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: 'PASSWORD_RESET', email: mail }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || 'Versturen mislukt');
+    setMsg($('#loginMsg'), 'Als dit adres bij een account hoort, is er een e-mail met een herstellink verstuurd (kijk ook in je spam).', true);
+  } catch (e) { setMsg($('#loginMsg'), /EMAIL_NOT_FOUND/.test(e.message) ? 'Als dit adres bij een account hoort, is er een e-mail met een herstellink verstuurd (kijk ook in je spam).' : loginFout(e.message), /EMAIL_NOT_FOUND/.test(e.message) ? true : false); }
 };
 $('#logoutBtn').onclick = () => { localStorage.removeItem(LS_KEY); auth = null; showLogin(); };
 
@@ -296,7 +332,7 @@ $('#deleteProgBtn').onclick = async () => {
 
 $('#rebuildListBtn').onclick = async () => {
   setMsg($('#progMsg'), 'Bijwerken…');
-  try { const r = await callFn('adminRebuildProgrammaLijst', {}); setMsg($('#progMsg'), 'Openbare lijst bijgewerkt (' + r.aantal + ' programma's).', true); }
+  try { const r = await callFn('adminRebuildProgrammaLijst', {}); setMsg($('#progMsg'), 'Openbare lijst bijgewerkt (' + r.aantal + ' programma\'s).', true); }
   catch (e) { setMsg($('#progMsg'), e.message, false); }
 };
 
