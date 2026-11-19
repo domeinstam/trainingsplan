@@ -1012,6 +1012,8 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
   #view-running .rv3 .run-src .v{text-align:left;padding-left:34px}
   #view-running .rv-next-photo{min-height:120px}
 }
+.run-hr-line{display:flex;align-items:center;gap:8px}
+.run-hr-line .run-hr-heart{flex:none}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -1324,7 +1326,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.21";
+const APP_VERSION = "block2-2.24.22";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -3375,7 +3377,6 @@ function injuryAskHTML(d){
 function profileCardHTML(){
   const p = profile(), age = profileAge(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld'), sw = profileStartWeight();
   return `<div class="card prof-card" id="profileCard">
-    <p class="small muted" style="margin-top:0">Alleen voor jou. Atempo gebruikt dit voor je leeftijd (hartslag), je startgewicht en je blessures.</p>
     <div class="form-grid cols-3">
       <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
       <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" min="1900-01-01" max="${todayISO()}"></div>
@@ -5807,6 +5808,19 @@ function renderMethod(){
     </ul></div>
   </div>`;
 
+  /* hartslagdoel: wat het is, waar het vandaan komt en wat het rode hartje in Mijn profiel betekent */
+  if(typeof RUN_HR_ZONES!=='undefined'){
+    const zl = RUN_HR_ZONES.map(z=>`<li><b>${esc(z[1])}</b>: ${Math.round(z[2]*100)}–${Math.round(z[3]*100)}% van je maximale hartslag</li>`).join('');
+    html += `<div class="section-title"><h2>Hartslagdoel</h2></div><div class="card">
+      <p class="small">Bij elke geplande hardlooptraining kies je een <b>Intensiteit</b>. Atempo rekent die om naar een hartslagbereik (in slagen per minuut) dat bij de training hoort en naar je horloge gaat. Zo weet je tijdens het lopen of je rustig genoeg of juist stevig genoeg gaat.</p>
+      <ul class="small">${zl}</ul>
+      <p class="small"><b>Je maximale hartslag</b> schat Atempo uit je leeftijd (208 − 0,7 × leeftijd). Die leeftijd haalt Atempo uit je geboortedatum bij Mijn profiel. Ken je je eigen maximale hartslag, bijvoorbeeld uit een test, dan kun je die in Mijn profiel invullen: die gaat dan voor.</p>
+      <p class="small"><b>Het rode hartje</b> bij Mijn profiel zonder tekst erachter betekent dat je geboortedatum nog ontbreekt. Zonder geboortedatum kan Atempo geen hartslagbereik uitrekenen en kun je niet met een hartslagdoel trainen. Vul je die in, dan verschijnt je maximale hartslag naast het hartje.</p>
+      <p class="small"><b>Wijzigt je maximale hartslag</b> (nieuwe leeftijd of eigen waarde), dan vraagt Atempo of je de toekomstige trainingen wilt bijwerken. Trainingen die je al hebt gedaan blijven zoals ze waren.</p>
+      <p class="small"><b>Zeer intensief</b> is een zeer zware belasting en gaat alleen vanzelf naar je horloge op een dag met groen herstel. Is je herstel rood, dan raadt Atempo hardlopen af. Een schatting uit je leeftijd is een richtlijn: iedereen is anders, en bij klachten (pijn op de borst, duizeligheid) stop je en neem je contact op met een arts.</p>
+    </div>`;
+  }
+
   const dr = HISTORICAL.reference.decisionRules || {};
   html += `<div class="section-title"><h2>Beslisregels (bondig, niet alarmistisch)</h2></div><div class="grid cols-3">
     <div class="card"><h3 style="color:#5aa57a">Normaal</h3><p class="small">${esc(dr.green||'Normale energie, geen nieuwe pijn, normale slaap/RHR: voer de geplande sessie uit.')}</p></div>
@@ -5829,10 +5843,8 @@ function renderMethod(){
 function renderData(){
   const H = HISTORICAL;
   const days = Object.keys(H.logs||{}).sort();
-  let html = `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Data &amp; backup</h2>
-    <p>Je data wordt in deze browser bewaard en, als je hieronder bent ingelogd, ook gesynchroniseerd met je eigen cloud (telefoon en computer delen dan dezelfde data). Maak daarnaast geregeld een JSON-back-up. Historische data is read-only.</p></div>`;
+  let html = `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Data &amp; backup</h2></div>`;
 
-  html += syncCardHTML();
   if(typeof coachSettingsHTML==='function') html += `<div class="card">${coachSettingsHTML()}</div>`;   // koppeling met Intervals.icu (Garmin) naast de synchronisatie
   html += `<div class="grid cols-2">
     <div class="card"><h3>Back-up &amp; herstel</h3>
@@ -6564,8 +6576,8 @@ function accountHTML(){
       <button type="button" role="tab" aria-selected="${!nieuw}" class="${nieuw?'':'on'}" data-acct="login">Ik heb al een account</button>
       <button type="button" role="tab" aria-selected="${nieuw}" class="${nieuw?'on':''}" data-acct="signup">Ik ben nieuw</button></div>
     <p class="small" style="margin:10px 0 12px">${nieuw
-      ? 'Maak een gratis account aan om je gegevens veilig te bewaren en te delen tussen telefoon en computer. Kies een e-mailadres en een wachtwoord van minstens 6 tekens.'
-      : 'Log in met het e-mailadres en wachtwoord van je account om je gegevens te delen tussen telefoon en computer.'}</p>
+      ? 'Maak een gratis account aan om je gegevens veilig te bewaren en te delen tussen apparaten. Kies een e-mailadres en een wachtwoord van minstens 6 tekens.'
+      : 'Log in om je gegevens te delen tussen apparaten.'}</p>
     <div class="form-grid cols-3"><div class="field"><label for="syncEmail">E-mail</label><input type="email" id="syncEmail" autocomplete="username" value="${esc(ui.acctEmail||'')}"></div>
       <div class="field"><label for="syncPw">Wachtwoord</label><div class="pw-wrap"><input type="password" id="syncPw" autocomplete="${nieuw?'new-password':'current-password'}">${eye}</div></div>
       ${nieuw ? `<div class="field"><label for="syncPw2">Wachtwoord nog een keer</label><div class="pw-wrap"><input type="password" id="syncPw2" autocomplete="new-password">${eye}</div></div>` : ''}</div>
@@ -6576,7 +6588,10 @@ function accountHTML(){
     <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p></div>`;
   }
   return `<div class="card prof-acct"><h3>Account</h3><div class="prof-acct-row"><p class="small" style="margin:0">Ingelogd als <b>${esc(s.auth.email||'')}</b></p><button class="btn sm" data-sync="logout">Uitloggen</button></div>
-    <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p>
+    <p class="small muted" style="margin:10px 0 8px">Wijzigingen worden automatisch gedeeld tussen je apparaten.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" data-sync="now">Nu synchroniseren</button></div>
+    <p class="tny muted sync-status" id="syncStatus" style="margin-top:6px">${esc(SYNC.msg)}</p>
+    <details class="acc" style="margin-top:10px"><summary>Eerdere cloudversie terugzetten</summary><div class="acc-body" id="syncVersions">${syncVersionsHTML()}</div></details>
     <p class="tny" style="margin-top:10px"><a href="#" class="prof-del-acct" data-sync="delete-account">Account en alle gegevens verwijderen</a></p></div>`;
 }
 /* Meer (telefoon): alles wat je niet iedere dag nodig hebt, één lijst */
@@ -6586,7 +6601,7 @@ function renderMore(){
     <div class="card more-list">
       ${row('data-view="profile"', TDI.heart, 'Mijn profiel', 'Naam, geboortedatum, startgewicht en blessures')}
       ${row('data-view="data"', TDI.check, 'Gegevens, back-up en synchronisatie', 'Back-up maken of terugzetten, je account, de cloud')}
-      ${row('data-view="data"', TDI.run, 'Garmin en Intervals.icu', 'Koppeling en trainingen naar je horloge')}
+      ${row('data-view="data"', TDI.run, 'Verbinding met sporthorloge', 'Koppeling en trainingen naar je horloge')}
       ${row('data-view="garmin"', TDI.bars, 'Garmin-gegevens laden', 'Export van Garmin Connect inlezen')}
       ${row('data-view="method"', TDI.list, 'Uitleg', 'Hoe Atempo werkt en waarom')}
       <a class="more-row" href="privacy.html" target="_blank" rel="noopener">${TD_ICO(TDI.heart)}<span><b>Privacy</b><small>Wat er met je gegevens gebeurt</small></span>${TD_ICO(TDI.chev, 'more-chev')}</a>
@@ -7144,18 +7159,6 @@ Dit kan niet ongedaan worden gemaakt: je trainingsgeschiedenis, profiel en inste
   catch(e){ syncSetMsg(e.message); }
 }
 function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-intervals'); } catch(e){} syncSetMsg(''); renderCurrent(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
-function syncCardHTML(){
-  if(!fbConfigured()) return `<div class="card"><h3>Synchronisatie</h3><p class="small muted">Nog niet ingesteld op dit apparaat.</p></div>`;
-  const s = syncLoad();
-  /* inloggen en uitloggen staan bij Meer › Mijn profiel (Account); hier alleen het synchroniseren */
-  if(!s.auth) return `<div class="card"><h3>Synchronisatie</h3>
-    <p class="small">Log in bij <a href="#" data-view="profile">Mijn profiel</a> om je data te delen tussen telefoon en computer.</p></div>`;
-  return `<div class="card"><h3>Synchronisatie</h3>
-    <p class="small">Ingelogd als <b>${esc(s.auth.email||'')}</b>. Wijzigingen worden automatisch gedeeld.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" data-sync="now">Nu synchroniseren</button></div>
-    <p class="tny muted sync-status" id="syncStatus" style="margin-top:6px">${esc(SYNC.msg)}</p>
-    <details class="acc" style="margin-top:10px"><summary>Eerdere cloudversie terugzetten</summary><div class="acc-body" id="syncVersions">${syncVersionsHTML()}</div></details></div>`;
-}
 /* bewaarde cloudversies (de laatste 20) tonen en er één terugzetten; de huidige versie wordt eerst zelf bewaard */
 function syncVersionsHTML(){
   if(!SYNC.versions) return `<p class="tny muted">Atempo bewaart in de cloud de laatste 20 versies (ook altijd bij een keuze tussen twee versies).</p><button class="btn sm" data-sync="versions">Bewaarde versies tonen</button>`;
@@ -7778,7 +7781,8 @@ function runViewProgram(){
 /* Mijn profiel › Mijn hartslag: de maximale hartslag (geschat uit de leeftijd in je profiel, of eigen waarde) en de bevestiging na een wijziging */
 function runHrSettingsHTML(){
   const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
-  return `<div class="small">${mx ? `Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span>` : '<span class="muted">Vul hierboven je geboortedatum in om met een hartslagdoel te trainen.</span>'}</div>
+  const heart = `<svg class="run-hr-heart" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}" fill="#C0392B"><title>${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}</title><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+  return `<div class="small run-hr-line">${heart}${mx ? `<span>Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span></span>` : ''}</div>
     <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
     ${h.useOwn ? `<div class="form-grid cols-3">${runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] })}</div>` : ''}
     ${old.length && h.dismissed!==runHrSig() ? runHrUpdateHTML(old.length) : ''}`;
@@ -8044,8 +8048,8 @@ async function coachAuthUrl(){
     state, code_challenge: await coachChallenge(verifier), code_challenge_method:'S256' });
 }
 async function coachConnect(){
-  if(!COACH_CLIENT_ID) return runMsg('De Atempo-app is nog niet goedgekeurd door Intervals.icu.', 'err');
-  if(!coachCanConnect()) return runMsg('Verbinden met Intervals.icu kan alleen in de webversie (apps.domeinstam.nl/trainingsplan).', 'err');
+  if(!COACH_CLIENT_ID) return runMsg('De koppeling met je sporthorloge is nog niet beschikbaar.', 'err');
+  if(!coachCanConnect()) return runMsg('Verbinden met je sporthorloge kan alleen in de webversie (apps.domeinstam.nl/trainingsplan).', 'err');
   const url = await coachAuthUrl();
   coachSessSave({ ...coachSess(), back:{ view:ui.view, tab:RUI.tab, openId:RUI.openId } });
   location.href = url;
@@ -8057,7 +8061,7 @@ async function coachHandleRedirect(search){
   if(search==null) history.replaceState(null, '', location.pathname + location.hash);
   const ss = coachSess(), p = ss.pkce; delete ss.pkce; coachSessSave(ss);
   const c = coachSet();
-  if(err){ c.lastError = 'Geen toestemming gegeven bij Intervals.icu'; return true; }
+  if(err){ c.lastError = 'Geen toestemming gegeven voor de horlogekoppeling'; return true; }
   if(!p || p.state!==st || Date.now()-p.at > 10*60*1000){ c.lastError = 'Verbinden mislukt (onbekende of verlopen poging) — probeer opnieuw'; return true; }
   try {
     const r = await fetch('https://intervals.icu/api/oauth/token', { method:'POST', body:new URLSearchParams({ client_id:COACH_CLIENT_ID, code, code_verifier:p.verifier, redirect_uri:coachHere() }) });
@@ -8065,13 +8069,13 @@ async function coachHandleRedirect(search){
     if(!r.ok || !j || !j.access_token) throw new Error((j && j.error) || ('fout '+r.status));
     coachSessSave({ ...coachSess(), token:j.access_token, at:Date.now() });
     c.athlete = j.athlete ? { id:j.athlete.id, name:j.athlete.name||null } : c.athlete; c.lastOkAt = runNow(); c.lastError = null;
-  } catch(e){ c.lastError = 'Verbinden met Intervals.icu mislukt: '+e.message; }
+  } catch(e){ c.lastError = 'Verbinden met je sporthorloge mislukt: '+e.message; }
   return true;
 }
 async function coachDisconnect(){
   const t = coachSess().token; coachSessSave({});
   if(t){ try { await fetch('https://intervals.icu/api/v1/disconnect-app', { method:'DELETE', headers:{ Authorization:'Bearer '+t } }); } catch(e){} }
-  runMsg('Verbinding met Intervals.icu verbroken en het toegangsbewijs ingetrokken.'); coachRerender();
+  runMsg('Verbinding met je sporthorloge verbroken en het toegangsbewijs ingetrokken.'); coachRerender();
 }
 
 /* ---------- runs ophalen uit Intervals.icu en koppelen aan je trainingen ---------- */
@@ -8112,12 +8116,12 @@ async function coachFetchWellness(token){
 }
 /* haalt de activiteiten van de afgelopen dagen op; nieuwe komen bij je Garmin-gegevens en worden (als het eenduidig is) gekoppeld */
 async function coachFetchRuns(quiet){
-  const token = coachSess().token; if(!token) return quiet ? null : runMsg('Verbind eerst met Intervals.icu.', 'err');
+  const token = coachSess().token; if(!token) return quiet ? null : runMsg('Verbind eerst met je sporthorloge.', 'err');
   const c = coachSet(), oldest = addDays(todayISO(), -14), newest = todayISO();
   let r; try { r = await fetch(COACH_API+'/activities?oldest='+oldest+'&newest='+newest, { headers:{ Authorization:'Bearer '+token, Accept:'application/json' } }); }
-  catch(e){ if(!quiet) runMsg('Geen verbinding met Intervals.icu.', 'err'); return null; }
-  if(r.status===401 || r.status===403){ c.needActivityScope = true; if(!quiet) runMsg('Atempo mag je gegevens nog niet lezen. Verbind opnieuw met Intervals.icu en geef toestemming voor activiteiten en dagwaarden.', 'err'); coachRerender(); return null; }
-  if(!r.ok){ if(!quiet) runMsg('Intervals.icu gaf fout '+r.status+' bij het ophalen van je runs.', 'err'); return null; }
+  catch(e){ if(!quiet) runMsg('Geen verbinding met de horlogekoppeling.', 'err'); return null; }
+  if(r.status===401 || r.status===403){ c.needActivityScope = true; if(!quiet) runMsg('Atempo mag je gegevens nog niet lezen. Verbind opnieuw met je sporthorloge en geef toestemming voor activiteiten en dagwaarden.', 'err'); coachRerender(); return null; }
+  if(!r.ok){ if(!quiet) runMsg('De horlogekoppeling gaf fout '+r.status+' bij het ophalen van je runs.', 'err'); return null; }
   const list = await r.json().catch(()=>[]); c.needActivityScope = false;
   const acts = state.garmin.activities, have = new Set(acts.map(a=>a.externalId)), added = [];
   for(const x of (Array.isArray(list)?list:[])){
@@ -8132,8 +8136,8 @@ async function coachFetchRuns(quiet){
   const parts = [];
   if(added.length) parts.push(added.length+' nieuwe activiteit(en)'+(linked?', '+linked+' gekoppeld aan je training':''));
   if(wl.days) parts.push('dagwaarden van '+wl.days+' dag(en) bijgewerkt');
-  if(wl.scope && !quiet) runMsg('Runs opgehaald, maar Atempo mag je dagwaarden (HRV, rustpols, slaap) nog niet lezen. Verbind opnieuw met Intervals.icu en geef daarvoor toestemming.', 'err');
-  else if(parts.length || !quiet) runMsg(parts.length ? 'Uit Intervals.icu: '+parts.join('; ')+'.' : 'Niets nieuws in Intervals.icu.');
+  if(wl.scope && !quiet) runMsg('Runs opgehaald, maar Atempo mag je dagwaarden (HRV, rustpols, slaap) nog niet lezen. Verbind opnieuw met je sporthorloge en geef daarvoor toestemming.', 'err');
+  else if(parts.length || !quiet) runMsg(parts.length ? 'Van je horloge: '+parts.join('; ')+'.' : 'Niets nieuws van je horloge.');
   coachRerender();
   return { added: added.length, linked, days: wl.days || 0 };
 }
@@ -8150,17 +8154,17 @@ function coachToEvent(e){
 }
 async function coachCall(data){
   const token = coachSess().token;
-  if(!token) throw new Error('Eerst verbinden met Intervals.icu (knop Verbinden met Intervals.icu)');
+  if(!token) throw new Error('Eerst verbinden met je sporthorloge (knop Verbinden met je sporthorloge)');
   let method = 'GET', path = '', body;
   if(data.action==='upsert'){ method = 'POST'; path = '/events/bulk?upsert=true'; body = data.events.map(coachToEvent); }
   else if(data.action==='delete'){ if(!data.externalIds.every(x=>COACH_EXT_RE.test(x))) throw new Error('Alleen Atempo-afspraken kunnen worden verwijderd'); method = 'PUT'; path = '/events/bulk-delete'; body = data.externalIds.map(x=>({ external_id:x })); }
   else if(data.action!=='ping') throw new Error('Onbekende handeling');
   let r;
   try { r = await fetch(COACH_API+path, { method, headers:{ Authorization:'Bearer '+token, Accept:'application/json', ...(body?{ 'Content-Type':'application/json' }:{}) }, body: body ? JSON.stringify(body) : undefined }); }
-  catch(e){ throw new Error('Geen verbinding met Intervals.icu'); }
+  catch(e){ throw new Error('Geen verbinding met de horlogekoppeling'); }
   const j = await r.json().catch(()=>null);
-  if(r.status===401 || r.status===403){ coachSessSave({}); throw new Error('Toegang verlopen of ingetrokken — verbind opnieuw met Intervals.icu'); }
-  if(!r.ok) throw new Error(r.status===429 ? 'Te veel verzoeken bij Intervals.icu, probeer het later opnieuw' : 'Intervals.icu gaf fout '+r.status);
+  if(r.status===401 || r.status===403){ coachSessSave({}); throw new Error('Toegang verlopen of ingetrokken — verbind opnieuw met je sporthorloge'); }
+  if(!r.ok) throw new Error(r.status===429 ? 'Te veel verzoeken bij de horlogekoppeling, probeer het later opnieuw' : 'De horlogekoppeling gaf fout '+r.status);
   if(data.action==='ping') return { athlete: j ? { id:j.id, name:j.name||null } : null };
   if(data.action==='upsert') return { events: (Array.isArray(j)?j:[]).map(ev=>({ id:ev.id, external_id:ev.external_id })) };
   return { deleted: j && j.eventsDeleted };
@@ -8219,14 +8223,14 @@ async function coachRemove(extId, s, auto){
     await coachCall({ action:'delete', externalIds:[extId] });
     if(s){ s.ext = s.ext || {}; s.ext.intervals = { ...(coachInfo(s)||{}), externalId:extId, status:'deleted', syncedAt:runNow(), error:null }; }
     coachSet().lastError = null; runMsg(auto ? (RUI.msg ? RUI.msg+' ' : '')+'Ook uit Garmin gehaald.' : 'Uit Garmin gehaald.');
-  } catch(e){ coachSet().lastError = e.message; runMsg('Verwijderen in Intervals.icu mislukt: '+e.message, 'err'); }
+  } catch(e){ coachSet().lastError = e.message; runMsg('Verwijderen bij de horlogekoppeling mislukt: '+e.message, 'err'); }
   coachRerender();
 }
 /* overslaan of verwijderen in Atempo: staat de training in Garmin, dan gaat hij daar vanzelf ook weg */
 function coachAutoRemove(s){
   const i = coachInfo(s); if(!i || (i.status!=='sent' && i.status!=='error')) return;
   if(coachConnected()) coachRemove(i.externalId, s, true);
-  else runMsg('Let op: deze training staat nog in Garmin. Verbind met Intervals.icu (Data & backup) om hem daar weg te halen.', 'err');
+  else runMsg('Let op: deze training staat nog in Garmin. Verbind met je sporthorloge (Data & backup) om hem daar weg te halen.', 'err');
 }
 /* een training die al in Garmin staat en in Atempo verandert (datum, stappen, niveau), gaat vanzelf mee */
 function coachSoon(){ clearTimeout(coachSoon.t); coachSoon.t = setTimeout(()=>coachSyncAll(false), 1200); }
@@ -8240,7 +8244,7 @@ function coachHold(s){
   return zi ? 'zeer' : '';
 }
 async function coachSyncAll(manual){
-  if(!coachConnected()){ if(manual) runMsg('Verbind eerst met Intervals.icu.', 'err'); return 0; }
+  if(!coachConnected()){ if(manual) runMsg('Verbind eerst met je sporthorloge.', 'err'); return 0; }
   if(RUI.coachBusy) return 0;
   const today = todayISO(), list = RP().sessions.filter(s=> s.status==='planned' && s.date>=today && coachState(s)!=='sent' && (manual || !coachHold(s)));
   if(!list.length){ if(manual){ runMsg('Alles staat al in Garmin.'); coachRerender(); } return 0; }
@@ -8262,7 +8266,7 @@ const coachSyncChanged = () => coachSyncAll(false);
 function coachAct(act, args){
   const s = args[0] ? runSes(args[0]) : null;
   if(['coachSend','coachRemove','coachRuns'].includes(act) && !coachConnected())
-    return runMsg('Verbind eerst met Intervals.icu met de knop Verbinden met Intervals.icu.', 'err');
+    return runMsg('Verbind eerst met je sporthorloge met de knop Verbinden met je sporthorloge.', 'err');
   switch(act){
     case 'coachSend': {
       if(!s || s.status!=='planned') return runMsg('Alleen een geplande training kun je naar Garmin sturen.', 'err');
@@ -8274,7 +8278,7 @@ function coachAct(act, args){
     case 'coachConnect': coachConnect(); return;
     case 'coachSync': if(coachConnected()) coachSyncAll(true); else coachConnect(); return;
     case 'coachRuns': RUI.coachBusy = 'runs'; coachRerender(); coachFetchRuns(false).finally(()=>{ RUI.coachBusy = null; coachRerender(); }); return;
-    case 'coachDisconnect': if(confirm('Verbinding met Intervals.icu verbreken? Je kunt later opnieuw verbinden.')) coachDisconnect(); return;
+    case 'coachDisconnect': if(confirm('Verbinding met je sporthorloge verbreken? Je kunt later opnieuw verbinden.')) coachDisconnect(); return;
   }
 }
 
@@ -8298,17 +8302,16 @@ function coachSettingsHTML(){
   const c = coachSet(), con = coachConnected(), busy = RUI.coachBusy==='runs';
   const when = x => x ? esc(new Date(x).toLocaleString('nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})) : '—';
   const conTxt = con ? 'verbonden' : !COACH_CLIENT_ID ? 'nog niet beschikbaar' : !coachCanConnect() ? 'alleen in de webversie' : 'niet verbonden';
-  return `<h3>Garmin via Intervals.icu</h3>${RUI.msg?`<div class="run-msg ${RUI.msgKind==='err'?'err':''}">${esc(RUI.msg)}</div>`:''}
+  return `<h3>Verbinding met sporthorloge</h3>${RUI.msg?`<div class="run-msg ${RUI.msgKind==='err'?'err':''}">${esc(RUI.msg)}</div>`:''}
     <div class="week-track">
       <div class="row"><span class="k">Verbinding</span><span class="v ${con?'ok':'na'}">${conTxt}</span></div>
       <div class="row"><span class="k">Laatst opgehaald</span><span class="v">${when(c.lastRunsAt)}</span></div>
       ${c.lastError ? `<div class="warnline">${esc(c.lastError)}</div>` : ''}
-      ${c.needActivityScope ? `<div class="warnline">Atempo mag nog niet al je gegevens lezen. Klik op Verbinding verbreken en daarna op Verbinden met Intervals.icu, en geef toestemming voor activiteiten en dagwaarden.</div>` : ''}
+      ${c.needActivityScope ? `<div class="warnline">Atempo mag nog niet al je gegevens lezen. Klik op Verbinding verbreken en daarna op Verbinden met je sporthorloge, en geef toestemming voor activiteiten en dagwaarden.</div>` : ''}
     </div>
-    <div class="run-actions">${busy ? '<span class="tny muted">Bezig…</span>' : con ? runBtn('coachRuns','Nu ophalen','sm primary')+runBtn('coachDisconnect','Verbinding verbreken','sm') : coachCanConnect() ? runBtn('coachConnect','Verbinden met Intervals.icu','sm primary') : ''}</div>
-    <p class="tny muted">Je geplande trainingen gaan vanzelf naar Garmin (Sync met Garmin). Je runs en dagwaarden (HRV, rustpols, slaap, gewicht, VO₂-max) worden bij het openen vanzelf opgehaald.</p>
+    <div class="run-actions">${busy ? '<span class="tny muted">Bezig…</span>' : con ? runBtn('coachRuns','Nu ophalen','sm primary')+runBtn('coachDisconnect','Verbinding verbreken','sm') : coachCanConnect() ? runBtn('coachConnect','Verbinden met je sporthorloge','sm primary') : ''}</div>
     <details class="acc" style="margin-top:10px"><summary>Reserve: trainingen via de kabel (FIT-bestanden)</summary><div class="acc-body">
-      <p class="tny muted">Alleen nodig als de draadloze route via Intervals.icu niet werkt.</p>
+      <p class="tny muted">Alleen nodig als de draadloze route niet werkt.</p>
       <div class="run-actions">${runBtn('exportAllLevels','Alle niveaus (A–H) als zip','sm')}</div>
       <details class="acc"><summary>Uitleg: .fit-bestanden via de kabel op je horloge zetten</summary><div class="acc-body"><ol class="small run-ol"><li>Pak de zip uit (rechtermuisknop › Alles uitpakken). Sluit je Forerunner 165 met de kabel aan op je computer.</li><li>Open het horloge in de Verkenner › map <b>GARMIN</b> › <b>NewFiles</b> (bestaat die niet: probeer de map <b>Workouts</b>).</li><li>Kopieer het .fit-bestand (of bij de zip: alle bestanden — begin desnoods met alleen <b>Niveau_A.fit</b> als test) erin, werp het horloge veilig uit en koppel los. Het horloge verplaatst de bestanden zelf naar <b>Workouts</b>; start het zo nodig opnieuw op.</li><li>Op het horloge: <b>START</b> › <b>Hardlopen</b> › houd <b>UP</b> ingedrukt › <b>Training</b> › <b>Workouts</b> (of <b>Mijn workouts</b>) — daar staan Niveau A t/m H.</li></ol><div class="tny muted">Dit is de route die gebruikers voor veel Garmin-modellen beschrijven; Garmin zelf publiceert deze stappen niet per model. Naam wordt op sommige horloges na 15 tekens afgekapt.</div></div></details>
     </div></details>`;
