@@ -278,6 +278,14 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-since{font-size:13px;color:var(--muted)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .prof-acct-btns{display:flex;gap:8px;margin-top:10px}
+.acct-switch{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card,#fff);max-width:100%}
+.acct-switch button{font:inherit;font-weight:700;font-size:14px;padding:8px 16px;border:0;border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+.acct-switch button.on{background:var(--green,#04717C);color:#fff}
+@media(max-width:420px){.acct-switch{display:flex}.acct-switch button{flex:1;padding:8px 10px}}
+.pw-wrap{position:relative;display:flex}
+.pw-wrap input{flex:1;min-width:0;padding-right:44px}
+.pw-eye{position:absolute;right:3px;top:3px;bottom:3px;width:38px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.pw-eye[aria-pressed="true"]{color:var(--green,#04717C)}
 @media(max-width:420px){.prof-acct-btns{flex-direction:column}}
 .td-task.is-opt input[type=checkbox]:not(:checked){border-style:dashed}
 .td-task.is-opt:not(.is-done) .td-tick{border-style:dashed}
@@ -1316,7 +1324,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.20";
+const APP_VERSION = "block2-2.24.21";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -6547,12 +6555,26 @@ function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><d
 function accountHTML(){
   if(!fbConfigured()) return `<div class="card prof-acct"><h3>Account</h3><p class="small muted" style="margin:0">Inloggen is op dit apparaat nog niet ingesteld.</p></div>`;
   const s = syncLoad();
-  if(!s.auth) return `<div class="card prof-acct"><h3>Account</h3><p class="small" style="margin-top:0">Log in om je gegevens te delen tussen telefoon en computer, of maak een nieuw account aan.</p>
-    <div class="form-grid cols-3"><div class="field"><label for="syncEmail">E-mail</label><input type="email" id="syncEmail" autocomplete="username"></div>
-      <div class="field"><label for="syncPw">Wachtwoord</label><input type="password" id="syncPw" autocomplete="current-password"></div></div>
-    <div class="prof-acct-btns"><button class="btn sm primary" data-sync="login">Inloggen</button><button class="btn sm" data-sync="signup">Account aanmaken</button></div>
-    <p class="tny" style="margin-top:8px"><a href="#" data-sync="forgot">Wachtwoord vergeten?</a></p>
+  if(!s.auth){
+    /* twee aparte keuzes: wie al een account heeft logt in; wie nieuw is maakt eerst een account aan */
+    const nieuw = ui.acctMode==='signup';
+    const eye = `<button type="button" class="pw-eye" data-pw-eye aria-label="Wachtwoord tonen" aria-pressed="false" title="Wachtwoord tonen of verbergen"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>`;
+    return `<div class="card prof-acct"><h3>Account</h3>
+    <div class="acct-switch" role="tablist" aria-label="Inloggen of account aanmaken">
+      <button type="button" role="tab" aria-selected="${!nieuw}" class="${nieuw?'':'on'}" data-acct="login">Ik heb al een account</button>
+      <button type="button" role="tab" aria-selected="${nieuw}" class="${nieuw?'on':''}" data-acct="signup">Ik ben nieuw</button></div>
+    <p class="small" style="margin:10px 0 12px">${nieuw
+      ? 'Maak een gratis account aan om je gegevens veilig te bewaren en te delen tussen telefoon en computer. Kies een e-mailadres en een wachtwoord van minstens 6 tekens.'
+      : 'Log in met het e-mailadres en wachtwoord van je account om je gegevens te delen tussen telefoon en computer.'}</p>
+    <div class="form-grid cols-3"><div class="field"><label for="syncEmail">E-mail</label><input type="email" id="syncEmail" autocomplete="username" value="${esc(ui.acctEmail||'')}"></div>
+      <div class="field"><label for="syncPw">Wachtwoord</label><div class="pw-wrap"><input type="password" id="syncPw" autocomplete="${nieuw?'new-password':'current-password'}">${eye}</div></div>
+      ${nieuw ? `<div class="field"><label for="syncPw2">Wachtwoord nog een keer</label><div class="pw-wrap"><input type="password" id="syncPw2" autocomplete="new-password">${eye}</div></div>` : ''}</div>
+    <div class="prof-acct-btns">${nieuw
+      ? '<button class="btn sm primary" data-sync="signup">Account aanmaken</button>'
+      : '<button class="btn sm primary" data-sync="login">Inloggen</button>'}</div>
+    ${nieuw ? '' : '<p class="tny" style="margin-top:8px"><a href="#" data-sync="forgot">Wachtwoord vergeten?</a></p>'}
     <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p></div>`;
+  }
   return `<div class="card prof-acct"><h3>Account</h3><div class="prof-acct-row"><p class="small" style="margin:0">Ingelogd als <b>${esc(s.auth.email||'')}</b></p><button class="btn sm" data-sync="logout">Uitloggen</button></div>
     <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p>
     <p class="tny" style="margin-top:10px"><a href="#" class="prof-del-acct" data-sync="delete-account">Account en alle gegevens verwijderen</a></p></div>`;
@@ -7101,6 +7123,7 @@ async function syncSignup(){
   const email = ($('#syncEmail')||{}).value, pw = ($('#syncPw')||{}).value;
   if(!email || !pw){ syncSetMsg('Vul e-mail en wachtwoord in.'); return; }
   if(pw.length < 6){ syncSetMsg('Wachtwoord te kort (minstens 6 tekens).'); return; }
+  const pw2 = $('#syncPw2'); if(pw2 && pw2.value !== pw){ syncSetMsg('De twee wachtwoorden zijn niet hetzelfde. Probeer het nog eens.'); return; }
   try{ await fbSignUp(email, pw); syncSetMsg('☁ Account aangemaakt en ingelogd'); renderCurrent(); saveState(); }
   catch(e){ syncSetMsg(e.message); }
 }
@@ -7166,6 +7189,17 @@ async function syncRestoreVersion(key){
     location.reload();
   } catch(e){ SYNC.busy = false; syncSetMsg('☁ Terugzetten mislukt: '+e.message+' — er is niets veranderd.'); }
 }
+/* inloggen / nieuw account: wisselen houdt het ingetypte e-mailadres vast */
+document.addEventListener('click', e=>{
+  const m = e.target.closest && e.target.closest('[data-acct]');
+  if(m){ const mail = ($('#syncEmail')||{}).value || ''; ui.acctEmail = mail; ui.acctMode = m.dataset.acct; SYNC.msg = ''; renderProfile(); setTimeout(()=>{ const f = $('#syncEmail'); if(f) f.focus(); }, 0); return; }
+  const eyeB = e.target.closest && e.target.closest('[data-pw-eye]');
+  if(eyeB){ const inp = eyeB.parentElement.querySelector('input'); if(!inp) return; const toon = inp.type==='password'; inp.type = toon ? 'text' : 'password'; eyeB.setAttribute('aria-pressed', toon?'true':'false'); eyeB.setAttribute('aria-label', toon?'Wachtwoord verbergen':'Wachtwoord tonen'); }
+});
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Enter' || !e.target || !/^sync(Email|Pw|Pw2)$/.test(e.target.id||'')) return;
+  e.preventDefault(); if(ui.acctMode==='signup') syncSignup(); else syncLogin();
+});
 document.addEventListener('click', e=>{
   const b = e.target.closest && e.target.closest('[data-sync]'); if(!b) return;
   const a = b.dataset.sync;
