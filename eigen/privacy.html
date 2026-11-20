@@ -15,6 +15,7 @@
   h3{color:var(--ink);font-size:15px;margin:18px 0 4px}
   p.sub{color:var(--muted);margin:0 0 20px}
   ul{padding-left:20px}
+  .note:target{outline:2px solid var(--amber-ink)}
   .note{margin-top:10px;padding:12px 14px;background:var(--amber-bg);color:var(--amber-ink);border-radius:10px;font-size:14.5px}
   .en{margin-top:36px;padding:16px 18px;background:var(--ice);border:1px solid var(--line);border-radius:12px}
   .en h2{margin-top:0}
@@ -27,7 +28,7 @@
   <h1>Atempo — privacyverklaring</h1>
   <p class="sub">Move. Recover. Grow. · Alfaversie · Laatst bijgewerkt: 14 november 2026</p>
 
-  <div class="note">Atempo is nog in ontwikkeling (alfaversie) en kan fouten bevatten. Gebruik de app op eigen risico en bewaar belangrijke gegevens ook zelf (zie "Je eigen kopie" hieronder).</div>
+  <div class="note" id="alfa">Atempo is nog in ontwikkeling (alfaversie) en kan fouten bevatten. Gebruik de app op eigen risico en bewaar belangrijke gegevens ook zelf (zie <a href="#kopie">"Je eigen kopie"</a> hieronder).</div>
 
   <h2>Wat Atempo is</h2>
   <p>Atempo is een trainings- en herstelapp. Iedereen kan een eigen, gratis account aanmaken. Elk account heeft zijn eigen, van andere accounts afgeschermde gegevens — er wordt niets gedeeld of samengevoegd tussen gebruikers.</p>
@@ -53,7 +54,7 @@
   <h2>Zonder account</h2>
   <p>Gebruik je de app zonder in te loggen, dan blijft alles alleen in je eigen browser staan (lokale opslag). Er gaat dan niets naar een server. Wis je je browsergegevens, dan ben je die gegevens kwijt — maak in dat geval zelf een back-up (zie "Je eigen kopie").</p>
 
-  <h2>Je eigen kopie</h2>
+  <h2 id="kopie">Je eigen kopie</h2>
   <p>Je kunt op elk moment zelf een volledige kopie van je gegevens downloaden (JSON-bestand of HTML-bestand), via de app zelf (Meer → Data &amp; back-up). Bewaar zo'n bestand alleen op je eigen apparaat of in je eigen, afgeschermde opslag — het bevat al je persoonlijke en gezondheidsgegevens.</p>
 
   <h2>Account en gegevens verwijderen</h2>

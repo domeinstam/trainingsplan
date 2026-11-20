@@ -50,10 +50,12 @@ a{color:var(--green)}
 .main{min-width:0;display:flex;flex-direction:column}
 #backupBar{background:var(--amber-bg);border-bottom:1px solid #e5d59b;color:var(--amber-ink);padding:9px 24px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #backupBar[hidden]{display:none}
-#alfaBar{background:var(--ice);border-bottom:1px solid var(--line);color:var(--ink);padding:9px 24px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+#alfaBar{background:var(--ice);border-bottom:1px solid var(--line);color:var(--ink);padding:9px 44px;font-size:13px;display:flex;gap:10px;align-items:center;justify-content:center;position:relative;text-align:center}
+#alfaBar .alfa-link{color:inherit;text-decoration:none}
+#alfaBar .alfa-link:hover{text-decoration:underline}
 #alfaBar[hidden]{display:none}
 #alfaBar b{color:#B8710A}
-#alfaBar button{background:none;border:0;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
+#alfaBar button{background:none;border:0;cursor:pointer;color:var(--muted);font-size:16px;line-height:1;padding:0 4px;position:absolute;right:14px;top:50%;transform:translateY(-50%)}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
 .topbar h1{margin:0;font-size:19px}
 .save-state{font-size:11.5px;color:var(--muted)}
@@ -1341,7 +1343,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.32";
+const APP_VERSION = "block2-2.24.33";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -6056,7 +6058,7 @@ function alfaInit(){
   const bar = document.getElementById('alfaBar'); if(!bar) return;
   try{ if(localStorage.getItem('atempo-alfa-gezien')) return; }catch(e){}
   bar.hidden = false;
-  bar.innerHTML = `<span>✏️ <b>Alfaversie</b> — deze app is nog in ontwikkeling en kan fouten bevatten.</span><button type="button" aria-label="Sluiten" data-alfa-close>✕</button>`;
+  bar.innerHTML = `<a class="alfa-link" href="privacy.html#alfa" target="_blank" rel="noopener" title="Lees meer over de alfaversie">✏️ <b>Alfaversie</b> — deze app is nog in ontwikkeling en kan fouten bevatten, het gebruik van de app is op eigen risico.</a><button type="button" aria-label="Sluiten" data-alfa-close>✕</button>`;
   bar.querySelector('[data-alfa-close]').addEventListener('click', ()=>{ bar.hidden = true; try{ localStorage.setItem('atempo-alfa-gezien','1'); }catch(e){} });
 }
 async function bkInit(){
