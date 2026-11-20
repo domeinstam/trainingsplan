@@ -1345,7 +1345,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.40";
+const APP_VERSION = "block2-2.24.41";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -3307,7 +3307,7 @@ function extraMove(){
 function extraMoveCardHTML(){
   const cur = extraMove(), other = cur && !EXTRA_MOVES.includes(cur);
   return `<div class="card" id="extraMoveCard"><h3>Extra beweging</h3>
-    <p class="small muted" style="margin-top:0">Staat bij Mijn taken als optionele taak, met een gestippeld rondje. Telt niet mee in de teller.</p>
+    <p class="small muted" style="margin-top:0">Staat bij Mijn taken als optionele taak. Telt niet mee in de teller.</p>
     <div class="rt-two"><div class="field"><label for="exMoveSel">Activiteit</label><select id="exMoveSel" data-exmove-sel>
       <option value="" ${!cur?'selected':''}>Geen</option>${EXTRA_MOVES.map(x=>`<option value="${x}" ${cur===x?'selected':''}>${x}</option>`).join('')}<option value="__other" ${other || ui.exMoveOther ? 'selected' : ''}>Iets anders…</option></select></div>
     ${other || ui.exMoveOther ? `<div class="field"><label for="exMoveTxt">Naam</label><input id="exMoveTxt" type="text" maxlength="40" value="${other ? esc(cur) : ''}" placeholder="bijv. Hond uitlaten, Roeien" data-exmove-txt></div>` : ''}</div></div>`;
