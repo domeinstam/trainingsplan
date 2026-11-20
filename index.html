@@ -1334,7 +1334,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.25";
+const APP_VERSION = "block2-2.24.26";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -1501,7 +1501,6 @@ function activeProgrammaKey(){
   const cat = programmaCatalogus(), id = CB.programmaId;
   if(id && cat[id]) return id;
   if(cat[BUILTIN_PROGRAMMA_ID]) return BUILTIN_PROGRAMMA_ID;
-  if(PUBLIC_BUILD && Object.keys(cat)[0]) return Object.keys(cat)[0];
   return BUILTIN_PROGRAMMA_ID;
 }
 function activeProgramma(){ return programmaCatalogus()[activeProgrammaKey()] || builtinProgramma(); }
@@ -2248,7 +2247,7 @@ function runClearConflicting(date, exceptId){
 }
 function runPlanOn(date, tpl){
   if(!runValidDate(date)) return runMsg('Ongeldige datum.','err');
-  const t = tpl || runCurrentTpl(); if(!t) return runMsg('Er is nog geen hardloopprogramma geladen.','err');
+  const t = tpl || runCurrentTpl(); if(!t) return runMsg('Er is nog geen hardloopprogramma gekozen. Kies er een bij Trainingsprogramma.','err');
   runClearConflicting(date, null);
   const s = runNewSession(date, t); RP().sessions.push(s); RP().sessions.sort(runByDate);
   return s;
@@ -7676,7 +7675,7 @@ function runViewOverview(){
       <div class="rv-next-foot">${coachLineHTML(nx)}<div class="run-actions">${runBtn('open|'+nx.id,TD_ICO(TDI.pen)+'Bekijken of aanpassen','primary')}</div></div>`;
   } else {
     const sug = runSuggestionDates(today, 3)[0], lvl = runCurrentTpl();
-    h += `<p class="small">${lvl ? 'Er is geen training gepland.' : 'Er is nog geen hardloopprogramma geladen.'}</p>`;
+    h += `<p class="small">${lvl ? 'Er is geen training gepland.' : 'Er is nog geen hardloopprogramma gekozen. Kies er een bij Trainingsprogramma.'}</p>`;
     if(sug) h += `<div class="run-actions big">${runBtn('plan|'+sug+'|'+lvl.id,'Plan '+esc(lvl.name)+' op '+esc(runDateShort(sug)),'primary')}</div>`;
   }
   h += `</div></div>`;
@@ -7739,7 +7738,7 @@ function runLevelEditor(t){
 /* niveaus (A–H): op de pagina Hardlopen, onderaan en standaard ingeklapt */
 function runLevelsHTML(){
   const rp = RP(), cur = runCurrentTpl(); let h = '';
-  if(!cur) return `<div class="card"><h3>Niveaus</h3><p class="small muted">Er is nog geen hardloopprogramma geladen. Zodra er een programma met niveaus actief is, verschijnen ze hier.</p></div>`;
+  if(!cur) return `<div class="card"><h3>Niveaus</h3><p class="small muted">Er is nog geen hardloopprogramma gekozen. Kies er een bij Trainingsprogramma; de niveaus van dat programma verschijnen dan hier.</p></div>`;
   /* niveaus: standaard ingeklapt */
   h += `<details class="acc run-levels" ${RUI.manage?'open':''}><summary>Niveaus <span class="tny muted">· huidig: ${esc(cur.name)} — ${esc(runShortStructure(runStepsFromParams(cur)))} · ${runMinLabel(runTotals(runStepsFromParams(cur)).total)}</span></summary><div class="acc-body"><div class="run-ladder">`;
   rp.templates.forEach(t=>{

@@ -34,6 +34,11 @@
   .pwwrap input{flex:1;padding-right:44px}
   button.eye{position:absolute;right:3px;top:3px;bottom:3px;width:38px;padding:0;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center}
   button.eye[aria-pressed="true"]{color:var(--green)}
+  label.chk{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:14px;font-weight:400;color:var(--text)}
+  label.chk .hint{color:var(--muted);font-size:12.5px}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 22px;width:22px;height:22px;margin:1px 0 0;padding:0;border:2px solid #B9C6D0;border-radius:50%;background:#fff;display:inline-grid;place-content:center;cursor:pointer;box-sizing:border-box}
+  input[type=checkbox]:checked{background:#2E9A4E;border-color:#2E9A4E}
+  input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
   .hidden{display:none}
   a.lnk{color:var(--green);cursor:pointer}
 </style>
@@ -97,9 +102,10 @@
 
     <section class="card">
       <h2>Trainingsprogramma's</h2>
-      <p class="sub" style="margin:0 0 10px">Elk programma is een eigen weekschema (fases, oefeningen) dat in de app te kiezen is. Het ingebouwde standaardprogramma (id "standaard-12weken") hoeft hier niet te staan — dat zit al in de app. Met <code>"gratis": true</code> kan iedereen het programma zonder inloggen gebruiken; <code>"beschrijving"</code> is de korte tekst die gebruikers bij het programma zien. Programma's met een bestaande JSON moet je eenmaal opnieuw opslaan (of op "Openbare lijst bijwerken" klikken) om ze in de openbare lijst te krijgen.</p>
+      <p class="sub" style="margin:0 0 10px">Elk programma is een eigen weekschema (fases, oefeningen) dat in de app te kiezen is. Het ingebouwde standaardprogramma (id "standaard-12weken") hoeft hier niet te staan — dat zit al in de app. Met het vinkje "Gratis voor iedereen" kan iedereen het programma zonder inloggen gebruiken; <code>"beschrijving"</code> is de korte tekst die gebruikers bij het programma zien. Programma's met een bestaande JSON moet je eenmaal opnieuw opslaan (of op "Openbare lijst bijwerken" klikken) om ze in de openbare lijst te krijgen.</p>
       <div class="row"><select id="progSelect"><option value="">— nieuw programma —</option><option value="__template__">— standaardsjabloon laden (12-weken opbouw) —</option></select><button id="loadProgsBtn">Vernieuw lijst</button><button id="rebuildListBtn" title="Zet naam, beschrijving en gratis van alle programma's in de openbare lijst">Openbare lijst bijwerken</button></div>
       <div class="field" style="margin-top:10px"><label>Id (bv. "5km")</label><input id="progId" placeholder="5km"></div>
+      <label class="chk" style="margin-top:10px"><input type="checkbox" id="progGratis"> <span><b>Gratis voor iedereen</b><br><span class="hint">Aan: ook wie niet is ingelogd kan dit programma kiezen en gebruiken. Uit: alleen ingelogde gebruikers.</span></span></label>
       <div class="field" style="margin-top:10px"><textarea id="progText" placeholder='{"naam":"5 km","weken":[...],"vervolg":{...}}'></textarea></div>
       <div class="row"><button class="primary" id="saveProgBtn">Opslaan</button><button id="deleteProgBtn">Verwijderen</button><button id="exportProgBtn">Exporteren…</button><button id="importProgBtn">Importeren…</button><input type="file" id="importProgFile" accept="application/json" style="display:none"></div>
       <div class="msg" id="progMsg"></div>
@@ -268,6 +274,17 @@ $('#savePlanBtn').onclick = async () => {
 const BUILTIN_PROGRAMMA_TEMPLATE = {"naam":"12-weken opbouw","beschrijving":"","gratis":false,"weken":[{"week":1,"phase":"leren","faseLabel":"Leren","focusExercise":"goblet-squat","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Squatpatroon leren: eerst naar een stoel zonder gewicht, dan lichaamsgewicht, dan de kettlebell als het past."},{"week":2,"phase":"leren","faseLabel":"Leren","focusExercise":"rdl","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Heupscharnier (RDL) leren. Goblet squat mag kort terugkomen als herhaling."},{"week":3,"phase":"leren","faseLabel":"Leren","focusExercise":"row-a","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Trekbeweging (single-arm row) leren. Squat en RDL blijven bekende bewegingen om kort te herhalen."},{"week":4,"phase":"leren","faseLabel":"Leren","focusExercise":"split-squat","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Split squat leren met extra aandacht voor links/rechts-controle. Geen prestatiedruk."},{"week":5,"phase":"consolideren","faseLabel":"Consolideren","focusExercise":null,"learningTarget":0,"strengthA":false,"strengthB":false,"consolidation":true,"learningGoal":"Geen nieuwe oefening. Squat, RDL, row en split squat herhalen. Eén korte combinatiesessie met 2–3 bekende oefeningen mag."},{"week":6,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"side-plank","learningTarget":1,"strengthA":false,"strengthB":false,"checkpoint":"tussenmeting","learningGoal":"Side plank leren, links/rechts apart. Technische kwaliteit boven tijd. Deze week ook de tussenmeting (Week 6)."},{"week":7,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"suitcase-carry","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Suitcase carry leren: rompstabiliteit, grip, rechtop lopen onder asymmetrische belasting."},{"week":8,"phase":"uitbreiden","faseLabel":"Uitbreiden & combineren","focusExercise":"calf-a","learningTarget":1,"strengthA":false,"strengthB":false,"learningGoal":"Eén eenvoudige kuitvariant (staande calf raise). Kuiten/enkels rustig ondersteunen naast het hardlopen."},{"week":9,"phase":"consolideren","faseLabel":"Consolideren","focusExercise":null,"learningTarget":0,"strengthA":false,"strengthB":false,"consolidation":true,"learningGoal":"Geen nieuwe oefening. Beoordelen: welke bewegingen voelen vertrouwd, welke nog niet, hoe verdraagt de combinatie met Garmin Coach. Vanaf hier mag de overgang naar Kracht A/B beginnen."},{"week":10,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":false,"learningGoal":"Eén korte geïntegreerde krachtsessie (Kracht A) proberen. Geen eis van twee volledige sessies."},{"week":11,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"learningGoal":"Als herstel en planning goed zijn: Kracht A én Kracht B, beide kort."},{"week":12,"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"checkpoint":"eindmeting","learningGoal":"Uitvoeren, observeren, evalueren. Geen piekweek, geen eindspurt. Deze week ook de eindmeting (Week 12)."}],"vervolg":{"phase":"integreren","faseLabel":"Integreren","focusExercise":null,"learningTarget":0,"strengthA":true,"strengthB":true,"learningGoal":"Vervolg na week 12: structureel trainen op basis van wat aantoonbaar goed werkt."}};
 
 let allProgrammas = {};
+/* het vinkje "Gratis voor iedereen" en het veld "gratis" in de tekst van het programma blijven gelijk */
+function gratisUitTekst() {
+  try { const d = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {}; $('#progGratis').checked = d.gratis === true; } catch (e) { /* ongeldige JSON: vinkje blijft staan */ }
+}
+$('#progGratis').onchange = () => {
+  const aan = $('#progGratis').checked;
+  try {
+    const d = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {};
+    d.gratis = aan; $('#progText').value = JSON.stringify(d, null, 2);
+  } catch (e) { $('#progGratis').checked = !aan; setMsg($('#progMsg'), 'Het vinkje kan pas als de tekst van het programma geldige JSON is: ' + e.message, false); }
+};
 async function loadProgs() {
   setMsg($('#progMsg'), 'Laden…');
   try {
@@ -281,10 +298,12 @@ async function loadProgs() {
 $('#loadProgsBtn').onclick = loadProgs;
 $('#progSelect').onchange = () => {
   const id = $('#progSelect').value;
-  if (id === '__template__') { $('#progId').value = ''; $('#progText').value = JSON.stringify(BUILTIN_PROGRAMMA_TEMPLATE, null, 2); setMsg($('#progMsg'), 'Sjabloon geladen — pas aan en kies een eigen id voor je het opslaat.', true); return; }
+  if (id === '__template__') { $('#progId').value = ''; $('#progText').value = JSON.stringify(BUILTIN_PROGRAMMA_TEMPLATE, null, 2); gratisUitTekst(); setMsg($('#progMsg'), 'Sjabloon geladen — pas aan en kies een eigen id voor je het opslaat.', true); return; }
   $('#progId').value = id;
   $('#progText').value = id ? JSON.stringify(allProgrammas[id] || {}, null, 2) : '';
+  gratisUitTekst();
 };
+$('#progText').addEventListener('change', gratisUitTekst);
 $('#exportProgBtn').onclick = () => {
   let data;
   try { data = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {}; }
@@ -303,7 +322,7 @@ $('#importProgFile').onchange = () => {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      $('#progText').value = JSON.stringify(data, null, 2);
+      $('#progText').value = JSON.stringify(data, null, 2); gratisUitTekst();
       if (!$('#progId').value.trim()) $('#progId').value = file.name.replace(/\.json$/i, '');
       setMsg($('#progMsg'), 'Bestand ingeladen — controleer het id en klik op Opslaan.', true);
     } catch (e) { setMsg($('#progMsg'), 'Ongeldige JSON in dit bestand: ' + e.message, false); }
@@ -317,6 +336,8 @@ $('#saveProgBtn').onclick = async () => {
   let programma;
   try { programma = JSON.parse($('#progText').value || '{}'); }
   catch (e) { return setMsg($('#progMsg'), 'Ongeldige JSON: ' + e.message, false); }
+  programma.gratis = $('#progGratis').checked;      // het vinkje is leidend
+  $('#progText').value = JSON.stringify(programma, null, 2);
   setMsg($('#progMsg'), 'Opslaan…');
   try { await callFn('adminSetProgramma', { id, programma }); setMsg($('#progMsg'), 'Opgeslagen.', true); loadProgs(); }
   catch (e) { setMsg($('#progMsg'), e.message, false); }
@@ -326,7 +347,7 @@ $('#deleteProgBtn').onclick = async () => {
   if (!id) return;
   if (!confirm('Programma "' + id + '" verwijderen?')) return;
   setMsg($('#progMsg'), 'Verwijderen…');
-  try { await callFn('adminDeleteProgramma', { id }); setMsg($('#progMsg'), 'Verwijderd.', true); $('#progId').value = ''; $('#progText').value = ''; loadProgs(); }
+  try { await callFn('adminDeleteProgramma', { id }); setMsg($('#progMsg'), 'Verwijderd.', true); $('#progId').value = ''; $('#progText').value = ''; $('#progGratis').checked = false; loadProgs(); }
   catch (e) { setMsg($('#progMsg'), e.message, false); }
 };
 
