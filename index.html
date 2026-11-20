@@ -1344,7 +1344,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.33";
+const APP_VERSION = "block2-2.24.34";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -6059,7 +6059,7 @@ function alfaInit(){
   const bar = document.getElementById('alfaBar'); if(!bar) return;
   try{ if(localStorage.getItem('atempo-openbaar-alfa-gezien')) return; }catch(e){}
   bar.hidden = false;
-  bar.innerHTML = `<a class="alfa-link" href="privacy.html#alfa" target="_blank" rel="noopener" title="Lees meer over de alfaversie">✏️ <b>Alfaversie</b> — deze app is nog in ontwikkeling en kan fouten bevatten, het gebruik van de app is op eigen risico.</a><button type="button" aria-label="Sluiten" data-alfa-close>✕</button>`;
+  bar.innerHTML = `<a class="alfa-link" href="privacy.html#alfa" target="_blank" rel="noopener" title="Lees meer over de alfaversie">🧪 <b>Alfaversie</b> — deze app is nog in ontwikkeling en kan fouten bevatten, het gebruik van de app is op eigen risico.</a><button type="button" aria-label="Sluiten" data-alfa-close>✕</button>`;
   bar.querySelector('[data-alfa-close]').addEventListener('click', ()=>{ bar.hidden = true; try{ localStorage.setItem('atempo-openbaar-alfa-gezien','1'); }catch(e){} });
 }
 async function bkInit(){
