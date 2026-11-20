@@ -1337,7 +1337,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.27";
+const APP_VERSION = "block2-2.24.28";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -2265,12 +2265,15 @@ function runPlanOn(date, tpl){
 function runApplyProgramLevels(){
   if(typeof activeProgrammaKey!=='function') return false;
   const rp = RP(), key = activeProgrammaKey(), p = activeProgramma(), had = rp.levelSetFor;
-  if(had===key) return false;
   const lv = (Array.isArray(p.niveaus) ? p.niveaus : []).filter(n=> n && n.id!=null && num(n.reps)>0 && num(n.runMin)>0).map(runTemplateFrom);
   rp.levelSets = rp.levelSets || {};
   const stored = rp.levelSets[key];
   const dagen = Array.isArray(p.trainingsdagen) ? p.trainingsdagen.filter(d=> ['mon','tue','wed','thu','fri','sat','sun'].includes(d)) : [];   // optioneel: de vaste trainingsdagen van dit programma
   const zetDagen = ()=>{ if(dagen.length) rp.settings.trainingDays = dagen.slice(); };
+  if(had===key){                                 // al gekozen: niets te doen, behalve als het programma toen nog geen niveaus had en jij zelf nog geen niveaus hebt
+    if(!rp.templates.length && lv.length){ rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; zetDagen(); return true; }
+    return false;
+  }
   if(!had){                                      // eerste keer: de huidige niveaus (eigen of standaard) horen bij dit programma
     if(!rp.templates.length && lv.length){ rp.templates = lv; rp.settings.currentTemplateId = lv[0].id; zetDagen(); }
     rp.levelSetFor = key; if(CB && !CB.programmaId) CB.programmaId = key;
@@ -3412,11 +3415,25 @@ function profileCardHTML(){
 const GOAL_STATUS = { actief:'Actief', gepauzeerd:'Gepauzeerd', behaald:'Behaald', beeindigd:'Beëindigd' };
 function goalsAll(){ const p = profile(); return Array.isArray(p.goals) ? p.goals.filter(g=> g && !g.deleted && g.type==='resultaat') : []; }
 function goalMain(){ return goalsAll().find(g=> g.status==='actief') || null; }
+/* het doel van een programma: { naam, soort, afstandKm, beschrijving }; een gewone tekst telt als de naam van het doel */
+function programmaDoel(p){
+  const d = p && p.doel; if(!d) return null;
+  const o = typeof d==='string' ? { naam:d } : (typeof d==='object' ? d : null);
+  const naam = o && String(o.naam||'').trim().slice(0,80); if(!naam) return null;
+  return { naam, soort:o.soort, afstandKm:o.afstandKm, beschrijving:o.beschrijving };
+}
+/* is het programma al actief maar heeft de gebruiker (nog) geen doel daarvan? Dan komt het doel er vanzelf bij, tenzij er al een hoofddoel is of het doel eerder is gekozen/beëindigd */
+function programmaDoelAuto(){
+  const key = activeProgrammaKey(), p = programmaCatalogus()[key]; if(!programmaDoel(p)) return false;
+  const raw = Array.isArray(profileW().goals) ? profileW().goals : [];
+  if(goalMain() || raw.some(g=> g && g.programmaId===key)) return false;
+  programmaDoelToepassen(key); return true;
+}
 /* een programma kan een doel meebrengen (programma.doel = { naam, soort, afstandKm, beschrijving }): bij het kiezen wordt dat je hoofddoel.
    Een eigen hoofddoel of het doel van een ander programma wordt nooit stilzwijgend overschreven; het oude doel gaat naar "Eerder". */
 function programmaDoelToepassen(key){
-  const p = programmaCatalogus()[key], d = p && p.doel; if(!d || !String(d.naam||'').trim()) return;
-  const naam = String(d.naam).trim().slice(0,80), main = goalMain(), nu = new Date().toISOString();
+  const p = programmaCatalogus()[key], d = programmaDoel(p); if(!d) return;
+  const naam = d.naam, main = goalMain(), nu = new Date().toISOString();
   if(main && main.programmaId===key) return;
   if(main){
     const q = main.programmaId ? `Het doel van je vorige programma ("${main.name}") vervangen door "${naam}"? Het oude doel gaat naar Eerder.`
@@ -3453,6 +3470,7 @@ function goalSave(id){
 function goalSetStatus(id, st){
   const g = goalsAll().find(x=> x.id===id); if(!g || !GOAL_STATUS[st]) return;
   if(st==='behaald' && !confirm(`"${g.name}" op behaald zetten? Doe dit alleen als je het echt gehaald hebt.`)) return;
+  if(st==='beeindigd' && !confirm(`Doel "${g.name}" uitschakelen? Het komt onder Eerder te staan en je kunt daarna zelf een nieuw doel instellen.`)) return;
   g.status = st; g.updatedAt = new Date().toISOString(); if(st==='behaald') g.achievedAt = todayISO();
   ui.goalEdit = null; saveState(); renderCurrent();
 }
@@ -3464,13 +3482,13 @@ function goalsCardHTML(){
       <div class="form-grid cols-3"><div class="field"><label for="goalKind">Gaat over</label><select id="goalKind"><option value="hardlopen" ${!g || g.kind==='hardlopen' ? 'selected' : ''}>Hardlopen</option><option value="anders" ${g && g.kind!=='hardlopen' ? 'selected' : ''}>Iets anders</option></select></div>
         <div class="field"><label for="goalDate">Streefdatum <span class="tny muted">(optioneel)</span></label><input id="goalDate" type="date" value="${esc(g && g.targetDate || '')}" min="2020-01-01"></div></div>
       <div class="field"><label for="goalDesc">Toelichting <span class="tny muted">(optioneel)</span></label><input id="goalDesc" type="text" maxlength="200" value="${esc(g && g.desc || '')}" placeholder="bijv. pijnvrij, in mijn eigen tempo"></div>
-      <div class="rt-actions"><button class="btn primary" data-goal-save="${g ? esc(g.id) : 'new'}">Opslaan</button><button class="btn" data-goal-cancel>Annuleren</button>${g ? `<button class="btn" data-goal-status="${esc(g.id)}|beeindigd">Beëindigen</button>` : ''}</div></div>`;
+      <div class="rt-actions"><button class="btn primary" data-goal-save="${g ? esc(g.id) : 'new'}">Opslaan</button><button class="btn" data-goal-cancel>Annuleren</button>${g ? `<button class="btn" data-goal-status="${esc(g.id)}|beeindigd">Uitschakelen</button>` : ''}</div></div>`;
   const meta = g => [g.programmaId && (programmaLijst()[g.programmaId]||{}).naam ? 'hoort bij '+programmaLijst()[g.programmaId].naam : null, g.targetDate ? 'streefdatum '+fmt(g.targetDate,{day:'numeric',month:'long',year:'numeric'}) : null, g.status!=='actief' ? GOAL_STATUS[g.status] : null].filter(Boolean).join(' · ');
   const goalBox = g => cur===g ? form(g) : `<div class="goal-main ${g.status==='gepauzeerd' ? 'is-paused' : ''}">
       <div class="goal-name">${esc(g.name)}</div>${g.desc ? `<div class="small">${esc(g.desc)}</div>` : ''}
       ${g.kind==='hardlopen' && g.status==='actief' ? `<ul class="goal-info">${goalRunInfo().map(x=>`<li>${esc(x)}</li>`).join('')}<li>Je werkt aan je doel.</li></ul>` : ''}
       ${meta(g) ? `<div class="tny muted">${esc(meta(g))}</div>` : ''}
-      <div class="run-actions"><button class="btn sm" data-goal-edit="${esc(g.id)}">Wijzigen</button><button class="btn sm" data-goal-status="${esc(g.id)}|behaald">Behaald</button>${g.status==='gepauzeerd' ? `<button class="btn sm" data-goal-status="${esc(g.id)}|actief">Weer actief</button>` : `<button class="btn sm" data-goal-status="${esc(g.id)}|gepauzeerd">Pauzeren</button>`}</div></div>`;
+      <div class="run-actions"><button class="btn sm" data-goal-edit="${esc(g.id)}">Wijzigen</button><button class="btn sm" data-goal-status="${esc(g.id)}|behaald">Behaald</button><button class="btn sm" data-goal-status="${esc(g.id)}|beeindigd">Uitschakelen</button>${g.status==='gepauzeerd' ? `<button class="btn sm" data-goal-status="${esc(g.id)}|actief">Weer actief</button>` : `<button class="btn sm" data-goal-status="${esc(g.id)}|gepauzeerd">Pauzeren</button>`}</div></div>`;
   const wi = weekIndexFor(todayISO()), ds = weekDates(wi >= 0 ? wi : 0);
   const rts = routineList().map(r=>{ const n = ds.filter(d=> routineDoneOn(CB.dailyLogs[d], r)).length, t = routineTarget(r, ds);
     return `<li><span><b>${esc(r.name)}</b><small>${esc([routineFreqText(r), r.phase].filter(Boolean).join(' · '))}${r.paused ? ' · gepauzeerd' : ''}</small></span>${r.paused ? '' : `<span class="goal-n">${n} van ${t}</span><span class="td-bar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(100*n/(t||1)))}%"></i></span>`}</li>`; }).join('');
@@ -7032,6 +7050,7 @@ async function syncProgrammasMaybe(){
       if(alle) programmaCacheSave(alle);
       else { const gratis = {}; for(const id of Object.keys(lijst||{}).filter(k=> lijst[k] && lijst[k].gratis===true)){ try{ const p = await fbPublicGet('programmas/'+encodeURIComponent(id)); if(p) gratis[id] = p; }catch(e){} } programmaCacheSave(gratis); }
     }
+    try{ programmaDoelAuto(); }catch(e){}
     if(typeof renderCurrent==='function') renderCurrent();
   }catch(e){ PROGRAMMAS_FETCHED = ''; }
 }

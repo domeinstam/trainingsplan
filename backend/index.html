@@ -39,6 +39,13 @@
   input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 22px;width:22px;height:22px;margin:1px 0 0;padding:0;border:2px solid #B9C6D0;border-radius:50%;background:#fff;display:inline-grid;place-content:center;cursor:pointer;box-sizing:border-box}
   input[type=checkbox]:checked{background:#2E9A4E;border-color:#2E9A4E}
   input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+  .pcard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff}
+  .pcard .head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pcard .head input{flex:1;min-width:180px;font-weight:700}
+  .pcard dl{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:10px 0 0;font-size:13.5px}
+  .pcard dt{color:var(--muted)} .pcard dd{margin:0}
+  .badge{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--ice);color:var(--green)}
+  .badge.betaald{background:#F3F5F7;color:var(--muted)} .badge.warn{background:#FBEAE6;color:var(--neg)}
   .hidden{display:none}
   a.lnk{color:var(--green);cursor:pointer}
 </style>
@@ -98,6 +105,14 @@
       <div class="row"><button id="loadPlanBtn">Laden</button><button class="primary" id="savePlanBtn">Opslaan</button></div>
       <div class="field" style="margin-top:10px"><textarea id="planText" placeholder="{}"></textarea></div>
       <div class="msg" id="planMsg"></div>
+    </section>
+
+    <section class="card" id="progOverzichtCard">
+      <h2>Programma-overzicht</h2>
+      <p class="sub" style="margin:0 0 10px">Alle programma's met de belangrijkste gegevens en hoeveel ze worden gebruikt. De naam kun je hier meteen aanpassen; de rest (niveaus, doel, gratis) wijzig je in het blok hieronder.</p>
+      <div class="row"><button id="refreshOverzichtBtn">Overzicht verversen</button><span class="msg" id="overzichtTotaal" style="margin:0"></span></div>
+      <div id="progOverzicht" style="margin-top:10px"></div>
+      <div class="msg" id="overzichtMsg"></div>
     </section>
 
     <section class="card">
@@ -303,17 +318,71 @@ $('#progGratis').onchange = () => {
     d.gratis = aan; $('#progText').value = JSON.stringify(d, null, 2);
   } catch (e) { $('#progGratis').checked = !aan; setMsg($('#progMsg'), 'Het vinkje kan pas als de tekst van het programma geldige JSON is: ' + e.message, false); }
 };
+function loadProgsSelect() {
+  const sel = $('#progSelect'), huidig = sel.value;
+  sel.innerHTML = '<option value="">— nieuw programma —</option>' + Object.keys(allProgrammas).map(id => `<option value="${esc(id)}">${esc((allProgrammas[id] && allProgrammas[id].naam) || id)} — ${esc(id)}</option>`).join('');
+  sel.value = huidig;
+}
 async function loadProgs() {
   setMsg($('#progMsg'), 'Laden…');
   try {
     const { programmas } = await callFn('adminListProgrammas', {});
     allProgrammas = programmas || {};
-    const sel = $('#progSelect');
-    sel.innerHTML = '<option value="">— nieuw programma —</option>' + Object.keys(allProgrammas).map(id => `<option value="${id}">${id}</option>`).join('');
+    loadProgsSelect();
     setMsg($('#progMsg'), '');
+    renderOverzicht();
+    loadGebruik();
   } catch (e) { setMsg($('#progMsg'), e.message, false); }
 }
 $('#loadProgsBtn').onclick = loadProgs;
+/* ---- programma-overzicht ---- */
+let gebruik = null;      // { accounts, zonderProgramma, perProgramma } van adminProgrammaGebruik; null = (nog) niet beschikbaar
+const DAGEN = { mon: 'ma', tue: 'di', wed: 'wo', thu: 'do', fri: 'vr', sat: 'za', sun: 'zo' };
+function renderOverzicht() {
+  const ids = Object.keys(allProgrammas);
+  const box = $('#progOverzicht');
+  if (!ids.length) { box.innerHTML = '<p class="sub">Nog geen programma\'s.</p>'; $('#overzichtTotaal').textContent = ''; return; }
+  box.innerHTML = ids.map(id => {
+    const p = allProgrammas[id] || {};
+    const nv = Array.isArray(p.niveaus) ? p.niveaus : [];
+    const doel = typeof p.doel === 'string' ? { naam: p.doel } : (p.doel || null);
+    const g = gebruik && gebruik.perProgramma ? (gebruik.perProgramma[id] || { gekozen: 0, actief30d: 0 }) : null;
+    const dagen = Array.isArray(p.trainingsdagen) && p.trainingsdagen.length ? p.trainingsdagen.map(d => DAGEN[d] || d).join(' ') : '—';
+    const niveauTekst = nv.length ? nv.length + ' (' + esc(nv[0].name || nv[0].id) + (nv.length > 1 ? ' t/m ' + esc(nv[nv.length - 1].name || nv[nv.length - 1].id) : '') + ')' : '<span class="badge warn">geen niveaus</span> <span class="hint">— zonder niveaus verschijnen er geen trainingen in de app</span>';
+    return `<div class="pcard" data-pid="${esc(id)}">
+      <div class="head"><input value="${esc(p.naam || '')}" placeholder="Naam van het programma" aria-label="Naam" data-naam><button class="primary" data-rename="${esc(id)}">Naam opslaan</button>
+        <span class="badge ${p.gratis === true ? '' : 'betaald'}">${p.gratis === true ? 'Gratis' : 'Betaald'}</span></div>
+      <dl>
+        <dt>Gebruik</dt><dd>${g ? '<b>' + g.gekozen + '</b> gekozen · <b>' + g.actief30d + '</b> actief de laatste 30 dagen' : (gebruik === null ? '<span class="hint">laden… (of de functie is nog niet geplaatst)</span>' : '—')}</dd>
+        <dt>Niveaus</dt><dd>${niveauTekst}</dd>
+        <dt>Weken</dt><dd>${Array.isArray(p.weken) ? p.weken.length : 0}</dd>
+        <dt>Trainingsdagen</dt><dd>${esc(dagen)}</dd>
+        <dt>Doel</dt><dd>${doel && doel.naam ? esc(doel.naam) + (doel.afstandKm ? ' · ' + esc(doel.afstandKm) + ' km' : '') : '—'}</dd>
+        <dt>Beschrijving</dt><dd>${p.beschrijving ? esc(p.beschrijving) : '—'}</dd>
+        <dt>Id</dt><dd><code>${esc(id)}</code> · <a class="lnk" data-bewerk="${esc(id)}">bewerken</a></dd>
+      </dl></div>`;
+  }).join('');
+  $('#overzichtTotaal').textContent = gebruik ? gebruik.accounts + ' accounts · ' + gebruik.zonderProgramma + ' zonder gekozen programma' : '';
+}
+async function loadGebruik() {
+  try { gebruik = await callFn('adminProgrammaGebruik', {}); setMsg($('#overzichtMsg'), ''); }
+  catch (e) { gebruik = null; setMsg($('#overzichtMsg'), 'Gebruik kon niet worden opgehaald (' + e.message + '). Het overzicht hieronder blijft wel beschikbaar.', false); }
+  renderOverzicht();
+}
+$('#refreshOverzichtBtn').onclick = async () => { await loadProgs(); };
+$('#progOverzicht').addEventListener('click', async e => {
+  const ren = e.target.closest('[data-rename]');
+  if (ren) {
+    const id = ren.dataset.rename, naam = ren.closest('.pcard').querySelector('[data-naam]').value.trim();
+    if (!naam) return setMsg($('#overzichtMsg'), 'Vul een naam in.', false);
+    setMsg($('#overzichtMsg'), 'Opslaan…');
+    try { await callFn('adminSetProgramma', { id, programma: Object.assign({}, allProgrammas[id], { naam }) }); allProgrammas[id].naam = naam; setMsg($('#overzichtMsg'), 'Naam opgeslagen.', true); renderOverzicht(); loadProgsSelect(); }
+    catch (er) { setMsg($('#overzichtMsg'), er.message, false); }
+    return;
+  }
+  const bw = e.target.closest('[data-bewerk]');
+  if (bw) { $('#progSelect').value = bw.dataset.bewerk; $('#progSelect').onchange(); $('#progId').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+});
 $('#progSelect').onchange = () => {
   const id = $('#progSelect').value;
   if (id === '__template__') { $('#progId').value = ''; $('#progText').value = JSON.stringify(BUILTIN_PROGRAMMA_TEMPLATE, null, 2); gratisUitTekst(); setMsg($('#progMsg'), 'Sjabloon geladen — pas aan en kies een eigen id voor je het opslaat.', true); return; }
@@ -360,7 +429,13 @@ $('#saveProgBtn').onclick = async () => {
     else { programma.doel = Object.assign({ soort: 'hardlopen' }, programma.doel || {}, { naam }); if (km !== '' && Number(km) > 0) programma.doel.afstandKm = Number(km); else delete programma.doel.afstandKm; } }
   $('#progText').value = JSON.stringify(programma, null, 2);
   setMsg($('#progMsg'), 'Opslaan…');
-  try { await callFn('adminSetProgramma', { id, programma }); setMsg($('#progMsg'), 'Opgeslagen.', true); loadProgs(); }
+  try {
+    await callFn('adminSetProgramma', { id, programma });
+    const heeftNiveaus = Array.isArray(programma.niveaus) && programma.niveaus.length > 0;
+    if (heeftNiveaus) setMsg($('#progMsg'), 'Opgeslagen.', true);
+    else setMsg($('#progMsg'), 'Opgeslagen, maar let op: dit programma bevat geen "niveaus". In de app verschijnen er dan geen trainingen in de kalender. Importeer het bestand met niveaus (bijvoorbeeld 5km-beginner.json).', false);
+    loadProgs();
+  }
   catch (e) { setMsg($('#progMsg'), e.message, false); }
 };
 $('#deleteProgBtn').onclick = async () => {
