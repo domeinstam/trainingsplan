@@ -304,6 +304,12 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .oc-panel{scroll-margin-top:90px}
 .td-task input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
 .td-subcheck input[type=checkbox]{width:18px!important;height:18px!important}
+/* alle vinkjes in de app: groene cirkel met wit vinkje (zoals bij de taken op Vandaag) */
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:22px!important;height:22px!important;min-width:22px;padding:0;border:2px solid #B9C6D0;border-radius:50%;margin:0 8px 0 0;display:inline-grid;place-content:center;background:#fff;cursor:pointer;flex:0 0 auto;vertical-align:middle;box-sizing:border-box}
+input[type=checkbox]:checked{background:var(--td-pos,#2E9A4E);border-color:var(--td-pos,#2E9A4E)}
+input[type=checkbox]:checked::after{content:"";width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px)}
+input[type=checkbox]:focus-visible{outline:2px solid var(--green,#04717C);outline-offset:2px}
+input[type=checkbox]:disabled{opacity:.5;cursor:default}
 .td-tick{width:22px;height:22px;margin-top:0}
 .td-go{background:none;border:0;padding:6px;margin-left:auto;cursor:pointer;color:var(--td-sub);border-radius:8px;display:flex}
 .td-go:hover{background:#F2F8FB}
@@ -867,7 +873,8 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 .run-drop{outline:2px dashed var(--green);outline-offset:-2px;background:var(--mint)!important}
 .run-src{margin:10px 0 4px}
 @keyframes runOpen{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
-.run-edit{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}
+.run-edit{margin:10px 0;padding-bottom:10px;border-bottom:1px solid var(--line2)}
+.run-edit-foot{margin-top:6px}
 .run-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
 .run-chips .btn{min-width:42px}
 .run-move{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:650}
@@ -1326,7 +1333,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.22";
+const APP_VERSION = "block2-2.24.23";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -7560,10 +7567,16 @@ function runEditHTML(s){
       ${runInp('Afkoelen (min)', qb+'cool', q.cool, { inputmode:'decimal' })}
     </div>
     <div class="tny muted">Een wijziging telt meteen${coachState(s)!=='local' ? ' en gaat vanzelf mee naar Garmin' : ''}. Het niveau zelf blijft zoals het is.</div>
-    <div class="run-sub">Of neem een ander niveau voor deze training</div>
-    <div class="run-chips">${RP().templates.map(t=>runBtn('sesLevel|'+s.id+'|'+t.id, esc(t.name.replace(/^Niveau /,'')), 'sm'+(t.id===s.templateId?' active':''))).join('')}</div>
-    ${runInp('Notitie', '__run.ses.'+s.id+'.notes', s.notes, { ph:'optioneel' })}
-    <div class="run-actions">${runBtn('close|'+s.id,'Klaar','sm primary')}</div></div>`;
+  </div>`;
+}
+/* ander niveau voor één training: staat in het aanpassen onder de Intensiteit */
+function runEditLevelHTML(s){
+  return `<div class="run-sub">Of neem een ander niveau voor deze training</div>
+    <div class="run-chips">${RP().templates.map(t=>runBtn('sesLevel|'+s.id+'|'+t.id, esc(t.name.replace(/^Niveau /,'')), 'sm'+(t.id===s.templateId?' active':''))).join('')}</div>`;
+}
+/* in het aanpassen: de notitie; daaronder volgen de Garmin-regel, Verzetten/Verwijderen en als laatste Klaar */
+function runEditNoteHTML(s){
+  return `<div class="run-edit-foot">${runInp('Notitie', '__run.ses.'+s.id+'.notes', s.notes, { ph:'optioneel' })}</div>`;
 }
 /* intensiteit (hartslagdoel) van één training: één keuzelijst met het bereik ernaast */
 const runBpm = t => t && t.type==='hr' ? t.low+'–'+t.high+' bpm' : '';
@@ -7586,16 +7599,18 @@ function runHrLine(s){
 function runSessionDetail(s){
   const today = todayISO(), b = '__run.ses.'+s.id+'.';
   let h = runTimelineSVG(s.steps, 30) + runTotalsLine(s.steps);
+  if(s.status==='planned' && RUI.editId===s.id) h += runEditHTML(s);      // aanpassen staat direct onder de structuur
   if(s.status==='planned'){
+    const editing = RUI.editId===s.id;
     h += runRestWarnings(s).map(w=>`<div class="warnline">${esc(w)}</div>`).join('');
     h += runHrLine(s);
+    if(editing) h += runEditLevelHTML(s) + runEditNoteHTML(s);      // aanpassen: velden, intensiteit, niveau, notitie; daarna Garmin, verzetten, Klaar
     h += coachLineHTML(s);
     if(s.date<=today) h += `<div class="run-sub">Hoe ging het?</div><div class="run-actions">${runResultButtons(s)}</div>`;
-    const editing = RUI.editId===s.id;
     h += `<div class="run-actions">
         <label class="run-move">Verzetten <input type="date" data-bind="${b}date" value="${esc(s.date)}"></label>
         ${editing ? '' : runBtn('editToggle|'+s.id, 'Aanpassen', 'sm')}${runBtn('del|'+s.id,'Verwijderen','sm danger')}${editing ? '' : runBtn('close|'+s.id,'Klaar','sm primary run-close')}</div>`;
-    if(editing) h += runEditHTML(s);
+    if(editing) h += `<div class="run-actions">${runBtn('close|'+s.id,'Klaar','sm primary')}</div>`;
   } else if(s.status==='done'){
     h += runHrLine(s) + `<div class="small run-res">${runResultLine(s)}</div><div class="run-sub">Na de training</div>${runPostForm(s)}`;
     h += `<div class="small"><b>Beoordeling:</b> ${esc(runOutcome(s).text)}</div>`;
@@ -7783,10 +7798,14 @@ function runHrSettingsHTML(){
   const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
   const heart = `<svg class="run-hr-heart" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}" fill="#C0392B"><title>${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}</title><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
   return `<div class="small run-hr-line">${heart}${mx ? `<span>Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span></span>` : ''}</div>
-    <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
-    ${h.useOwn ? `<div class="form-grid cols-3">${runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] })}</div>` : ''}
+    <details class="acc run-hr-own-acc" data-run-hrown ${RUI.hrOwnOpen?'open':''}><summary>Eigen maximale hartslag${h.useOwn?' <span class="muted">(in gebruik)</span>':''}</summary><div class="acc-body">
+      <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
+      ${h.useOwn ? `<div class="form-grid cols-3">${runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] })}</div>` : ''}
+    </div></details>
     ${old.length && h.dismissed!==runHrSig() ? runHrUpdateHTML(old.length) : ''}`;
 }
+/* de keuze open/dicht van "Eigen maximale hartslag" blijft staan bij opnieuw tekenen */
+document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.matches && d.matches('details[data-run-hrown]')) RUI.hrOwnOpen = d.open; }, true);
 const runHrSig = () => { const m = runHrMax(); return m ? m.bpm+'/'+m.basis : ''; };
 const runHrUpdateHTML = n => `<div class="run-msg run-hr-upd">Je hartslaginstellingen zijn gewijzigd. ${n===1 ? '1 toekomstige training' : n+' toekomstige trainingen'} bijwerken?
   <div class="run-actions">${runBtn('hrUpdate','Bijwerken','sm primary')}${runBtn('hrLater','Niet nu','sm')}</div></div>`;
