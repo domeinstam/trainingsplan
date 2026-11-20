@@ -648,8 +648,6 @@ body.rtp-open{overflow:hidden}
 .dagadvies .toggles summary::-webkit-details-marker{display:none}
 .dagadvies .toggles summary::marker{content:""}
 .dagadvies .toggles .panel{font-size:11px;color:var(--muted);line-height:1.45;margin-top:3px}
-.dagadvies .toggles .own-row{margin-left:8px;font-size:16px}
-.dagadvies .toggles .own-row a{text-decoration:none;margin-right:6px}
 
 /* Today: crisp segmented answer */
 .answer{display:flex;flex-direction:column;gap:2px}
@@ -1151,6 +1149,7 @@ body{background:var(--paper)}
 .td-head{display:none}
 .td-recovery{container-type:inline-size}
 .oc-panels{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
+.oc-panels:not(:has(.oc-panel[open])){align-items:stretch}      /* Dagcheck en Slaap even hoog zolang ze allebei dicht zijn */
 .oc-panel,.oc-beeld{border:1px solid #D8EAF0;border-radius:12px;background:#fff;overflow:hidden}
 .oc-beeld{margin-top:12px;background:#fff}
 .oc-ph{display:flex;align-items:center;gap:8px;margin:0!important;padding:9px 14px;background:#F0F8FB;border-bottom:1px solid #D8EAF0;font-size:14px!important;font-weight:700;color:var(--td-ink)}
@@ -1346,7 +1345,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.38";
+const APP_VERSION = "block2-2.24.39";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -2064,7 +2063,7 @@ function runResultOf(s){
    Hardlopen zijn ingevuld (checks) blijven gelden voor de dagen waarop de Dagcheck ze niet heeft. */
 function runPre(date){
   const c = RP().checks[date] || null, l = (CB && CB.dailyLogs) ? CB.dailyLogs[date] : null;
-  const e = l ? num(l.energy) : null, p = l ? num(l.pain) : null, ws = l ? runBool(l.walkStairs) : null, own = l && RUN_LIGHT[l.traffic] ? l.traffic : null;
+  const e = l ? num(l.energy) : null, p = l ? num(l.pain) : null, ws = l ? runBool(l.walkStairs) : null, own = null;      // de eigen beoordeling bestaat niet meer
   if(!c && e==null && p==null && ws==null && !own) return null;
   const m = { ...(c||{}) };
   if(e!=null){ m.energy = e; m.energyFrom = 'dagcheck'; }
@@ -3244,7 +3243,7 @@ function strictestStatus(auto, own){
 /* effectieve dagstatus voor historie/tellingen: de strengste van het bewaarde advies en je eigen beoordeling */
 function effectiveDayStatus(d){
   const l = CB.dailyLogs[d]; if(!l) return null;
-  return strictestStatus(l.advice && l.advice.status, l.traffic);
+  return strictestStatus(l.advice && l.advice.status, null);
 }
 /* -- alleen nog voor de Progressie › Herstel-trend (beschrijvend, geen advies) -- */
 function recoveryFlags(){
@@ -3931,7 +3930,7 @@ function routineDelete(id){
    Eén bron voor het mobiele blok en de desktopkaarten, zodat kleur en tekst overal hetzelfde zeggen. */
 function todayState(d, ctx){
   const isToday = d===todayISO(), l = CB.dailyLogs[d] || {};
-  const own = l.traffic && DAY_STATUS[l.traffic] ? l.traffic : null;
+  const own = null;      // de eigen beoordeling bestaat niet meer (een eerder opgeslagen waarde telt niet meer mee)
   let status, why = [], und, vals, onlyMissing = '';
   if(isToday){ const rd = runReadiness(d); und = rd.undetermined && !own; status = und ? null : (rd.undetermined ? own : rd.shown); why = rd.reasons.concat(rd.missing.map(t=>({ sev:'info', text:t }))); vals = rd.values;
     // oranje alleen door ontbrekende gegevens: zeg meteen welke (anders lijken goede waarden met oranje tegenstrijdig)
@@ -3945,15 +3944,11 @@ function todayState(d, ctx){
   const head = (planned || other) ? TODAY_HEAD.train : TODAY_HEAD.rest;
   return { d, isToday, l, own, status, why, und, vals, onlyMissing, planned, done, other, next, head };
 }
-/* Waarom? + Eigen beoordeling (ingeklapt) */
+/* Waarom dit advies? (ingeklapt) */
 function todayToggles(st){
-  const { d, own, why } = st;
-  const ownPanel = own
-    ? `<div class="panel">Jouw beoordeling: <b>${DAY_STATUS[own].emoji} ${esc(DAY_STATUS[own].label)}</b>. Die kan het advies strenger maken, nooit milder. <a href="#" data-own-clear="${d}">wissen</a></div>`
-    : `<div class="panel">Voel je je slechter dan het advies zegt? Kies je eigen beoordeling: <span class="own-row">${['green','orange','red'].map(s=>`<a href="#" data-own-set="${d}|${s}" title="${esc(DAY_STATUS[s].label)}">${DAY_STATUS[s].emoji}</a>`).join('')}</span></div>`;
+  const { why } = st;
   const whyList = why.length ? `<ul class="small">${why.map(r=>`<li>${esc(r.text)}</li>`).join('')}</ul>` : `<div class="small">Geen aandachtspunten.</div>`;
-  return `<div class="toggles"><details><summary>Waarom dit advies?</summary><div class="panel">${whyList}<div class="tny muted">Ondersteunend advies, geen medische beoordeling. Atempo blokkeert niets; jij beslist.</div></div></details>
-    <details><summary>Eigen beoordeling</summary>${ownPanel}</details></div>`;
+  return `<div class="toggles"><details><summary>Waarom dit advies?</summary><div class="panel">${whyList}<div class="tny muted">Ondersteunend advies, geen medische beoordeling. Jij beslist!</div></div></details></div>`;
 }
 function todayCoachBlock(d, ctx){
   const st = todayState(d, ctx), { isToday, status, und, vals, onlyMissing, planned, done, other, next, head } = st;
@@ -4051,17 +4046,34 @@ function tdTasks(st, ctx){
   if(other) out.push({ k:'other', done:false, html:`<button class="td-link" data-add="${other.type}|${d}">${esc(other.label)}</button>` });
   ['strengthA','strengthB','longwalk','learning'].forEach(k=>{ if(ctx.logged && ctx.logged[k] && !(other && other.type===k)) out.push({ k:'reg:'+k, done:true, html: ({ strengthA:'Kracht A', strengthB:'Kracht B', longwalk:'Lange wandeling', learning:'Leermoment' })[k] }); });
   /* afgevinkt: geen Start en geen 'deels / afwijkend' meer; via › kun je de registratie nog bekijken of aanpassen */
-  routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ k:'rt:'+r.id, done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
+  routineToday(d, l).forEach(r=>{ const dn = routineDoneOn(l, r); out.push({ k:'rt:'+r.id, moment:r.moment||'ochtend', done:dn, check:true, html: routineCheckHTML(r, l, null, true), ...(rtExercises(r).length ? { go:'reg', goAttr:`data-rt-reg="${esc(r.id)}"`, play: !dn && d <= todayISO() ? r.id : null } : {}) }); });
   if(showOc) out.push({ k:'slaap', done: (has(l.restingHr)||has(g.restingHr)) && (has(l.hrv)||has(g.nightHrv)) && (has(l.sleepHours)||has(g.sleepDuration)),
     html:`<button class="td-link" data-oc-panel="more">Slaap</button>` });
   const xm = extraMove(); if(xm || checks.eveningWalk) out.push({ k:'extra', done:!!checks.eveningWalk, check:true, optional:true, html:`<label><input type="checkbox" data-check="eveningWalk"${checks.eveningWalk?' checked':''}> <span class="rt-txt">${esc(xm || 'Extra beweging')}</span> <span class="td-opt">(optioneel)</span></label>${checks.eveningWalk ? `<div class="td-dur">${fInput('Duur (min)','currentBlock.dailyLogs.'+d+'.eveningWalkMin', l.eveningWalkMin,'number','inputmode="numeric"')}</div>` : ''}` });
-  return taskSort(out);
+  return taskSort(out.slice().sort((a,b)=> taskRank(a) - taskRank(b)));      // standaard: in de volgorde van de dag
+}
+/* de gewone volgorde van de dag: Dagcheck en Slaap (ochtendmetingen), ochtendroutines, training en evaluatie, overige registraties,
+   middag- en avondroutines; optionele taken (bv. een wandeling) helemaal onderaan */
+function taskRank(x){
+  if(x.optional) return 99;
+  const k = String(x.k);
+  if(k==='dc') return 10; if(k==='slaap') return 20;
+  if(k.startsWith('rt:')) return x.moment==='avond' ? 60 : x.moment==='middag' ? 50 : 30;
+  if(k==='run') return 40; if(k==='eval') return 45; if(k==='other') return 46;
+  return 47;
 }
 /* eigen volgorde van Mijn taken (CB.taskOrder, per gebruiker): taken die erin staan krijgen die volgorde,
    nieuwe taken blijven op hun gewone plek */
 function taskSort(list){
-  const ord = Array.isArray(CB.taskOrder) ? CB.taskOrder : [], known = list.filter(x=> ord.includes(x.k)).sort((a,b)=> ord.indexOf(a.k) - ord.indexOf(b.k));
-  let n = 0; return list.map(x=> ord.includes(x.k) ? known[n++] : x);
+  const ord = Array.isArray(CB.taskOrder) ? CB.taskOrder : [], out = list.filter(x=> ord.includes(x.k)).sort((a,b)=> ord.indexOf(a.k) - ord.indexOf(b.k));
+  /* een taak die nog geen eigen plek heeft (bv. "Training geëvalueerd" na het hardlopen) komt direct onder de taak waar hij van nature achter hoort */
+  list.forEach((x,i)=>{
+    if(ord.includes(x.k)) return;
+    let at = 0; for(let j=i-1; j>=0; j--){ const p = out.indexOf(list[j]); if(p>=0){ at = p+1; break; } }
+    out.splice(at, 0, x);
+  });
+  /* optionele taken (zoals een wandeling) staan altijd onderaan, ook als je ze ergens anders hebt neergezet */
+  return [...out.filter(x=> !x.optional), ...out.filter(x=> x.optional)];
 }
 function taskMove(i, to){
   const keys = [...document.querySelectorAll('.td-tasks .td-tasklist li[data-tk-i]')].map(li=> li.dataset.tk);
@@ -4873,7 +4885,7 @@ function dagdataColumns(){
     { key:'restingHr',  label:'Rusthartslag (bpm)',           short:'RHR',     m:'restingHr', g:'restingHr',     h:'rhr',             num:true },
     { key:'sleepHours', label:'Slaapduur (u:mm)',              short:'Slaap',   m:'sleepHours',g:'sleepDuration', h:'__sleepH',       time:true },
     { key:'sleepScore', label:'Garmin slaapscore',            short:'Score',   m:'sleepScore',g:'sleepScore',    h:'garminSleepScore', num:true },
-    { key:'traffic',    label:'Dagadvies — automatisch berekend (eigen beoordeling kies je op Vandaag)', short:'Advies', computed:true },
+    { key:'traffic',    label:'Dagadvies — automatisch berekend', short:'Advies', computed:true },
   ];
   const routine = [
     { key:'routineDone',     label:'Ochtendroutine gedaan',        short:'Routine',   m:'__routine', g:null, h:null, sel:[['','—'],['ja','ja'],['deels','deels'],['nee','nee']] },
@@ -4949,8 +4961,8 @@ function dagdataRows(){
       } else if(col.computed){
         // Dagadvies (read-only in de tabel): de strengste van automatisch advies en eigen beoordeling.
         // Live berekend voor weergave; de dag-snapshot (l.advice) blijft ongewijzigd.
-        const au = isHist ? null : dayAdvice(date).status, s = isHist ? null : strictestStatus(au, l.traffic);
-        cells[col.key] = { val: s || null, src: s && l.traffic && s===l.traffic && s!==au ? 'own' : (s?'auto':null), editable:false, ro:true };
+        const au = isHist ? null : dayAdvice(date).status, s = isHist ? null : au;
+        cells[col.key] = { val: s || null, src: s ? 'auto' : null, editable:false, ro:true };
       } else if(isHist){
         cells[col.key] = { val: dagdataHistVal(h, col), src:'H', editable:false };
       } else {
@@ -6757,8 +6769,6 @@ document.addEventListener('click', e=>{
   const rtrc = e.target.closest('[data-rt-reg-cancel]'); if(rtrc){ e.preventDefault(); ui.rtReg = null; renderCurrent(); return; }
   const rts = e.target.closest('[data-rt-save]'); if(rts){ e.preventDefault(); routineSave(rts.dataset.rtSave); return; }
   const rtd = e.target.closest('[data-rt-del]'); if(rtd){ e.preventDefault(); routineDelete(rtd.dataset.rtDel); return; }
-  const ost = e.target.closest('[data-own-set]'); if(ost){ e.preventDefault(); const [dd,s]=ost.dataset.ownSet.split('|'); ensureLog(dd).traffic = s; saveState(); renderToday(); return; }
-  const ocl = e.target.closest('[data-own-clear]'); if(ocl){ e.preventDefault(); const dd=ocl.dataset.ownClear; if(CB.dailyLogs[dd]) CB.dailyLogs[dd].traffic = null; saveState(); renderToday(); return; }
   const mvs = e.target.closest('[data-move-start]'); if(mvs){ const [kind,id]=mvs.dataset.moveStart.split('|'); ui.moveOn={kind,id}; renderToday(); return; }
   if(e.target.closest('[data-move-cancel]')){ ui.moveOn=null; renderToday(); return; }
   const mvv = e.target.closest('[data-move-save]'); if(mvv){ const [kind,id]=mvv.dataset.moveSave.split('|'); const val=$('#moveDateInput')?.value; moveRecordDate(kind,id,val); return; }
