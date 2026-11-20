@@ -1030,6 +1030,8 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 .run-hr-line{display:flex;align-items:center;gap:8px}
 .run-hr-line .run-hr-heart{flex:none}
 .hr-title{display:flex;align-items:center;gap:8px}
+.run-hr-tag{margin-left:2px;font-weight:650;color:var(--green)}
+.run-hr-tag.none{font-weight:500;color:var(--muted)}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -1343,7 +1345,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.36";
+const APP_VERSION = "block2-2.24.37";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -7863,8 +7865,24 @@ function runLevelsHTML(){
   h += `</div><div class="run-actions">${runBtn('tplAdd','+ Nieuw niveau','sm')}<span class="tny muted">kopie van ${esc(cur.name)}</span></div>${runLegend()}${rp.levelLog.length?`<details class="acc"><summary>Niveau-geschiedenis</summary><div class="acc-body"><ul class="small">${rp.levelLog.slice().reverse().map(l=>`<li>${esc(fmt(l.date,{day:'numeric',month:'long'}))}: ${esc((runTpl(l.from)||{}).name||l.from||'—')} → <b>${esc((runTpl(l.to)||{}).name||l.to)}</b>${l.reason?` <span class="tny muted">(${esc(l.reason)})</span>`:''}</li>`).join('')}</ul></div></details>`:''}</div></details>`;
   return h;
 }
+/* intensiteit van een training in één regel: "Stevig 136–154 bpm"; zonder doel (maar met hartslag aan) staat er "geen hartslagdoel" */
+function runHrTag(s){
+  if(s.status==='skipped') return '';
+  const z = runHrZoneOf(s);
+  if(z) return ` <span class="run-hr-tag">· ${esc(runHrZone(z)[1])} ${s.target.low}–${s.target.high} bpm</span>`;
+  return s.status==='planned' && runHrOn() ? ' <span class="run-hr-tag none">· geen hartslagdoel</span>' : '';
+}
+/* geplande trainingen vanaf vandaag zonder hartslagdoel terwijl de hartslag bekend is (bv. gepland voordat je je geboortedatum invulde) */
+const runHrMissing = () => runHrOn() ? RP().sessions.filter(s=> s.status==='planned' && s.date>=todayISO() && !runHrZoneOf(s)) : [];
+function runHrFillHTML(){
+  const miss = runHrMissing(), h = runHrSet(); if(!miss.length || h.fillDismissed===miss.length) return '';
+  const def = (h.lastZone && h.lastZone!=='zeerintensief' && runHrZone(h.lastZone)) ? h.lastZone : 'rustig';
+  return `<div class="run-msg run-hr-upd">${miss.length===1 ? '1 geplande training heeft' : miss.length+' geplande trainingen hebben'} nog geen hartslagdoel. Welke intensiteit past bij je?
+    <div class="run-actions"><label class="run-hr-pick">Intensiteit <select id="hrFillZone" aria-label="Intensiteit">${RUN_HR_ZONES.filter(z=>z[0]!=='zeerintensief').map(z=>`<option value="${z[0]}" ${z[0]===def?'selected':''}>${esc(z[1])}</option>`).join('')}</select></label>${runBtn('hrFill','Invullen','sm primary')}${runBtn('hrFillLater','Niet nu','sm')}</div>
+    <div class="tny muted">Je kunt het per training altijd nog wijzigen.</div></div>`;
+}
 function runViewProgram(){
-  const rp = RP(), today = todayISO(), cur = runCurrentTpl(); let h = typeof programmaKeuzeHTML==='function' ? programmaKeuzeHTML() : '';
+  const rp = RP(), today = todayISO(), cur = runCurrentTpl(); let h = (typeof programmaKeuzeHTML==='function' ? programmaKeuzeHTML() : '') + runHrFillHTML();
 
   /* kalender: elke dag; tik op een training om alles ervan te zien */
   h += `<div class="card"><h3>Kalender</h3><p class="tny muted" style="margin-top:-4px">Hardlopen, kracht en routines per dag. Tip: houd een hardlooptraining vast en sleep hem naar een andere dag.</p>`;
@@ -7881,7 +7899,7 @@ function runViewProgram(){
       const rcol = hasRt ? `<span class="run-day-r">${rchip}</span>` : '';
       ss.forEach((s, si)=>{
         const T = runTotals(s.steps);
-        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span>${si===0 ? rcol : hasRt ? '<span class="run-day-r"></span>' : ''}<span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span></span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${s.status==='planned' ? coachPill(s) : ''}<span class="run-chev" aria-hidden="true"></span></span></summary>
+        rows += `<details class="run-day ${s.status}${td}" id="run-${s.id}" data-run-day="${s.id}" data-day="${d}" ${RUI.openId===s.id?'open':''}><summary><span class="run-day-d">${dl}</span>${si===0 ? rcol : hasRt ? '<span class="run-day-r"></span>' : ''}<span class="run-day-b"><b>${esc(s.name.replace(/ – .*/,''))}</b> <span class="tny muted">${runMinLabel(T.total)}<span class="run-struct"> · ${esc(runShortStructure(s.steps))}</span>${runHrTag(s)}</span>${si===0 && chips ? ` <span class="prog-chips">${chips}</span>` : ''}</span><span class="run-day-s">${s.status==='planned' ? (s.date<today ? '<span class="pill warn">nog verwerken</span>' : '') : runStatusPill(s)}${s.status==='planned' ? coachPill(s) : ''}<span class="run-chev" aria-hidden="true"></span></span></summary>
           <div class="run-day-body">${runSessionDetail(s)}</div></details>`;
       });
       if(!ss.length){
@@ -7994,6 +8012,11 @@ function runAct0(act, args, el){
     case 'hrCalm': if(s && s.status==='planned' && runHrOn()){ s.target = runHrTarget('rustig'); RUI.openId = s.id; coachSoon(); runMsg('Deze training is nu Rustig ('+runBpm(s.target)+').'); } break;
     case 'hrOwn': { const h = rp.settings.hr = rp.settings.hr || {}; h.useOwn = !h.useOwn; } break;
     case 'hrAgeOk': { const h = rp.settings.hr = rp.settings.hr || {}; h.ageSetAt = runNow(); } break;
+    case 'hrFill': { const sel = document.getElementById('hrFillZone'), z = (sel && sel.value) || args[0] || (runHrSet().lastZone) || 'rustig';
+      if(!runHrZone(z) || z==='zeerintensief') return;
+      const list = runHrMissing().filter(s=> !(runHrHeavy(z) && s.date===todayISO() && runReadiness(s.date).shown!=='green'));
+      list.forEach(s=>{ s.target = runHrTarget(z); }); if(list.length){ runHrRemember(z); coachSoon(); runMsg(list.length===1 ? '1 training bijgewerkt.' : list.length+' trainingen bijgewerkt.'); } } break;
+    case 'hrFillLater': { const h = rp.settings.hr = rp.settings.hr || {}; h.fillDismissed = runHrMissing().length; } break;
     case 'hrLater': { const h = rp.settings.hr = rp.settings.hr || {}; h.dismissed = runHrSig(); } break;
     case 'hrUpdate': { const list = runHrOutdated(); list.forEach(x=>{ x.target = runHrTarget(runHrZoneOf(x) || runLevelZone(runTpl(x.templateId))); }); if(list.length){ coachSoon(); runMsg(list.length===1 ? '1 training bijgewerkt.' : list.length+' trainingen bijgewerkt.'); } } break;
     case 'open': if(s){ RUI.tab = 'program'; RUI.openId = s.id; RUI.scrollTo = s.id; } break;
