@@ -7,49 +7,86 @@
 <title>Atempo — Privacy</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <style>
-  :root{--ink:#2A4560;--text:#2B3F52;--muted:#5D7183;--line:#DCE6EC;--paper:#FAFAF7;--ice:#E6F3F7}
+  :root{--ink:#2A4560;--text:#2B3F52;--muted:#5D7183;--line:#DCE6EC;--paper:#FAFAF7;--ice:#E6F3F7;--amber-bg:#FBF1DD;--amber-ink:#7A4B00}
   body{margin:0;background:var(--paper);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
   main{max-width:720px;margin:0 auto;padding:32px 16px 48px}
   h1{color:var(--ink);font-size:26px;margin:0 0 4px}
   h2{color:var(--ink);font-size:18px;margin:28px 0 6px}
+  h3{color:var(--ink);font-size:15px;margin:18px 0 4px}
   p.sub{color:var(--muted);margin:0 0 20px}
   ul{padding-left:20px}
+  .note{margin-top:10px;padding:12px 14px;background:var(--amber-bg);color:var(--amber-ink);border-radius:10px;font-size:14.5px}
   .en{margin-top:36px;padding:16px 18px;background:var(--ice);border:1px solid var(--line);border-radius:12px}
   .en h2{margin-top:0}
   footer{color:var(--muted);font-size:13px;margin-top:32px}
+  a{color:#04717C}
 </style>
 </head>
 <body>
 <main>
   <h1>Atempo — privacyverklaring</h1>
-  <p class="sub">Move. Recover. Grow. · Laatst bijgewerkt: 3 november 2026</p>
+  <p class="sub">Move. Recover. Grow. · Alfaversie · Laatst bijgewerkt: 14 november 2026</p>
+
+  <div class="note">Atempo is nog in ontwikkeling (alfaversie) en kan fouten bevatten. Gebruik de app op eigen risico en bewaar belangrijke gegevens ook zelf (zie "Je eigen kopie" hieronder).</div>
 
   <h2>Wat Atempo is</h2>
-  <p>Atempo is een persoonlijke trainingsapp, gemaakt voor en gebruikt door één persoon (de eigenaar). De app is nog in ontwikkeling. Er is geen openbare registratie en er worden geen gegevens van andere personen verwerkt.</p>
+  <p>Atempo is een trainings- en herstelapp. Iedereen kan een eigen, gratis account aanmaken. Elk account heeft zijn eigen, van andere accounts afgeschermde gegevens — er wordt niets gedeeld of samengevoegd tussen gebruikers.</p>
+  <p>Een account is niet verplicht: de app werkt ook zonder in te loggen, met alle gegevens dan alleen in je eigen browser (zie "Zonder account" hieronder).</p>
 
-  <h2>Welke gegevens en waar</h2>
+  <h2>Wie dit beheert</h2>
+  <p>Atempo wordt beheerd door Rens Stam (Domein Stam). Voor vragen, zie "Contact" onderaan.</p>
+
+  <h2>Welke gegevens</h2>
+  <p>Afhankelijk van wat je zelf invult, kan dit onder meer zijn: je naam of alias, geboortedatum, (optioneel) adres, postcode en woonplaats, lichaamsgewicht, trainings- en herstelgeschiedenis, hartslag- en slaapgegevens, pijn/blessures en hoe je je voelt. Dit zijn gezondheidsgerelateerde gegevens — we gaan daar extra zorgvuldig mee om (zie "Gezondheidsgegevens" hieronder). Je bepaalt zelf wat je invult; velden die je leeg laat, worden niet verzonden of opgeslagen.</p>
+
+  <h2>Wat we vragen bij het aanmaken van een account</h2>
+  <p>Naast je e-mailadres en wachtwoord kun je optioneel een <b>naam of alias</b>, je <b>geboortedatum</b>, je <b>gewicht</b>, <b>adres</b>, <b>postcode</b> en <b>woonplaats</b> invullen. Niets hiervan is verplicht: vul alleen in wat je wilt delen en gebruik gerust een alias. Je geboortedatum gebruiken we om je hartslagbereik te berekenen (zonder geboortedatum is er geen hartslagdoel); je naam of alias tonen we in de app. Je adresgegevens gebruiken we op dit moment nergens voor. Als je later een betaald programma koopt, kunnen we je naam en adres nodig hebben, bijvoorbeeld voor de factuur; dan vragen we er op dat moment om. Je kunt alles op elk moment wijzigen of verwijderen bij Mijn profiel, en je account met al je gegevens verwijderen.</p>
+
+  <h2>Met account: waar je gegevens staan</h2>
   <ul>
-    <li>Trainings- en herstelgegevens staan in de browser van de gebruiker en, na inloggen, in een eigen beveiligde Firebase-opslag. Alleen het eigen account kan die gegevens lezen of wijzigen.</li>
-    <li>De openbare versie van de app op GitHub Pages bevat geen persoonlijke gegevens.</li>
+    <li>Na het aanmaken van een account (e-mailadres + wachtwoord) staan je gegevens in je browser én, versleuteld onderweg, in een beveiligde Firebase-database (Google Cloud, regio Europa). Alleen jouw eigen account kan bij jouw gegevens — dat wordt afgedwongen door de beveiligingsregels van de database zelf, niet alleen door de app.</li>
+    <li>Wachtwoorden worden niet door Atempo zelf opgeslagen; dat doet Firebase Authentication (Google), volgens hun eigen beveiligingsstandaarden.</li>
     <li>Er worden geen cookies voor tracking of advertenties gebruikt en er is geen analysesoftware.</li>
+    <li>Gegevens worden niet verkocht en niet met derden gedeeld, behalve wat je zelf naar Intervals.icu stuurt (zie hieronder).</li>
   </ul>
+
+  <h2>Zonder account</h2>
+  <p>Gebruik je de app zonder in te loggen, dan blijft alles alleen in je eigen browser staan (lokale opslag). Er gaat dan niets naar een server. Wis je je browsergegevens, dan ben je die gegevens kwijt — maak in dat geval zelf een back-up (zie "Je eigen kopie").</p>
+
+  <h2>Je eigen kopie</h2>
+  <p>Je kunt op elk moment zelf een volledige kopie van je gegevens downloaden (JSON-bestand of HTML-bestand), via de app zelf (Meer → Data &amp; back-up). Bewaar zo'n bestand alleen op je eigen apparaat of in je eigen, afgeschermde opslag — het bevat al je persoonlijke en gezondheidsgegevens.</p>
+
+  <h2>Account en gegevens verwijderen</h2>
+  <p>Je kunt je account en al je gegevens zelf, definitief verwijderen via Meer → Mijn profiel → "Account en alle gegevens verwijderen". Dit kan niet ongedaan worden gemaakt: eerst worden je trainingsgegevens uit de database verwijderd, daarna je account zelf. Maak van tevoren een eigen back-up als je iets wilt bewaren.</p>
+
+  <h2>Back-office (beheer)</h2>
+  <p>De beheerder van Atempo heeft een apart, afgeschermd beheerscherm, alleen toegankelijk vanaf één specifiek, vooraf vastgelegd account. Daarmee kan de beheerder:</p>
+  <ul>
+    <li>een lijst van accounts zien (e-mailadres, aanmaakdatum, laatste keer ingelogd — geen trainingsgegevens);</li>
+    <li>bij een vraag of probleem de gegevens van één account inzien (dit wordt gelogd: welk account de beheerder bekeek en wanneer);</li>
+    <li>een account blokkeren of verwijderen, bijvoorbeeld bij misbruik.</li>
+  </ul>
+  <p>Dit gebeurt alleen voor beheer en ondersteuning van de app, nooit voor commerciële doeleinden.</p>
+
+  <h2>Gezondheidsgegevens</h2>
+  <p>Gegevens zoals hartslag, slaap, pijn en gewicht zijn een bijzondere categorie persoonsgegevens. Je vult deze vrijwillig in; dat vormt de grondslag voor de verwerking ervan. We nemen redelijke technische maatregelen (versleuteling onderweg, afgeschermde toegang per account), maar dit is een kleine, nog in ontwikkeling zijnde app, geen medisch product. Gebruik Atempo niet als vervanging voor medisch advies.</p>
 
   <h2>Koppeling met Intervals.icu</h2>
   <ul>
-    <li>De gebruiker kan Atempo zelf verbinden met het eigen Intervals.icu-account (OAuth met PKCE). Atempo vraagt alleen het recht om de trainingsagenda te beheren (CALENDAR:WRITE) en de eigen activiteiten en dagwaarden te lezen (ACTIVITY:READ en WELLNESS:READ), zodat een gelopen training aan de geplande training gekoppeld kan worden en herstelwaarden (zoals HRV, rustpols en slaap) in de grafieken verschijnen.</li>
+    <li>Je kunt Atempo zelf verbinden met je eigen Intervals.icu-account (OAuth met PKCE). Atempo vraagt alleen het recht om je trainingsagenda te beheren (CALENDAR:WRITE) en je eigen activiteiten en dagwaarden te lezen (ACTIVITY:READ en WELLNESS:READ), zodat een gelopen training aan de geplande training gekoppeld kan worden en herstelwaarden (zoals HRV, rustpols en slaap) in de grafieken verschijnen.</li>
     <li>Atempo plaatst, wijzigt en verwijdert alleen geplande trainingen die Atempo zelf heeft aangemaakt. Andere agenda-items worden niet aangeraakt.</li>
     <li>Het toegangsbewijs wordt alleen tijdelijk in het geopende browsertabblad bewaard en niet opgeslagen in back-ups, exports of de cloud. De verbinding kan op elk moment worden verbroken, in Atempo of in Intervals.icu.</li>
   </ul>
 
-  <h2>Delen</h2>
-  <p>Gegevens worden niet verkocht en niet met derden gedeeld, behalve de geplande trainingen die de gebruiker zelf naar Intervals.icu stuurt (en die Intervals.icu op verzoek van de gebruiker doorstuurt naar Garmin Connect).</p>
+  <h2>Jouw rechten</h2>
+  <p>Je hebt recht op inzage (zie "Je eigen kopie"), rectificatie (pas je gegevens zelf aan in de app), verwijdering (zie hierboven) en het intrekken van de Intervals.icu-koppeling. Vragen of een verzoek dat je niet zelf via de app kunt regelen: zie "Contact".</p>
 
   <h2>Contact</h2>
-  <p>Vragen over deze app: via de eigenaar van de GitHub-account <a href="https://github.com/RensStam">RensStam</a>.</p>
+  <p>Vragen over deze app of over je gegevens: via Rens Stam, <a href="https://github.com/RensStam">GitHub</a>.</p>
 
   <section class="en" lang="en">
     <h2>Summary in English</h2>
-    <p>Atempo is a personal training app (in development) used by a single person, its owner. Training data stays in the owner's browser and in the owner's own secured Firebase storage. The optional Intervals.icu connection uses OAuth with PKCE and requests only the CALENDAR:WRITE, ACTIVITY:READ and WELLNESS:READ scopes (to link completed runs to planned workouts and show recovery values such as HRV, resting heart rate and sleep); Atempo only creates, updates or deletes planned workouts it created itself (external_id "atempo-…"). The access token is kept only in the open browser tab and is never stored in backups, exports or the cloud. No tracking, no analytics, no data is sold or shared.</p>
+    <p>Atempo is a training and recovery app, currently in alpha. Anyone can create a free account; each account's data is isolated from every other account. An account is optional — without one, all data stays only in your own browser. With an account, data (which can include health-related information such as heart rate, sleep, pain and weight) is stored in your browser and in a secured Firebase database (Google Cloud, EU region), access-restricted to your own account by the database's own security rules. Passwords are handled by Firebase Authentication, not stored by Atempo itself. You can export a full copy of your data at any time, and permanently delete your account and all data yourself. The app owner has a separate, access-restricted admin tool to view an account list, look up one account's data for support (logged), and block or delete accounts. The optional Intervals.icu connection uses OAuth with PKCE and only the CALENDAR:WRITE, ACTIVITY:READ and WELLNESS:READ scopes; Atempo only creates, updates or deletes planned workouts it created itself. No tracking, no analytics, no data is sold or shared with third parties beyond what you send to Intervals.icu yourself.</p>
   </section>
 
   <footer>Atempo · <a href="./">naar de app</a></footer>

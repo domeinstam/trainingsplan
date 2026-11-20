@@ -1025,6 +1025,7 @@ pre.sketch{overflow:auto;background:#EDF2F5;padding:12px;border-radius:10px;font
 }
 .run-hr-line{display:flex;align-items:center;gap:8px}
 .run-hr-line .run-hr-heart{flex:none}
+.hr-title{display:flex;align-items:center;gap:8px}
 /*__HARDLOPEN_CSS_END__*/
 /*__ATEMPO_CSS_BEGIN__*/
 
@@ -1337,7 +1338,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.29";
+const APP_VERSION = "block2-2.24.31";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -3410,10 +3411,15 @@ function profileCardHTML(){
       <p class="tny" style="margin-top:10px"><a href="#" class="prof-del-acct" data-sync="delete-account">Account en alle gegevens verwijderen</a></p></div></details>` : '';
   return `<div class="card prof-card" id="profileCard">${top}
     <div class="form-grid cols-3">
-      <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
+      <div class="field"><label for="profName">Naam of alias</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
       <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" min="1900-01-01" max="${todayISO()}"></div>
       <div class="field"><label for="profW">Startgewicht (kg)</label><input id="profW" type="number" data-prof="startWeightKg" value="${esc(p.startWeightKg ?? '')}" placeholder="${sw && !sw.own ? esc(nl(sw.kg)) : ''}" inputmode="decimal" step="0.1" min="30" max="250">
         ${sw && !sw.own ? `<div class="tny muted" style="margin-top:4px">${esc(nl(sw.kg))} kg uit je eerste weging (${esc(fmt(sw.date,{day:'numeric',month:'short'}))}). Vul zelf in om dit te wijzigen.</div>` : ''}</div>
+    </div>
+    <div class="form-grid cols-3" style="margin-top:10px">
+      <div class="field"><label for="profAdres">Adres</label><input id="profAdres" type="text" data-prof="address" value="${esc(p.address||'')}" maxlength="80" autocomplete="street-address" placeholder="straat en huisnummer"></div>
+      <div class="field"><label for="profPostcode">Postcode</label><input id="profPostcode" type="text" data-prof="postcode" value="${esc(p.postcode||'')}" maxlength="10" autocomplete="postal-code"></div>
+      <div class="field"><label for="profPlaats">Woonplaats</label><input id="profPlaats" type="text" data-prof="city" value="${esc(p.city||'')}" maxlength="40" autocomplete="address-level2"></div>
     </div>
     ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
     ${syncAcc}
@@ -5873,7 +5879,7 @@ function renderMethod(){
       <ul class="small">${zl}</ul>
       <p class="small"><b>Je maximale hartslag</b> schat Atempo uit je leeftijd (208 − 0,7 × leeftijd). Die leeftijd haalt Atempo uit je geboortedatum bij Mijn profiel. Ken je je eigen maximale hartslag, bijvoorbeeld uit een test, dan kun je die in Mijn profiel invullen: die gaat dan voor.</p>
       <p class="small"><b>Aanbevolen intensiteit per niveau:</b> een programma kan bij elk niveau een intensiteit adviseren (bijvoorbeeld Rustig). Als je een training inplant, staat de Intensiteit daar dan al op, met het hartslagbereik dat bij jouw leeftijd past. Je kunt het per training altijd zelf wijzigen. Zeer intensief wordt nooit vanzelf gekozen, en Stevig of hoger niet op een dag waarop je herstel niet groen is.</p>
-      <p class="small"><b>Het rode hartje</b> bij Mijn profiel zonder tekst erachter betekent dat je geboortedatum nog ontbreekt. Zonder geboortedatum kan Atempo geen hartslagbereik uitrekenen en kun je niet met een hartslagdoel trainen. Vul je die in, dan verschijnt je maximale hartslag naast het hartje.</p>
+      <p class="small"><b>Het rode hartje</b> naast de titel Mijn hartslag en blessures (bij Mijn profiel) betekent: je hartslagdoel is beschikbaar. Staat er geen maximale hartslag onder, dan ontbreekt je geboortedatum nog. Zonder geboortedatum kan Atempo geen hartslagbereik uitrekenen en kun je niet met een hartslagdoel trainen. Vul je die in, dan verschijnt je maximale hartslag naast het hartje.</p>
       <p class="small"><b>Wijzigt je maximale hartslag</b> (nieuwe leeftijd of eigen waarde), dan vraagt Atempo of je de toekomstige trainingen wilt bijwerken. Trainingen die je al hebt gedaan blijven zoals ze waren.</p>
       <p class="small"><b>Zeer intensief</b> is een zeer zware belasting en gaat alleen vanzelf naar je horloge op een dag met groen herstel. Is je herstel rood, dan raadt Atempo hardlopen af. Een schatting uit je leeftijd is een richtlijn: iedereen is anders, en bij klachten (pijn op de borst, duizeligheid) stop je en neem je contact op met een arts.</p>
     </div>`;
@@ -6632,7 +6638,7 @@ function blessuresHTML(){
     ${old.length ? `<div class="prof-old tny muted">Eerder: ${old.map(x=>`<span>${esc(x.area)}${x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':''} <button class="prof-x" data-inj-del="${esc(x.id)}" aria-label="${esc(x.area)} verwijderen" title="Verwijderen">✕</button></span>`).join('')}</div>` : ''}
   </div>`;
 }
-function hartslagCardHTML(){ return typeof runHrSettingsHTML==='function' ? `<div class="card" id="hrCard"><h3>Mijn hartslag en blessures</h3>${runHrSettingsHTML()}${blessuresHTML()}</div>` : ''; }
+function hartslagCardHTML(){ return typeof runHrSettingsHTML==='function' ? `<div class="card" id="hrCard"><h3 class="hr-title">Mijn hartslag en blessures ${typeof runHrHeartHTML==='function' ? runHrHeartHTML() : ''}</h3>${runHrSettingsHTML()}${blessuresHTML()}</div>` : ''; }
 function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}`); }
 /* Account: inloggen en uitloggen (zelfde functies als voorheen bij Synchronisatie; aan de cloud zelf verandert niets) */
 function accountHTML(){
@@ -6652,6 +6658,16 @@ function accountHTML(){
     <div class="form-grid cols-3"><div class="field"><label for="syncEmail">E-mail</label><input type="email" id="syncEmail" autocomplete="username" value="${esc(ui.acctEmail||'')}"></div>
       <div class="field"><label for="syncPw">Wachtwoord</label><div class="pw-wrap"><input type="password" id="syncPw" autocomplete="${nieuw?'new-password':'current-password'}">${eye}</div></div>
       ${nieuw ? `<div class="field"><label for="syncPw2">Wachtwoord nog een keer</label><div class="pw-wrap"><input type="password" id="syncPw2" autocomplete="new-password">${eye}</div></div>` : ''}</div>
+    ${nieuw ? `<h4 style="margin:16px 0 4px">Over jou</h4>
+    <p class="tny muted" style="margin:0 0 8px">Alles hieronder is vrijwillig: vul alleen in wat je wilt delen, en gebruik gerust een alias. Voor een betaald programma hebben we later mogelijk je naam en adres nodig. Zonder geboortedatum kan Atempo geen hartslagbereik voor je berekenen. Je kunt alles later wijzigen bij Mijn profiel. <a href="privacy.html" target="_blank" rel="noopener">Wat we met je gegevens doen</a></p>
+    <div class="form-grid cols-3">
+      <div class="field"><label for="syncNaam">Naam of alias <span class="tny muted">optioneel</span></label><input type="text" id="syncNaam" maxlength="40" autocomplete="name"></div>
+      <div class="field"><label for="syncGeb">Geboortedatum <span class="tny muted">optioneel</span></label><input type="date" id="syncGeb" min="1900-01-01" max="${todayISO()}" autocomplete="bday"></div>
+      <div class="field"><label for="syncGewicht">Gewicht (kg) <span class="tny muted">optioneel</span></label><input type="number" id="syncGewicht" inputmode="decimal" step="0.1" min="30" max="250"></div>
+      <div class="field"><label for="syncAdres">Adres <span class="tny muted">optioneel</span></label><input type="text" id="syncAdres" maxlength="80" autocomplete="street-address" placeholder="straat en huisnummer"></div>
+      <div class="field"><label for="syncPostcode">Postcode <span class="tny muted">optioneel</span></label><input type="text" id="syncPostcode" maxlength="10" autocomplete="postal-code"></div>
+      <div class="field"><label for="syncPlaats">Woonplaats <span class="tny muted">optioneel</span></label><input type="text" id="syncPlaats" maxlength="40" autocomplete="address-level2"></div>
+    </div>` : ''}
     <div class="prof-acct-btns">${nieuw
       ? '<button class="btn sm primary" data-sync="signup">Account aanmaken</button>'
       : '<button class="btn sm primary" data-sync="login">Inloggen</button>'}</div>
@@ -6800,6 +6816,7 @@ document.addEventListener('change', e=>{
       const y = Number(v.slice(0,4));
       if(/^\d{4}-\d{2}-\d{2}$/.test(v) && y>=1900 && v<=todayISO()) p.birthDate = v; else if(!v) delete p.birthDate; else return; }
     else if(k==='name'){ if(v) p.name = v.slice(0,40); else delete p.name; }
+    else if(k==='address' || k==='postcode' || k==='city'){ const mx = k==='address' ? 80 : k==='postcode' ? 10 : 40; if(v) p[k] = v.slice(0,mx); else delete p[k]; }
     saveState(); renderCurrent(); return; }
   if(el.matches && el.matches('[data-inj-since]')){ const v = el.value, x = (profileW().injuries||[]).find(y=>y.id===el.dataset.injSince);
     if(x && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0,4))>=1900 && v<=todayISO()){ x.since = v; saveState(); } return; }   // tussenstanden tijdens typen: niet opslaan
@@ -7224,7 +7241,19 @@ async function syncSignup(){
   if(!email || !pw){ syncSetMsg('Vul e-mail en wachtwoord in.'); return; }
   if(pw.length < 6){ syncSetMsg('Wachtwoord te kort (minstens 6 tekens).'); return; }
   const pw2 = $('#syncPw2'); if(pw2 && pw2.value !== pw){ syncSetMsg('De twee wachtwoorden zijn niet hetzelfde. Probeer het nog eens.'); return; }
-  try{ await fbSignUp(email, pw); syncSetMsg('☁ Account aangemaakt en ingelogd'); renderCurrent(); saveState(); }
+  /* gegevens over jou (alleen aanwezig in het formulier "Ik ben nieuw"): alles is vrijwillig; ingevulde waarden worden wel gecontroleerd */
+  let over = null;
+  if($('#syncNaam')){
+    const v = id => (($('#'+id)||{}).value||'').trim();
+    const naam = v('syncNaam').slice(0,40), geb = v('syncGeb'), gw = v('syncGewicht');
+    if(geb && (!/^\d{4}-\d{2}-\d{2}$/.test(geb) || Number(geb.slice(0,4))<1900 || geb>todayISO())){ syncSetMsg('Controleer je geboortedatum, of laat het veld leeg.'); $('#syncGeb').focus(); return; }
+    let kg = null; if(gw!==''){ const n = num(gw); if(n==null || n<30 || n>250){ syncSetMsg('Vul een gewicht in tussen 30 en 250 kg, of laat het leeg.'); $('#syncGewicht').focus(); return; } kg = Math.round(n*10)/10; }
+    over = { naam, geb, kg, adres:v('syncAdres').slice(0,80), postcode:v('syncPostcode').slice(0,10), plaats:v('syncPlaats').slice(0,40) };
+  }
+  try{
+    await fbSignUp(email, pw);
+    if(over){ const pr = profileW(); if(over.naam) pr.name = over.naam; if(over.geb) pr.birthDate = over.geb; if(over.kg!=null) pr.startWeightKg = over.kg; if(over.adres) pr.address = over.adres; if(over.postcode) pr.postcode = over.postcode; if(over.plaats) pr.city = over.plaats; }
+    syncSetMsg('☁ Account aangemaakt en ingelogd'); renderCurrent(); saveState(); }
   catch(e){ syncSetMsg(e.message); }
 }
 async function syncForgotPassword(){
@@ -7873,10 +7902,14 @@ function runViewProgram(){
 
 /* ---------- invoer-verwerking (komt binnen via setByPath voor '__run.*'-velden) ---------- */
 /* Mijn profiel › Mijn hartslag: de maximale hartslag (geschat uit de leeftijd in je profiel, of eigen waarde) en de bevestiging na een wijziging */
+/* het rode hartje naast de titel van Mijn hartslag en blessures; zonder maximale hartslag (geen geboortedatum) staat er een toelichting bij */
+function runHrHeartHTML(){
+  const mx = runHrMax(), tekst = mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in';
+  return `<svg class="run-hr-heart" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="${tekst}" fill="#C0392B"><title>${tekst}</title><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
+}
 function runHrSettingsHTML(){
   const h = runHrSet(), mx = runHrMax(), old = runHrOutdated(), est = runHrMax({ ...h, useOwn:false });
-  const heart = `<svg class="run-hr-heart" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}" fill="#C0392B"><title>${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}</title><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-  return `<div class="small run-hr-line">${heart}${mx ? `<span>Maximale hartslag: <b>${mx.bpm} bpm</b> ${mx.basis==='eigen' ? ' <span class="muted">(eigen waarde)</span>' : ''}</span>` : ''}</div>
+  return `${mx ? `<div class="small run-hr-line"><span>Maximale hartslag: <b>${mx.bpm} bpm</b>${mx.basis==='eigen' ? ' <span class="muted">(eigen waarde)</span>' : ''}</span></div>` : ''}
     <details class="acc run-hr-own-acc" data-run-hrown ${RUI.hrOwnOpen?'open':''}><summary>Eigen maximale hartslag${h.useOwn?' <span class="muted">(in gebruik)</span>':''}</summary><div class="acc-body">
       <div class="form-grid cols-3">${runInp('Mijn eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.useOwn ? h.ownMax : '', { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1], ph: est ? 'Geschat: '+est.bpm : 'bijv. 185' })}</div>
       <div class="tny muted">Ken je je maximale hartslag, bijvoorbeeld uit een test? Vul die hier in, dan gebruikt Atempo die. Laat het veld leeg voor de schatting uit je leeftijd.</div>
