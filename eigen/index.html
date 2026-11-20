@@ -1333,7 +1333,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.23";
+const APP_VERSION = "block2-2.24.24";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -7607,10 +7607,11 @@ function runSessionDetail(s){
     if(editing) h += runEditLevelHTML(s) + runEditNoteHTML(s);      // aanpassen: velden, intensiteit, niveau, notitie; daarna Garmin, verzetten, Klaar
     h += coachLineHTML(s);
     if(s.date<=today) h += `<div class="run-sub">Hoe ging het?</div><div class="run-actions">${runResultButtons(s)}</div>`;
-    h += `<div class="run-actions">
+    /* de dingen die de training zelf veranderen: ingeklapt (less is more); Klaar blijft als laatste knop */
+    h += `<details class="acc run-more-acc" data-run-more="${s.id}" ${RUI.moreId===s.id?'open':''}><summary>Aanpassen, verzetten of verwijderen</summary><div class="acc-body"><div class="run-actions">
         <label class="run-move">Verzetten <input type="date" data-bind="${b}date" value="${esc(s.date)}"></label>
-        ${editing ? '' : runBtn('editToggle|'+s.id, 'Aanpassen', 'sm')}${runBtn('del|'+s.id,'Verwijderen','sm danger')}${editing ? '' : runBtn('close|'+s.id,'Klaar','sm primary run-close')}</div>`;
-    if(editing) h += `<div class="run-actions">${runBtn('close|'+s.id,'Klaar','sm primary')}</div>`;
+        ${editing ? '' : runBtn('editToggle|'+s.id, 'Aanpassen', 'sm')}${runBtn('del|'+s.id,'Verwijderen','sm danger')}</div></div></details>
+      <div class="run-actions">${runBtn('close|'+s.id,'Klaar','sm primary'+(editing?'':' run-close'))}</div>`;
   } else if(s.status==='done'){
     h += runHrLine(s) + `<div class="small run-res">${runResultLine(s)}</div><div class="run-sub">Na de training</div>${runPostForm(s)}`;
     h += `<div class="small"><b>Beoordeling:</b> ${esc(runOutcome(s).text)}</div>`;
@@ -7806,6 +7807,8 @@ function runHrSettingsHTML(){
 }
 /* de keuze open/dicht van "Eigen maximale hartslag" blijft staan bij opnieuw tekenen */
 document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.matches && d.matches('details[data-run-hrown]')) RUI.hrOwnOpen = d.open; }, true);
+/* open/dicht van "Aanpassen, verzetten of verwijderen" blijft staan bij opnieuw tekenen */
+document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.matches && d.matches('details[data-run-more]')){ if(d.open) RUI.moreId = d.dataset.runMore; else if(RUI.moreId===d.dataset.runMore) RUI.moreId = null; } }, true);
 const runHrSig = () => { const m = runHrMax(); return m ? m.bpm+'/'+m.basis : ''; };
 const runHrUpdateHTML = n => `<div class="run-msg run-hr-upd">Je hartslaginstellingen zijn gewijzigd. ${n===1 ? '1 toekomstige training' : n+' toekomstige trainingen'} bijwerken?
   <div class="run-actions">${runBtn('hrUpdate','Bijwerken','sm primary')}${runBtn('hrLater','Niet nu','sm')}</div></div>`;
