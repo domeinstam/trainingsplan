@@ -1344,7 +1344,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.34";
+const APP_VERSION = "block2-2.24.36";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -8229,7 +8229,7 @@ function coachMapActivity(a){
     durationMin: a.elapsed_time ? Math.round(a.elapsed_time/6)/10 : null, movingMin: a.moving_time ? Math.round(a.moving_time/6)/10 : null,
     distanceKm: a.distance ? Math.round(a.distance/10)/100 : null, avgPace: coachPace(a.moving_time, a.distance),
     avgHr: a.average_heartrate!=null ? Math.round(a.average_heartrate) : null, maxHr: a.max_heartrate!=null ? Math.round(a.max_heartrate) : null,
-    vo2max: null, rpe: null, continuousMin: null, _source:'intervals.icu', _syncedAt: runNow() };
+    vo2max: null, rpe: null, continuousMin: null, pairedEventId: a.paired_event_id!=null ? a.paired_event_id : null, _source:'intervals.icu', _syncedAt: runNow() };
 }
 /* dagwaarden uit Intervals.icu -> state.garmin.daily (zelfde velden als de Garmin-export).
    Een dag uit een Garmin-export blijft ongemoeid; alleen nieuwe dagen of eerder uit Intervals.icu gehaalde dagen worden gevuld. */
@@ -8253,9 +8253,31 @@ async function coachFetchWellness(token){
   }
   return { days };
 }
+/* Opruimen van een los plankaartje: is een geplande training in Atempo gedaan, staat de run al in Intervals.icu en heeft Intervals hem
+   niet aan de planning gekoppeld (paired_event_id is leeg), dan blijft daar een tweede kaartje achter. Atempo haalt dan alleen dat eigen
+   plankaartje weg (via de Atempo-sleutel), nooit een activiteit. Is de run wél gekoppeld, is de run net binnen (korter dan 3 uur geleden)
+   of weet Atempo de koppelstatus niet, dan gebeurt er niets. De training zelf blijft gewoon gedaan in Atempo. */
+async function coachCleanupDone(){
+  if(!coachConnected()) return 0;
+  const acts = (state.garmin && state.garmin.activities) || [], nu = Date.now();
+  const todo = RP().sessions.filter(s=>{
+    if(s.status!=='done' || !s.garminExternalId) return false;
+    const i = coachInfo(s); if(!i || i.status!=='sent' || !i.externalId) return false;
+    const a = acts.find(x=> x.externalId===s.garminExternalId);
+    return !!(a && a._source==='intervals.icu' && a.pairedEventId===null && a.date===s.date && a.startTime && nu - Date.parse(a.startTime) > 3*3600*1000);
+  });
+  let n = 0;
+  for(const s of todo){
+    const i = coachInfo(s);
+    try { await coachCall({ action:'delete', externalIds:[i.externalId] }); s.ext.intervals = { ...i, status:'deleted', cleaned:true, syncedAt:runNow(), error:null }; n++; }
+    catch(e){ break; }      // geen paniek: de volgende keer opnieuw
+  }
+  return n;
+}
 /* haalt de activiteiten van de afgelopen dagen op; nieuwe komen bij je Garmin-gegevens en worden (als het eenduidig is) gekoppeld */
 async function coachFetchRuns(quiet){
   const token = coachSess().token; if(!token) return quiet ? null : runMsg('Verbind eerst met je sporthorloge.', 'err');
+  coachAuto.last = Date.now();
   const c = coachSet(), oldest = addDays(todayISO(), -14), newest = todayISO();
   let r; try { r = await fetch(COACH_API+'/activities?oldest='+oldest+'&newest='+newest, { headers:{ Authorization:'Bearer '+token, Accept:'application/json' } }); }
   catch(e){ if(!quiet) runMsg('Geen verbinding met de horlogekoppeling.', 'err'); return null; }
@@ -8264,21 +8286,24 @@ async function coachFetchRuns(quiet){
   const list = await r.json().catch(()=>[]); c.needActivityScope = false;
   const acts = state.garmin.activities, have = new Set(acts.map(a=>a.externalId)), added = [];
   for(const x of (Array.isArray(list)?list:[])){
-    const a = coachMapActivity(x); if(!a || have.has(a.externalId)) continue;
+    const a = coachMapActivity(x); if(!a) continue;
+    if(have.has(a.externalId)){ const oud = acts.find(y=> y.externalId===a.externalId); if(oud && oud._source==='intervals.icu') oud.pairedEventId = a.pairedEventId; continue; }      // alleen de koppelstatus bijwerken
     // al binnen via de Garmin-export (zelfde start, binnen 2 minuten)? dan niet nog eens
     if(acts.some(y=> y.startTime && a.startTime && Math.abs(Date.parse(y.startTime)-Date.parse(a.startTime)) < 120000)) continue;
     acts.push(a); have.add(a.externalId); added.push(a);
   }
   const linked = added.length ? runAutoLinkAfterImport(added) : 0;
+  const cleaned = await coachCleanupDone().catch(()=>0);
   const wl = await coachFetchWellness(token);
   c.needActivityScope = !!wl.scope; c.lastRunsAt = runNow(); RUI.coachBusy = null;
   const parts = [];
   if(added.length) parts.push(added.length+' nieuwe activiteit(en)'+(linked?', '+linked+' gekoppeld aan je training':''));
   if(wl.days) parts.push('dagwaarden van '+wl.days+' dag(en) bijgewerkt');
+  if(cleaned) parts.push(cleaned+' geplande training'+(cleaned===1?'':'en')+' in je horlogekalender opgeruimd');
   if(wl.scope && !quiet) runMsg('Runs opgehaald, maar Atempo mag je dagwaarden (HRV, rustpols, slaap) nog niet lezen. Verbind opnieuw met je sporthorloge en geef daarvoor toestemming.', 'err');
   else if(parts.length || !quiet) runMsg(parts.length ? 'Van je horloge: '+parts.join('; ')+'.' : 'Niets nieuws van je horloge.');
   coachRerender();
-  return { added: added.length, linked, days: wl.days || 0 };
+  return { added: added.length, linked, days: wl.days || 0, cleaned };
 }
 
 /* ---------- aanroepen (alleen agenda-afspraken met een Atempo-sleutel) ---------- */
@@ -8308,6 +8333,19 @@ async function coachCall(data){
   if(data.action==='upsert') return { events: (Array.isArray(j)?j:[]).map(ev=>({ id:ev.id, external_id:ev.external_id })) };
   return { deleted: j && j.eventsDeleted };
 }
+/* Automatisch ophalen: zolang je met je horloge verbonden bent, haalt Atempo zelf nieuwe runs op, zodat je niet hoeft te wachten of op een knop
+   hoeft te klikken: bij het terugkomen in de app (als de laatste keer meer dan 2 minuten geleden is) en elke 10 minuten zolang de app open staat.
+   Een nieuwe run wordt aan de training van die dag gekoppeld; daarna vraagt Atempo om de vragen na de training. */
+const coachAuto = { last:0, busy:false };
+async function coachAutoFetch(minAgeMs){
+  if(coachAuto.busy || !coachConnected()) return false;
+  if(Date.now() - coachAuto.last < (minAgeMs==null ? 10*60*1000 : minAgeMs)) return false;
+  coachAuto.busy = true;
+  try { await coachFetchRuns(true); await coachSyncAll(false); } catch(e){ /* volgende ronde opnieuw */ } finally { coachAuto.busy = false; }
+  return true;
+}
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') coachAutoFetch(2*60*1000); });
+setInterval(()=>{ if(document.visibilityState==='visible') coachAutoFetch(10*60*1000); }, 60*1000);
 /* bij het opstarten: terugkomst van Intervals.icu afhandelen */
 window.addEventListener('load', ()=>{ coachHandleRedirect().then(back=>{ if(coachConnected()) setTimeout(()=>coachFetchRuns(true).finally(()=>coachSyncAll(false)), 1500); if(back){ saveState(); const ss = coachSess(), b = ss.back || {}; delete ss.back; coachSessSave(ss); if(typeof showView==='function'){ RUI.tab = b.tab || 'program'; if(b.openId){ RUI.openId = b.openId; RUI.scrollTo = b.openId; } showView(b.view || 'running'); } } }); });
 
