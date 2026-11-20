@@ -282,6 +282,7 @@ details.regcard .rc-body{padding:14px 16px 16px}
 .prof-since{font-size:13px;color:var(--muted)}
 .prof-acct{margin-bottom:14px}.prof-acct-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .prof-acct-btns{display:flex;gap:8px;margin-top:10px}
+.prof-acct-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line2)}
 .acct-switch{display:inline-flex;gap:0;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--card,#fff);max-width:100%}
 .acct-switch button{font:inherit;font-weight:700;font-size:14px;padding:8px 16px;border:0;border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
 .acct-switch button.on{background:var(--green,#04717C);color:#fff}
@@ -1337,7 +1338,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.28";
+const APP_VERSION = "block2-2.24.29";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -1522,8 +1523,13 @@ function programmaKeuzeHTML(){
       : '<span class="small muted">Nog niet geladen — ververs de pagina</span>';
     const badge = p.gratis ? ' <span class="pill done">gratis</span>' : (beheerder ? ' <span class="pill">betaald · alleen voor jou als beheerder</span>' : '');
     return `<div class="prog-keuze${isActief ? ' is-actief' : ''}${slot ? ' is-locked' : ''}"${slot ? ' aria-disabled="true"' : ''}><div class="prog-keuze-t"><b>${esc(p.naam || k)}</b>${badge}${p.beschrijving ? `<div class="small muted">${esc(p.beschrijving)}</div>` : ''}</div><div class="prog-keuze-a">${actie}</div></div>`; };
-  return `<div class="card" id="progKeuzeCard"><h3>Mijn programma</h3><p class="small muted" style="margin-top:0">Kies het programma waar je mee traint. Wissel je later, dan vraagt Atempo eerst wat er met je geplande trainingen gebeurt.</p>${keys.map(rij).join('')}</div>`;
+  /* uitklapblok: het gekozen programma staat bovenaan en in de kop; zolang er niets gekozen is, staat het open */
+  const heeft = keys.some(k=> !!cat[k] && k===actief), volgorde = keys.slice().sort((a,b)=> (b===actief && !!cat[b]) - (a===actief && !!cat[a]));
+  const open = ui.progKeuzeOpen===undefined ? !heeft : !!ui.progKeuzeOpen;
+  const kop = heeft ? esc((lijst[actief] || {}).naam || actief) : 'nog niets gekozen';
+  return `<details class="acc prog-acc" id="progKeuzeCard"${open ? ' open' : ''}><summary>Mijn programma <span class="muted">· ${kop}</span></summary><div class="acc-body"><p class="small muted" style="margin-top:0">Kies het programma waar je mee traint. Wissel je later, dan vraagt Atempo eerst wat er met je geplande trainingen gebeurt.</p>${volgorde.map(rij).join('')}</div></details>`;
 }
+document.addEventListener('toggle', e=>{ const d = e.target; if(d && d.id==='progKeuzeCard') ui.progKeuzeOpen = d.open; }, true);
 function weekConfig(wi){
   const p = activeProgramma(), c = Array.isArray(p.weken) ? p.weken : [];
   if(wi>=0 && wi<c.length) return c[wi];
@@ -1978,9 +1984,12 @@ const runHrZoneOf = s => (s && s.target && s.target.type==='hr' && runHrZone(s.t
 const runHrHeavy = z => z==='stevig' || z==='intensief' || z==='zeerintensief';
 /* intensiteit voor een nieuwe training: de laatst bewust gekozen (eerste keer Rustig). Zeer intensief nooit vanzelf;
    Stevig/Intensief niet vanzelf als het herstel van die dag (vandaag) niet groen is. Zonder hartslaginstelling: geen doel. */
-function runHrDefaultTarget(date){
+/* een niveau kan een aanbevolen intensiteit meebrengen (programma: niveau.intensiteit = 'herstel' | 'rustig' | 'stevig' | 'intensief' | 'zeerintensief').
+   Bij een nieuwe training staat de Intensiteit daar dan op, met het hartslagbereik voor jouw leeftijd. Zonder leeftijd (of eigen maximum): geen doel. */
+const runLevelZone = tpl => { const z = tpl && tpl.intensiteit; return (typeof z==='string' && runHrZone(z)) ? z : ''; };
+function runHrDefaultTarget(date, tpl){
   if(!runHrOn()) return null;
-  let z = runHrSet().lastZone || 'rustig';
+  let z = runLevelZone(tpl) || runHrSet().lastZone || 'rustig';
   if(!runHrZone(z) || z==='zeerintensief') z = 'rustig';
   if(runHrHeavy(z) && date===todayISO() && runReadiness(date).shown!=='green') z = 'rustig';
   return runHrTarget(z);
@@ -1988,13 +1997,14 @@ function runHrDefaultTarget(date){
 /* toekomstige geplande trainingen waarvan het bereik niet meer past bij de huidige instellingen */
 function runHrOutdated(){
   const today = todayISO();
-  return RP().sessions.filter(s=> s.status==='planned' && s.date>=today && runHrZoneOf(s)).filter(s=>{
+  return RP().sessions.filter(s=> s.status==='planned' && s.date>=today && (runHrZoneOf(s) || (runHrOn() && runLevelZone(runTpl(s.templateId))))).filter(s=>{
+    if(!runHrZoneOf(s)) return true;          // nog geen doel, het niveau adviseert een intensiteit en het hartslagbereik is nu bekend
     const n = runHrTarget(s.target.zone); return n.type!=='hr' || n.low!==s.target.low || n.high!==s.target.high; });
 }
 
 function runNewSession(date, tpl){
   return { id:runId(), date, templateId:tpl.id, name:tpl.name + (tpl.label ? ' – '+tpl.label : ''), status:'planned',
-    steps: runStepsFromParams(tpl), intensity:tpl.intensity||'rustig', target: runHrDefaultTarget(date) || { ...(tpl.target||{type:'none',low:null,high:null}) },
+    steps: runStepsFromParams(tpl), intensity:tpl.intensity||'rustig', target: runHrDefaultTarget(date, tpl) || { ...(tpl.target||{type:'none',low:null,high:null}) },
     notes:'', createdAt:runNow(), garminExternalId:null, manual:null, post:null, next:null };
 }
 function runSessionsOn(date){ return RP().sessions.filter(s=>s.date===date).sort(runByDate); }
@@ -3392,7 +3402,14 @@ function injuryAskHTML(d){
 }
 function profileCardHTML(){
   const p = profile(), age = profileAge(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld'), sw = profileStartWeight();
-  return `<div class="card prof-card" id="profileCard">
+  const sa = syncLoad(), ingelogd = fbConfigured() && !!sa.auth;
+  const top = ingelogd ? `<div class="prof-acct-top"><div class="small" style="margin:0">Ingelogd als <b>${esc(sa.auth.email||'')}</b><div class="tny muted sync-status" id="syncStatus">${esc(SYNC.msg || syncIdleLabel())}</div></div><button class="btn sm" data-sync="logout">Uitloggen</button></div>` : '';
+  const syncAcc = ingelogd ? `<details class="acc" id="syncAcc" style="margin-top:14px"><summary>Synchroniseren en account</summary><div class="acc-body">
+      <p class="small muted" style="margin:0 0 8px">Wijzigingen worden automatisch gedeeld tussen je apparaten.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" data-sync="now">Nu synchroniseren</button></div>
+      <details class="acc" style="margin-top:10px"><summary>Eerdere cloudversie terugzetten</summary><div class="acc-body" id="syncVersions">${syncVersionsHTML()}</div></details>
+      <p class="tny" style="margin-top:10px"><a href="#" class="prof-del-acct" data-sync="delete-account">Account en alle gegevens verwijderen</a></p></div></details>` : '';
+  return `<div class="card prof-card" id="profileCard">${top}
     <div class="form-grid cols-3">
       <div class="field"><label for="profName">Naam</label><input id="profName" type="text" data-prof="name" value="${esc(p.name||'')}" maxlength="40" autocomplete="given-name"></div>
       <div class="field"><label for="profBirth">Geboortedatum</label><input id="profBirth" type="date" data-prof="birthDate" value="${esc(p.birthDate||'')}" min="1900-01-01" max="${todayISO()}"></div>
@@ -3400,14 +3417,7 @@ function profileCardHTML(){
         ${sw && !sw.own ? `<div class="tny muted" style="margin-top:4px">${esc(nl(sw.kg))} kg uit je eerste weging (${esc(fmt(sw.date,{day:'numeric',month:'short'}))}). Vul zelf in om dit te wijzigen.</div>` : ''}</div>
     </div>
     ${age!=null ? `<p class="small">Leeftijd: <b>${age} jaar</b></p>` : ''}
-    <h4 style="margin:14px 0 6px">Mijn hartslag</h4>
-    ${typeof runHrSettingsHTML==='function' ? runHrSettingsHTML() : ''}
-    <h4 style="margin:14px 0 6px">Blessures</h4>
-    ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span class="prof-inj-n"><b>${esc(x.area)}</b> <label class="tny muted prof-since">sinds <input type="date" data-inj-since="${esc(x.id)}" value="${esc(x.since||'')}" min="1900-01-01" max="${todayISO()}" aria-label="${esc(x.area)}: sinds wanneer"></label></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
-      : ''}
-    <div class="prof-add"><div class="field"><select data-inj-add-sel aria-label="Blessure toevoegen"><option value="">+ ${act.length ? 'Nog een blessure' : 'Blessure'} toevoegen…</option>${PAIN_AREAS.filter(o=> !act.some(x=>x.area.toLowerCase()===o.toLowerCase())).map(o=>`<option>${esc(o)}</option>`).join('')}<option value="__other">Anders…</option></select></div>
-      ${ui.injOther ? `<div class="field"><input type="text" data-inj-add-txt maxlength="40" placeholder="bv. linkerbeen" aria-label="Plek van de blessure"></div>` : ''}</div>
-    ${old.length ? `<div class="prof-old tny muted">Eerder: ${old.map(x=>`<span>${esc(x.area)}${x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':''} <button class="prof-x" data-inj-del="${esc(x.id)}" aria-label="${esc(x.area)} verwijderen" title="Verwijderen">✕</button></span>`).join('')}</div>` : ''}
+    ${syncAcc}
   </div>`;
 }
 /* ===== Mijn doelen: resultaatdoelen per gebruiker in state.profile.goals; routinedoelen zijn de bestaande routines
@@ -5863,6 +5873,7 @@ function renderMethod(){
       <p class="small">Bij elke geplande hardlooptraining kies je een <b>Intensiteit</b>. Atempo rekent die om naar een hartslagbereik (in slagen per minuut) dat bij de training hoort en naar je horloge gaat. Zo weet je tijdens het lopen of je rustig genoeg of juist stevig genoeg gaat.</p>
       <ul class="small">${zl}</ul>
       <p class="small"><b>Je maximale hartslag</b> schat Atempo uit je leeftijd (208 − 0,7 × leeftijd). Die leeftijd haalt Atempo uit je geboortedatum bij Mijn profiel. Ken je je eigen maximale hartslag, bijvoorbeeld uit een test, dan kun je die in Mijn profiel invullen: die gaat dan voor.</p>
+      <p class="small"><b>Aanbevolen intensiteit per niveau:</b> een programma kan bij elk niveau een intensiteit adviseren (bijvoorbeeld Rustig). Als je een training inplant, staat de Intensiteit daar dan al op, met het hartslagbereik dat bij jouw leeftijd past. Je kunt het per training altijd zelf wijzigen. Zeer intensief wordt nooit vanzelf gekozen, en Stevig of hoger niet op een dag waarop je herstel niet groen is.</p>
       <p class="small"><b>Het rode hartje</b> bij Mijn profiel zonder tekst erachter betekent dat je geboortedatum nog ontbreekt. Zonder geboortedatum kan Atempo geen hartslagbereik uitrekenen en kun je niet met een hartslagdoel trainen. Vul je die in, dan verschijnt je maximale hartslag naast het hartje.</p>
       <p class="small"><b>Wijzigt je maximale hartslag</b> (nieuwe leeftijd of eigen waarde), dan vraagt Atempo of je de toekomstige trainingen wilt bijwerken. Trainingen die je al hebt gedaan blijven zoals ze waren.</p>
       <p class="small"><b>Zeer intensief</b> is een zeer zware belasting en gaat alleen vanzelf naar je horloge op een dag met groen herstel. Is je herstel rood, dan raadt Atempo hardlopen af. Een schatting uit je leeftijd is een richtlijn: iedereen is anders, en bij klachten (pijn op de borst, duizeligheid) stop je en neem je contact op met een arts.</p>
@@ -6610,7 +6621,20 @@ function progSubnav(){
   const a = el.querySelector('.prog-subnav .active'); if(a && a.scrollIntoView) a.scrollIntoView({ block:'nearest', inline:'center' });
 }
 /* Meer › Mijn profiel: eigen pagina (computer: tabblad naast Back-up en herstel; telefoon: bovenaan de lijst Meer) */
-function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${goalsCardHTML()}`); }
+/* Mijn hartslag: eigen kaart (leeftijd komt uit de geboortedatum in Mijn profiel) */
+function blessuresHTML(){
+  const p = profile(), act = injuriesActive(), old = (p.injuries||[]).filter(x=>x && x.status==='hersteld');
+  return `<div class="prof-blessures">
+    <h4 style="margin:14px 0 6px">Blessures</h4>
+    ${act.length ? `<ul class="prof-inj">${act.map(x=>`<li><span class="prof-inj-n"><b>${esc(x.area)}</b> <label class="tny muted prof-since">sinds <input type="date" data-inj-since="${esc(x.id)}" value="${esc(x.since||'')}" min="1900-01-01" max="${todayISO()}" aria-label="${esc(x.area)}: sinds wanneer"></label></span><button class="btn sm" data-inj-healed="${esc(x.id)}">Hersteld</button></li>`).join('')}</ul>`
+      : ''}
+    <div class="prof-add"><div class="field"><select data-inj-add-sel aria-label="Blessure toevoegen"><option value="">+ ${act.length ? 'Nog een blessure' : 'Blessure'} toevoegen…</option>${PAIN_AREAS.filter(o=> !act.some(x=>x.area.toLowerCase()===o.toLowerCase())).map(o=>`<option>${esc(o)}</option>`).join('')}<option value="__other">Anders…</option></select></div>
+      ${ui.injOther ? `<div class="field"><input type="text" data-inj-add-txt maxlength="40" placeholder="bv. linkerbeen" aria-label="Plek van de blessure"></div>` : ''}</div>
+    ${old.length ? `<div class="prof-old tny muted">Eerder: ${old.map(x=>`<span>${esc(x.area)}${x.healedAt?' (hersteld '+esc(fmt(x.healedAt,{day:'numeric',month:'short'}))+')':''} <button class="prof-x" data-inj-del="${esc(x.id)}" aria-label="${esc(x.area)} verwijderen" title="Verwijderen">✕</button></span>`).join('')}</div>` : ''}
+  </div>`;
+}
+function hartslagCardHTML(){ return typeof runHrSettingsHTML==='function' ? `<div class="card" id="hrCard"><h3>Mijn hartslag en blessures</h3>${runHrSettingsHTML()}${blessuresHTML()}</div>` : ''; }
+function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}`); }
 /* Account: inloggen en uitloggen (zelfde functies als voorheen bij Synchronisatie; aan de cloud zelf verandert niets) */
 function accountHTML(){
   if(!fbConfigured()) return `<div class="card prof-acct"><h3>Account</h3><p class="small muted" style="margin:0">Inloggen is op dit apparaat nog niet ingesteld.</p></div>`;
@@ -6635,12 +6659,7 @@ function accountHTML(){
     ${nieuw ? '' : '<p class="tny" style="margin-top:8px"><a href="#" data-sync="forgot">Wachtwoord vergeten?</a></p>'}
     <p class="tny muted sync-status" style="margin-top:6px">${esc(SYNC.msg)}</p></div>`;
   }
-  return `<div class="card prof-acct"><h3>Account</h3><div class="prof-acct-row"><p class="small" style="margin:0">Ingelogd als <b>${esc(s.auth.email||'')}</b></p><button class="btn sm" data-sync="logout">Uitloggen</button></div>
-    <p class="small muted" style="margin:10px 0 8px">Wijzigingen worden automatisch gedeeld tussen je apparaten.</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm primary" data-sync="now">Nu synchroniseren</button></div>
-    <p class="tny muted sync-status" id="syncStatus" style="margin-top:6px">${esc(SYNC.msg)}</p>
-    <details class="acc" style="margin-top:10px"><summary>Eerdere cloudversie terugzetten</summary><div class="acc-body" id="syncVersions">${syncVersionsHTML()}</div></details>
-    <p class="tny" style="margin-top:10px"><a href="#" class="prof-del-acct" data-sync="delete-account">Account en alle gegevens verwijderen</a></p></div>`;
+  return '';      // ingelogd: inloggegevens en synchroniseren staan in de kaart Mijn profiel (profileCardHTML)
 }
 /* Meer (telefoon): alles wat je niet iedere dag nodig hebt, één lijst */
 function renderMore(){
@@ -6680,7 +6699,8 @@ function showView(v){
 document.addEventListener('click', e=>{
   const pk = e.target.closest && e.target.closest('[data-prog-kies]'); if(pk){ e.preventDefault(); const k = pk.dataset.progKies;
     if((programmaLijst()[k]||{}).gratis!==true && !PROGRAMMA_ADMIN && k!==activeProgrammaKey()) return;      // betaald: alleen de beheerder
-    CB.programmaId = k; renderCurrent(); if(CB.programmaId===k) programmaDoelToepassen(k); saveState(); renderCurrent(); return; }
+    ui.progKeuzeOpen = false;      // na het kiezen klapt het blok dicht (het gekozen programma staat in de kop)
+    CB.programmaId = k; renderCurrent(); if(CB.programmaId===k) programmaDoelToepassen(k); saveState(); renderCurrent(); const kk = $('#progKeuzeCard'); if(kk) kk.open = false; return; }
   const nav = e.target.closest('[data-view]');
   if(nav){ e.preventDefault(); showView(nav.dataset.view); return; }
   if(e.target.id==='menuBtn' || e.target.id==='moreTabBtn' || e.target.closest('#moreTabBtn')){ $('#sidebar').classList.toggle('open'); return; }
@@ -7803,7 +7823,7 @@ function runLevelsHTML(){
   rp.templates.forEach(t=>{
     const steps = runStepsFromParams(t), isCur = t.id===cur.id, editing = RUI.manage===t.id;
     h += `<div class="run-level ${isCur?'cur':''} ${editing?'editing':''}"><div class="run-level-top"><b>${esc(t.name)}</b>${t.label?` <span class="tny muted">${esc(t.label)}</span>`:''}${isCur?' <span class="pill done">huidig</span>':''}</div>
-      <div class="small">${esc(runShortStructure(steps))} · ${runMinLabel(runTotals(steps).total)}</div>${runTimelineSVG(steps, 20)}
+      <div class="small">${esc(runShortStructure(steps))} · ${runMinLabel(runTotals(steps).total)}${runLevelZone(t) ? ' · intensiteit '+esc(runHrZone(runLevelZone(t))[1].toLowerCase()) : ''}</div>${runTimelineSVG(steps, 20)}
       ${editing ? '' : `<div class="run-actions">${runBtn('tplEdit|'+t.id, 'Aanpassen', 'sm')}</div>`}
       ${editing ? `<div class="run-level-edit">${runLevelEditor(t)}</div>` : ''}</div>`;
   });
@@ -7938,7 +7958,7 @@ function runAct0(act, args, el){
     case 'hrOwn': { const h = rp.settings.hr = rp.settings.hr || {}; h.useOwn = !h.useOwn; } break;
     case 'hrAgeOk': { const h = rp.settings.hr = rp.settings.hr || {}; h.ageSetAt = runNow(); } break;
     case 'hrLater': { const h = rp.settings.hr = rp.settings.hr || {}; h.dismissed = runHrSig(); } break;
-    case 'hrUpdate': { const list = runHrOutdated(); list.forEach(x=>{ x.target = runHrTarget(x.target.zone); }); if(list.length){ coachSoon(); runMsg(list.length===1 ? '1 training bijgewerkt.' : list.length+' trainingen bijgewerkt.'); } } break;
+    case 'hrUpdate': { const list = runHrOutdated(); list.forEach(x=>{ x.target = runHrTarget(runHrZoneOf(x) || runLevelZone(runTpl(x.templateId))); }); if(list.length){ coachSoon(); runMsg(list.length===1 ? '1 training bijgewerkt.' : list.length+' trainingen bijgewerkt.'); } } break;
     case 'open': if(s){ RUI.tab = 'program'; RUI.openId = s.id; RUI.scrollTo = s.id; } break;
     case 'plan': { const t = runTpl(args[1]) || runCurrentTpl(); if(rp.restDays[args[0]]) delete rp.restDays[args[0]]; const n = runPlanOn(args[0], t); if(n && n.id){ RUI.openId = n.id; runMsg(n.name+' ingepland op '+runDateShort(args[0])+'.'); } break; }
     case 'planAhead': { const t = runCurrentTpl(), ds = runSuggestionDates(today, (rp.settings.planWeeksAhead||2)+1).filter(d=>d>=today);

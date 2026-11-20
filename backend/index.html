@@ -355,6 +355,7 @@ function renderOverzicht() {
       <dl>
         <dt>Gebruik</dt><dd>${g ? '<b>' + g.gekozen + '</b> gekozen · <b>' + g.actief30d + '</b> actief de laatste 30 dagen' : (gebruik === null ? '<span class="hint">laden… (of de functie is nog niet geplaatst)</span>' : '—')}</dd>
         <dt>Niveaus</dt><dd>${niveauTekst}</dd>
+        <dt>Intensiteit</dt><dd>${(() => { const z = [...new Set(nv.map(n => n.intensiteit).filter(Boolean))]; return z.length ? esc(z.join(', ')) + (nv.every(n => n.intensiteit) ? '' : ' (niet bij alle niveaus)') : '<span class="hint">niet ingesteld — de gebruiker kiest zelf per training</span>'; })()}</dd>
         <dt>Weken</dt><dd>${Array.isArray(p.weken) ? p.weken.length : 0}</dd>
         <dt>Trainingsdagen</dt><dd>${esc(dagen)}</dd>
         <dt>Doel</dt><dd>${doel && doel.naam ? esc(doel.naam) + (doel.afstandKm ? ' · ' + esc(doel.afstandKm) + ' km' : '') : '—'}</dd>
