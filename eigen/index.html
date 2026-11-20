@@ -45,6 +45,8 @@ a{color:var(--green)}
 .nav-ico{width:20px;text-align:center;flex:0 0 20px;opacity:.85}
 .sidebar-sep{border-top:1px solid #ffffff1f;margin:12px 6px}
 .sidebar-foot{font-size:11px;color:#5D7183;margin:16px 10px;line-height:1.5}
+.side-privacy{display:block;margin:14px 14px 0;font-size:12.5px;color:var(--muted);text-decoration:underline}
+.side-privacy:hover{color:var(--green)}
 .main{min-width:0;display:flex;flex-direction:column}
 #backupBar{background:var(--amber-bg);border-bottom:1px solid #e5d59b;color:var(--amber-ink);padding:9px 24px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #backupBar[hidden]{display:none}
@@ -1286,6 +1288,7 @@ summary.oc-ph{flex-wrap:wrap}
   <div class="sidebar-sep"></div>
   <button class="nav-btn" data-view="progress"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="4" width="4" height="17" rx="1"/></svg></span> Voortgang</button>
   <button class="nav-btn" data-view="profile" title="Mijn profiel, gegevens, back-up en koppelingen"><span class="nav-ico"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 0 0-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 0 0-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 0 0-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 0 0-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 0 0 1.066-2.573c-.94-1.543.826-3.31 2.37-2.37c1 .608 2.296.07 2.572-1.065z"></path><circle cx="12" cy="12" r="3"></circle></svg></span> Meer<svg class="nav-chev" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></button>
+  <a class="side-privacy no-print" href="privacy.html" target="_blank" rel="noopener" title="Wat er met je gegevens gebeurt">Privacy</a>
   <div class="sidebar-foot" id="sidebarFoot">Opgeslagen in deze browser. Maak geregeld een JSON-back-up.</div>
   <div class="side-status no-print" id="sideStatus" aria-label="Opslag en versie"></div>
 </aside>
@@ -1338,7 +1341,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.31";
+const APP_VERSION = "block2-2.24.32";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -6639,7 +6642,7 @@ function blessuresHTML(){
   </div>`;
 }
 function hartslagCardHTML(){ return typeof runHrSettingsHTML==='function' ? `<div class="card" id="hrCard"><h3 class="hr-title">Mijn hartslag en blessures ${typeof runHrHeartHTML==='function' ? runHrHeartHTML() : ''}</h3>${runHrSettingsHTML()}${blessuresHTML()}</div>` : ''; }
-function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}`); }
+function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}<p class="tny muted" style="margin:14px 2px"><a href="privacy.html" target="_blank" rel="noopener">Privacy: wat er met je gegevens gebeurt</a></p>`); }
 /* Account: inloggen en uitloggen (zelfde functies als voorheen bij Synchronisatie; aan de cloud zelf verandert niets) */
 function accountHTML(){
   if(!fbConfigured()) return `<div class="card prof-acct"><h3>Account</h3><p class="small muted" style="margin:0">Inloggen is op dit apparaat nog niet ingesteld.</p></div>`;
