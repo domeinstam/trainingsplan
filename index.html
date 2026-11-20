@@ -1334,7 +1334,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.24";
+const APP_VERSION = "block2-2.24.25";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -7797,12 +7797,12 @@ function runViewProgram(){
 /* ---------- invoer-verwerking (komt binnen via setByPath voor '__run.*'-velden) ---------- */
 /* Mijn profiel › Mijn hartslag: de maximale hartslag (geschat uit de leeftijd in je profiel, of eigen waarde) en de bevestiging na een wijziging */
 function runHrSettingsHTML(){
-  const h = runHrSet(), mx = runHrMax(), old = runHrOutdated();
+  const h = runHrSet(), mx = runHrMax(), old = runHrOutdated(), est = runHrMax({ ...h, useOwn:false });
   const heart = `<svg class="run-hr-heart" viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}" fill="#C0392B"><title>${mx ? 'Hartslag' : 'Hartslagdoel nog niet beschikbaar: vul je geboortedatum in'}</title><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-  return `<div class="small run-hr-line">${heart}${mx ? `<span>Maximale hartslag: <b>${mx.bpm} bpm</b> <span class="muted">(${mx.basis==='eigen' ? 'eigen waarde' : 'geschat uit je leeftijd'})</span></span>` : ''}</div>
+  return `<div class="small run-hr-line">${heart}${mx ? `<span>Maximale hartslag: <b>${mx.bpm} bpm</b> ${mx.basis==='eigen' ? ' <span class="muted">(eigen waarde)</span>' : ''}</span>` : ''}</div>
     <details class="acc run-hr-own-acc" data-run-hrown ${RUI.hrOwnOpen?'open':''}><summary>Eigen maximale hartslag${h.useOwn?' <span class="muted">(in gebruik)</span>':''}</summary><div class="acc-body">
-      <label class="run-hr-own small"><input type="checkbox" data-run-act="hrOwn" ${h.useOwn?'checked':''}> Eigen maximale hartslag gebruiken</label>
-      ${h.useOwn ? `<div class="form-grid cols-3">${runInp('Eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.ownMax, { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1] })}</div>` : ''}
+      <div class="form-grid cols-3">${runInp('Mijn eigen maximale hartslag (bpm)', '__run.set.hrOwnMax', h.useOwn ? h.ownMax : '', { type:'number', inputmode:'numeric', min:RUN_HR_OWN[0], max:RUN_HR_OWN[1], ph: est ? 'Geschat: '+est.bpm : 'bijv. 185' })}</div>
+      <div class="tny muted">Ken je je maximale hartslag, bijvoorbeeld uit een test? Vul die hier in, dan gebruikt Atempo die. Laat het veld leeg voor de schatting uit je leeftijd.</div>
     </div></details>
     ${old.length && h.dismissed!==runHrSig() ? runHrUpdateHTML(old.length) : ''}`;
 }
@@ -7855,7 +7855,7 @@ function runSet(parts, raw){
   if(k==='set' && ['hrAge','hrOwnMax'].includes(parts[1])){
     const h = rp.settings.hr = rp.settings.hr || {}, wasOn = runHrOn(), f = parts[1];
     if(f==='hrAge'){ if(String(raw).trim()===''){ delete h.age; } else { const n = numIn(raw,0,150); if(n===undefined || n<RUN_HR_AGE[0] || n>RUN_HR_AGE[1]) return bad(n!==undefined && n<RUN_HR_AGE[0] ? 'De hartslagberekening is bedoeld voor volwassenen (18 jaar en ouder).' : 'Vul een leeftijd in tussen '+RUN_HR_AGE[0]+' en '+RUN_HR_AGE[1]+'.'); h.age = Math.round(n); h.ageSetAt = runNow(); } }
-    else if(f==='hrOwnMax'){ if(String(raw).trim()===''){ delete h.ownMax; } else { const n = numIn(raw,RUN_HR_OWN[0],RUN_HR_OWN[1]); if(n===undefined) return bad('Eigen maximale hartslag: tussen '+RUN_HR_OWN[0]+' en '+RUN_HR_OWN[1]+' bpm.'); h.ownMax = Math.round(n); } }
+    else if(f==='hrOwnMax'){ if(String(raw).trim()===''){ delete h.ownMax; h.useOwn = false; } else { const n = numIn(raw,RUN_HR_OWN[0],RUN_HR_OWN[1]); if(n===undefined) return bad('Eigen maximale hartslag: tussen '+RUN_HR_OWN[0]+' en '+RUN_HR_OWN[1]+' bpm.'); h.ownMax = Math.round(n); h.useOwn = true; } }
     if(!wasOn && runHrOn()){                                         // net aangezet: gekozen training afmaken + eenmalige tip
       const s = RUI.hrAsk && runSes(RUI.hrAsk); if(s && s.status==='planned'){ s.target = runHrTarget(RUI.hrAskZone || 'rustig'); runHrRemember(RUI.hrAskZone || 'rustig'); RUI.openId = s.id; coachSoon(); }
       RUI.hrAsk = null;
