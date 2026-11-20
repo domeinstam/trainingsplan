@@ -1346,7 +1346,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.37";
+const APP_VERSION = "block2-2.24.38";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -6049,12 +6049,9 @@ async function bkRender(){
   const lastTxt = last ? new Date(last).toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'}) : 'nog nooit';
   const st = document.getElementById('bkStatus');
   if(st) st.innerHTML = `Laatste back-up: <b>${lastTxt}</b> · back-upmap: <b>${h?esc(h.name):'niet gekoppeld'}</b> · automatisch elke ${BK_DAYS} dagen`;
-  if(bkMobile() || !bkDue() || syncEmpty(state)){ bar.hidden = true; return; }   // nog niets ingevuld: niets om te back-uppen, geen balk
-  // telefoon/tablet: geen mapkeuze/automatische back-up mogelijk -> hierboven al weggehaald (nooit een balk)
-  bar.hidden = false;
-  bar.innerHTML = h
-    ? `<span>🗂 De wekelijkse back-up is aan de beurt (laatste: ${lastTxt}).</span><button class="btn sm primary" data-bk="run">Nu opslaan in de back-upmap</button><button class="btn sm" data-bk="download">Liever downloaden</button>`
-    : `<span>🗂 Er is nog geen back-upmap gekoppeld (laatste back-up: ${lastTxt}). Kies eenmalig een map; daarna maakt de app elke week zelf een back-up.</span><button class="btn sm primary" data-bk="pick">Back-upmap kiezen</button><button class="btn sm" data-bk="download">Nu downloaden</button>`;
+  /* geen balk meer bovenin (op verzoek weggehaald); de back-up blijft bereikbaar bij Meer > Back-up en herstel, en een gekoppelde
+     back-upmap wordt nog steeds vanzelf elke week bijgewerkt (bkInit) */
+  bar.hidden = true; bar.innerHTML = '';
 }
 function alfaInit(){
   if(!PUBLIC_BUILD) return;
