@@ -106,6 +106,8 @@
       <div class="row"><select id="progSelect"><option value="">— nieuw programma —</option><option value="__template__">— standaardsjabloon laden (12-weken opbouw) —</option></select><button id="loadProgsBtn">Vernieuw lijst</button><button id="rebuildListBtn" title="Zet naam, beschrijving en gratis van alle programma's in de openbare lijst">Openbare lijst bijwerken</button></div>
       <div class="field" style="margin-top:10px"><label>Id (bv. "5km")</label><input id="progId" placeholder="5km"></div>
       <label class="chk" style="margin-top:10px"><input type="checkbox" id="progGratis"> <span><b>Gratis voor iedereen</b><br><span class="hint">Aan: ook wie niet is ingelogd kan dit programma kiezen en gebruiken. Uit: alleen ingelogde gebruikers.</span></span></label>
+      <div class="field" style="margin-top:10px"><label for="progDoelNaam">Doel van dit programma <span class="hint">(wordt het hoofddoel van de gebruiker die het kiest)</span></label><input id="progDoelNaam" maxlength="80" placeholder="bv. 5 km aaneengesloten hardlopen"></div>
+      <div class="field" style="max-width:220px"><label for="progDoelKm">Afstand van het doel (km) <span class="hint">optioneel</span></label><input id="progDoelKm" type="number" min="0" step="0.5" inputmode="decimal" placeholder="bv. 5"></div>
       <div class="field" style="margin-top:10px"><textarea id="progText" placeholder='{"naam":"5 km","weken":[...],"vervolg":{...}}'></textarea></div>
       <div class="row"><button class="primary" id="saveProgBtn">Opslaan</button><button id="deleteProgBtn">Verwijderen</button><button id="exportProgBtn">Exporteren…</button><button id="importProgBtn">Importeren…</button><input type="file" id="importProgFile" accept="application/json" style="display:none"></div>
       <div class="msg" id="progMsg"></div>
@@ -276,8 +278,24 @@ const BUILTIN_PROGRAMMA_TEMPLATE = {"naam":"12-weken opbouw","beschrijving":"","
 let allProgrammas = {};
 /* het vinkje "Gratis voor iedereen" en het veld "gratis" in de tekst van het programma blijven gelijk */
 function gratisUitTekst() {
-  try { const d = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {}; $('#progGratis').checked = d.gratis === true; } catch (e) { /* ongeldige JSON: vinkje blijft staan */ }
+  try {
+    const d = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {};
+    $('#progGratis').checked = d.gratis === true;
+    $('#progDoelNaam').value = (d.doel && d.doel.naam) || ''; $('#progDoelKm').value = (d.doel && d.doel.afstandKm != null) ? d.doel.afstandKm : '';
+  } catch (e) { /* ongeldige JSON: velden blijven staan */ }
 }
+/* de velden Doel en Afstand schrijven mee in het veld "doel" van de tekst (leeg doel = veld "doel" weg) */
+function doelNaarTekst() {
+  try {
+    const d = $('#progText').value.trim() ? JSON.parse($('#progText').value) : {};
+    const naam = $('#progDoelNaam').value.trim(), km = $('#progDoelKm').value.trim();
+    if (!naam) delete d.doel;
+    else { d.doel = Object.assign({ soort: 'hardlopen' }, d.doel || {}, { naam }); if (km !== '' && Number(km) > 0) d.doel.afstandKm = Number(km); else delete d.doel.afstandKm; }
+    $('#progText').value = JSON.stringify(d, null, 2);
+  } catch (e) { setMsg($('#progMsg'), 'Doel en afstand kunnen pas als de tekst van het programma geldige JSON is: ' + e.message, false); }
+}
+$('#progDoelNaam').addEventListener('change', doelNaarTekst);
+$('#progDoelKm').addEventListener('change', doelNaarTekst);
 $('#progGratis').onchange = () => {
   const aan = $('#progGratis').checked;
   try {
@@ -337,6 +355,9 @@ $('#saveProgBtn').onclick = async () => {
   try { programma = JSON.parse($('#progText').value || '{}'); }
   catch (e) { return setMsg($('#progMsg'), 'Ongeldige JSON: ' + e.message, false); }
   programma.gratis = $('#progGratis').checked;      // het vinkje is leidend
+  { const naam = $('#progDoelNaam').value.trim(), km = $('#progDoelKm').value.trim();      // de velden Doel en Afstand zijn leidend
+    if (!naam) delete programma.doel;
+    else { programma.doel = Object.assign({ soort: 'hardlopen' }, programma.doel || {}, { naam }); if (km !== '' && Number(km) > 0) programma.doel.afstandKm = Number(km); else delete programma.doel.afstandKm; } }
   $('#progText').value = JSON.stringify(programma, null, 2);
   setMsg($('#progMsg'), 'Opslaan…');
   try { await callFn('adminSetProgramma', { id, programma }); setMsg($('#progMsg'), 'Opgeslagen.', true); loadProgs(); }
@@ -347,7 +368,7 @@ $('#deleteProgBtn').onclick = async () => {
   if (!id) return;
   if (!confirm('Programma "' + id + '" verwijderen?')) return;
   setMsg($('#progMsg'), 'Verwijderen…');
-  try { await callFn('adminDeleteProgramma', { id }); setMsg($('#progMsg'), 'Verwijderd.', true); $('#progId').value = ''; $('#progText').value = ''; $('#progGratis').checked = false; loadProgs(); }
+  try { await callFn('adminDeleteProgramma', { id }); setMsg($('#progMsg'), 'Verwijderd.', true); $('#progId').value = ''; $('#progText').value = ''; $('#progGratis').checked = false; $('#progDoelNaam').value = ''; $('#progDoelKm').value = ''; loadProgs(); }
   catch (e) { setMsg($('#progMsg'), e.message, false); }
 };
 

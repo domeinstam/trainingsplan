@@ -89,6 +89,9 @@ a{color:var(--green)}
 .prog-keuze{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--line)}
 .prog-keuze:first-of-type{border-top:0}
 .prog-keuze.is-actief{background:var(--mint);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:10px}
+.prog-keuze.is-locked{opacity:.62;background:#F3F5F7;margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:10px;cursor:not-allowed}
+.prog-keuze.is-locked .prog-keuze-t b{color:var(--muted)}
+.prog-slot{display:inline-flex;align-items:center;gap:5px}
 .prog-keuze-a{flex:0 0 auto;text-align:right}   /* in een raster zorgt de gap al voor ruimte; anders staan de kaarten naast elkaar scheef */
 .card h3{margin:0 0 14px;font-size:16px}
 .card h3 .sub{font-weight:500;color:var(--muted);font-size:12.5px}
@@ -1333,7 +1336,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.26";
+const APP_VERSION = "block2-2.24.27";
 const PUBLIC_BUILD = false;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-state";
@@ -1508,13 +1511,16 @@ const weekFase = cfg => cfg.faseLabel || PHASE_LABEL[cfg.phase] || cfg.phase || 
 function programmaKeuzeHTML(){
   const lijst = programmaLijst(), keys = Object.keys(lijst);
   if(!keys.length) return '';
-  const actief = activeProgrammaKey(), ingelogd = typeof syncLoggedIn==='function' && syncLoggedIn(), cat = programmaCatalogus();
-  const rij = k => { const p = lijst[k] || {}, bruikbaar = !!cat[k], isActief = bruikbaar && k===actief;
+  const actief = activeProgrammaKey(), cat = programmaCatalogus(), beheerder = typeof PROGRAMMA_ADMIN!=='undefined' && PROGRAMMA_ADMIN===true;
+  const slotIco = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="vertical-align:-2px"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  /* gratis: voor iedereen te kiezen. Betaald: grijs met een slot (een verdienmodel komt later); alleen de beheerder mag ze kiezen */
+  const rij = k => { const p = lijst[k] || {}, bruikbaar = !!cat[k], isActief = bruikbaar && k===actief, betaald = p.gratis!==true, slot = betaald && !beheerder && !isActief;
     const actie = isActief ? '<span class="pill done">Actief</span>'
+      : slot ? `<span class="small muted prog-slot">${slotIco} Betaald programma · binnenkort beschikbaar</span>`
       : bruikbaar ? `<button class="btn sm" data-prog-kies="${esc(k)}">Kiezen</button>`
-      : ingelogd ? '<span class="small muted">Nog niet geladen — ververs de pagina</span>'
-      : '<span class="small muted">Log in om dit programma te gebruiken</span> <button class="btn sm" data-view="profile">Inloggen</button>';
-    return `<div class="prog-keuze${isActief ? ' is-actief' : ''}"><div class="prog-keuze-t"><b>${esc(p.naam || k)}</b>${p.gratis ? ' <span class="pill done">gratis</span>' : ''}${p.beschrijving ? `<div class="small muted">${esc(p.beschrijving)}</div>` : ''}</div><div class="prog-keuze-a">${actie}</div></div>`; };
+      : '<span class="small muted">Nog niet geladen — ververs de pagina</span>';
+    const badge = p.gratis ? ' <span class="pill done">gratis</span>' : (beheerder ? ' <span class="pill">betaald · alleen voor jou als beheerder</span>' : '');
+    return `<div class="prog-keuze${isActief ? ' is-actief' : ''}${slot ? ' is-locked' : ''}"${slot ? ' aria-disabled="true"' : ''}><div class="prog-keuze-t"><b>${esc(p.naam || k)}</b>${badge}${p.beschrijving ? `<div class="small muted">${esc(p.beschrijving)}</div>` : ''}</div><div class="prog-keuze-a">${actie}</div></div>`; };
   return `<div class="card" id="progKeuzeCard"><h3>Mijn programma</h3><p class="small muted" style="margin-top:0">Kies het programma waar je mee traint. Wissel je later, dan vraagt Atempo eerst wat er met je geplande trainingen gebeurt.</p>${keys.map(rij).join('')}</div>`;
 }
 function weekConfig(wi){
@@ -3405,6 +3411,23 @@ function profileCardHTML(){
 const GOAL_STATUS = { actief:'Actief', gepauzeerd:'Gepauzeerd', behaald:'Behaald', beeindigd:'Beëindigd' };
 function goalsAll(){ const p = profile(); return Array.isArray(p.goals) ? p.goals.filter(g=> g && !g.deleted && g.type==='resultaat') : []; }
 function goalMain(){ return goalsAll().find(g=> g.status==='actief') || null; }
+/* een programma kan een doel meebrengen (programma.doel = { naam, soort, afstandKm, beschrijving }): bij het kiezen wordt dat je hoofddoel.
+   Een eigen hoofddoel of het doel van een ander programma wordt nooit stilzwijgend overschreven; het oude doel gaat naar "Eerder". */
+function programmaDoelToepassen(key){
+  const p = programmaCatalogus()[key], d = p && p.doel; if(!d || !String(d.naam||'').trim()) return;
+  const naam = String(d.naam).trim().slice(0,80), main = goalMain(), nu = new Date().toISOString();
+  if(main && main.programmaId===key) return;
+  if(main){
+    const q = main.programmaId ? `Het doel van je vorige programma ("${main.name}") vervangen door "${naam}"? Het oude doel gaat naar Eerder.`
+                               : `Dit programma hoort bij het doel "${naam}". Als hoofddoel instellen? Je huidige hoofddoel "${main.name}" gaat dan naar Eerder.`;
+    if(typeof confirm==='function' && !confirm(q)) return;
+    main.status = 'beeindigd'; main.updatedAt = nu;
+  }
+  const pr = profileW(); pr.goals = Array.isArray(pr.goals) ? pr.goals : [];
+  pr.goals.push({ id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), type:'resultaat', status:'actief', kind: d.soort==='anders' ? 'anders' : 'hardlopen', name:naam, desc: String(d.beschrijving||'').slice(0,200) || null, targetDate:null, programmaId:key, createdAt:nu, updatedAt:nu });
+  const km = num(d.afstandKm); if(km!=null && km>0 && km<=100) CB.goalDistanceKm = km;
+  saveState();
+}
 function goalRunGoal(){ const g = goalMain(); return g && g.kind==='hardlopen' ? g : null; }
 function goalRunInfo(){
   const tpl = typeof runCurrentTpl==='function' ? runCurrentTpl() : null, out = [];
@@ -3441,7 +3464,7 @@ function goalsCardHTML(){
         <div class="field"><label for="goalDate">Streefdatum <span class="tny muted">(optioneel)</span></label><input id="goalDate" type="date" value="${esc(g && g.targetDate || '')}" min="2020-01-01"></div></div>
       <div class="field"><label for="goalDesc">Toelichting <span class="tny muted">(optioneel)</span></label><input id="goalDesc" type="text" maxlength="200" value="${esc(g && g.desc || '')}" placeholder="bijv. pijnvrij, in mijn eigen tempo"></div>
       <div class="rt-actions"><button class="btn primary" data-goal-save="${g ? esc(g.id) : 'new'}">Opslaan</button><button class="btn" data-goal-cancel>Annuleren</button>${g ? `<button class="btn" data-goal-status="${esc(g.id)}|beeindigd">Beëindigen</button>` : ''}</div></div>`;
-  const meta = g => [g.targetDate ? 'streefdatum '+fmt(g.targetDate,{day:'numeric',month:'long',year:'numeric'}) : null, g.status!=='actief' ? GOAL_STATUS[g.status] : null].filter(Boolean).join(' · ');
+  const meta = g => [g.programmaId && (programmaLijst()[g.programmaId]||{}).naam ? 'hoort bij '+programmaLijst()[g.programmaId].naam : null, g.targetDate ? 'streefdatum '+fmt(g.targetDate,{day:'numeric',month:'long',year:'numeric'}) : null, g.status!=='actief' ? GOAL_STATUS[g.status] : null].filter(Boolean).join(' · ');
   const goalBox = g => cur===g ? form(g) : `<div class="goal-main ${g.status==='gepauzeerd' ? 'is-paused' : ''}">
       <div class="goal-name">${esc(g.name)}</div>${g.desc ? `<div class="small">${esc(g.desc)}</div>` : ''}
       ${g.kind==='hardlopen' && g.status==='actief' ? `<ul class="goal-info">${goalRunInfo().map(x=>`<li>${esc(x)}</li>`).join('')}<li>Je werkt aan je doel.</li></ul>` : ''}
@@ -6636,7 +6659,9 @@ function showView(v){
 }
 
 document.addEventListener('click', e=>{
-  const pk = e.target.closest && e.target.closest('[data-prog-kies]'); if(pk){ e.preventDefault(); CB.programmaId = pk.dataset.progKies; renderCurrent(); saveState(); return; }
+  const pk = e.target.closest && e.target.closest('[data-prog-kies]'); if(pk){ e.preventDefault(); const k = pk.dataset.progKies;
+    if((programmaLijst()[k]||{}).gratis!==true && !PROGRAMMA_ADMIN && k!==activeProgrammaKey()) return;      // betaald: alleen de beheerder
+    CB.programmaId = k; renderCurrent(); if(CB.programmaId===k) programmaDoelToepassen(k); saveState(); renderCurrent(); return; }
   const nav = e.target.closest('[data-view]');
   if(nav){ e.preventDefault(); showView(nav.dataset.view); return; }
   if(e.target.id==='menuBtn' || e.target.id==='moreTabBtn' || e.target.closest('#moreTabBtn')){ $('#sidebar').classList.toggle('open'); return; }
@@ -6978,6 +7003,15 @@ async function fbGetCurrent(uid){
    niet ingelogd) dan blijft het laatst gecachete programma staan; is er nog nooit iets opgehaald, dan
    gebruikt de app gewoon het ingebouwde standaardprogramma. */
 var PROGRAMMAS_FETCHED = '';
+var PROGRAMMA_ADMIN = false;      // alleen in de openbare versie: true als dit account beheerder is (mag ook betaalde programma's kiezen)
+async function fbFnCall(name){      // callable Cloud Function van het (openbare) Firebase-project aanroepen met de inlog van de gebruiker
+  const m = /^https:\/\/(.+?)-default-rtdb\./.exec(FB_DB); if(!m) throw new Error('geen project');
+  const a = await fbToken();
+  const r = await fetch('https://europe-west1-'+m[1]+'.cloudfunctions.net/'+name, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+a.access }, body:JSON.stringify({ data:{} }) });
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok || j.error) throw new Error((j.error && (j.error.message||j.error.status)) || ('Serverfout '+r.status));
+  return j.result;
+}
 async function fbPublicGet(path){
   const r = await fetch(FB_DB+'/'+path+'.json'); if(!r.ok) throw new Error('niet beschikbaar');
   return r.json();
@@ -6989,8 +7023,14 @@ async function syncProgrammasMaybe(){
   try{
     // de lijst (naam, beschrijving, gratis) mag iedereen zien; de inhoud alleen ingelogd, of zonder inlog bij een gratis programma
     const lijst = await fbPublicGet('programmaLijst'); if(lijst && typeof lijst==='object') programmaLijstSave(lijst);
-    if(modus==='auth'){ const raw = await fbDb('programmas'); if(raw && typeof raw==='object') programmaCacheSave(raw); }
-    else { const gratis = {}; for(const id of Object.keys(lijst||{}).filter(k=> lijst[k] && lijst[k].gratis===true)){ try{ const p = await fbPublicGet('programmas/'+encodeURIComponent(id)); if(p) gratis[id] = p; }catch(e){} } programmaCacheSave(gratis); }
+    PROGRAMMA_ADMIN = false;
+    if(modus==='auth' && !PUBLIC_BUILD){ const raw = await fbDb('programmas'); if(raw && typeof raw==='object') programmaCacheSave(raw); }      // eigen versie: ongewijzigd
+    else {
+      let alle = null;
+      if(modus==='auth'){ try{ const r = await fbFnCall('adminListProgrammas'); if(r && r.programmas && typeof r.programmas==='object'){ alle = r.programmas; PROGRAMMA_ADMIN = true; } }catch(e){ /* geen beheerder */ } }
+      if(alle) programmaCacheSave(alle);
+      else { const gratis = {}; for(const id of Object.keys(lijst||{}).filter(k=> lijst[k] && lijst[k].gratis===true)){ try{ const p = await fbPublicGet('programmas/'+encodeURIComponent(id)); if(p) gratis[id] = p; }catch(e){} } programmaCacheSave(gratis); }
+    }
     if(typeof renderCurrent==='function') renderCurrent();
   }catch(e){ PROGRAMMAS_FETCHED = ''; }
 }
@@ -7164,7 +7204,7 @@ Dit kan niet ongedaan worden gemaakt: je trainingsgeschiedenis, profiel en inste
   try{ await fbDeleteAccountAndData(); alert('Je account en gegevens zijn verwijderd.'); syncReload(); }
   catch(e){ syncSetMsg(e.message); }
 }
-function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-intervals'); } catch(e){} syncSetMsg(''); renderCurrent(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
+function syncLogout(){ const s = syncLoad(); if(s.auth && s.auth.uid && !s.dataUid) s.dataUid = s.auth.uid; delete s.auth; syncSave(s); try { sessionStorage.removeItem('atempo-intervals'); } catch(e){} PROGRAMMA_ADMIN = false; PROGRAMMAS_FETCHED = ''; setTimeout(syncProgrammasMaybe, 0); syncSetMsg(''); renderCurrent(); const ss = $('#saveState'); if(ss) ss.textContent = 'Lokaal opgeslagen'; }
 /* bewaarde cloudversies (de laatste 20) tonen en er één terugzetten; de huidige versie wordt eerst zelf bewaard */
 function syncVersionsHTML(){
   if(!SYNC.versions) return `<p class="tny muted">Atempo bewaart in de cloud de laatste 20 versies (ook altijd bij een keuze tussen twee versies).</p><button class="btn sm" data-sync="versions">Bewaarde versies tonen</button>`;
