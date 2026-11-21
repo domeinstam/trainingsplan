@@ -1345,7 +1345,7 @@ summary.oc-ph{flex-wrap:wrap}
    Opslag: localStorage (+ optionele Firebase-synchronisatie). Back-up: JSON + HTML. schemaVersion voor migraties.
    =========================================================================== */
 const SCHEMA_VERSION = 6;
-const APP_VERSION = "block2-2.24.41";
+const APP_VERSION = "block2-2.24.42";
 const PUBLIC_BUILD = true;   // wordt door build_public.py op true gezet; alleen dan verschijnt de alfa-balk
 const APP_BUILD = "2026-11-01";   // zichtbaar bovenaan onder de paginatitel — zo zie je meteen of de nieuwste versie geladen is
 const STORAGE_KEY = "atempo-openbaar-state";
@@ -1403,7 +1403,13 @@ function setViewHTML(sel, html){
   // scrollposities (pagina + scrollende kaders zoals de Dagdata-tabel) behouden over de herrender
   const pageY = window.scrollY;
   const boxes = [...el.querySelectorAll('.dd-wrap')].map(b=>[b.scrollLeft,b.scrollTop]);
+  /* ingevulde velden van het inlog- en aanmaakformulier overleven elke herrender (bv. een late achtergrondverversing terwijl je een wachtwoord plakt of typt) */
+  const KEEP = ['syncEmail','syncPw','syncPw2','syncNaam','syncGeb','syncGewicht','syncAdres','syncPostcode','syncPlaats'], keep = {};
+  KEEP.forEach(id=>{ const f = el.querySelector('#'+id); if(f && f.value) keep[id] = f.value; });
+  const keepFocus = ae && KEEP.includes(ae.id) && el.contains(ae) ? ae.id : null;
   el.innerHTML = viewTabsHtml(sel) + html;
+  KEEP.forEach(id=>{ if(keep[id]!==undefined){ const f = el.querySelector('#'+id); if(f && !f.value) f.value = keep[id]; } });
+  if(keepFocus){ const f = el.querySelector('#'+keepFocus); if(f){ f.focus(); try{ f.setSelectionRange(f.value.length, f.value.length); }catch(e){} } }
   numFieldsComma(el);
   el.querySelectorAll('.dd-wrap').forEach((b,i)=>{ if(boxes[i]){ b.scrollLeft=boxes[i][0]; b.scrollTop=boxes[i][1]; } });
   if(Math.abs(window.scrollY-pageY)>2) window.scrollTo(0,pageY);
@@ -6070,7 +6076,7 @@ async function bkRender(){
   bar.hidden = true; bar.innerHTML = '';
 }
 function alfaInit(){
-  if(!PUBLIC_BUILD) return;
+  if(!PUBLIC_BUILD){ const sp = document.querySelector('.side-privacy'); if(sp) sp.remove(); return; }      // eigen versie: geen privacyverklaring nodig
   const bar = document.getElementById('alfaBar'); if(!bar) return;
   try{ if(localStorage.getItem('atempo-openbaar-alfa-gezien')) return; }catch(e){}
   bar.hidden = false;
@@ -6660,7 +6666,7 @@ function blessuresHTML(){
   </div>`;
 }
 function hartslagCardHTML(){ return typeof runHrSettingsHTML==='function' ? `<div class="card" id="hrCard"><h3 class="hr-title">Mijn hartslag en blessures ${typeof runHrHeartHTML==='function' ? runHrHeartHTML() : ''}</h3>${runHrSettingsHTML()}${blessuresHTML()}</div>` : ''; }
-function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}<p class="tny muted" style="margin:14px 2px"><a href="privacy.html" target="_blank" rel="noopener">Privacy: wat er met je gegevens gebeurt</a></p>`); }
+function renderProfile(){ setViewHTML('#view-profile', `<div class="pagehead"><div class="eyebrow">Meer</div><h2>Mijn profiel</h2></div>${accountHTML()}${profileCardHTML()}${hartslagCardHTML()}${goalsCardHTML()}${PUBLIC_BUILD ? `<p class="tny muted" style="margin:14px 2px"><a href="privacy.html" target="_blank" rel="noopener">Privacy: wat er met je gegevens gebeurt</a></p>` : ''}`); }
 /* Account: inloggen en uitloggen (zelfde functies als voorheen bij Synchronisatie; aan de cloud zelf verandert niets) */
 function accountHTML(){
   if(!fbConfigured()) return `<div class="card prof-acct"><h3>Account</h3><p class="small muted" style="margin:0">Inloggen is op dit apparaat nog niet ingesteld.</p></div>`;
@@ -6680,7 +6686,7 @@ function accountHTML(){
       <div class="field"><label for="syncPw">Wachtwoord</label><div class="pw-wrap"><input type="password" id="syncPw" autocomplete="${nieuw?'new-password':'current-password'}">${eye}</div></div>
       ${nieuw ? `<div class="field"><label for="syncPw2">Wachtwoord nog een keer</label><div class="pw-wrap"><input type="password" id="syncPw2" autocomplete="new-password">${eye}</div></div>` : ''}</div>
     ${nieuw ? `<h4 style="margin:16px 0 4px">Over jou</h4>
-    <p class="tny muted" style="margin:0 0 8px">Alles hieronder is vrijwillig: vul alleen in wat je wilt delen, en gebruik gerust een alias. Voor een betaald programma hebben we later mogelijk je naam en adres nodig. Zonder geboortedatum kan Atempo geen hartslagbereik voor je berekenen. Je kunt alles later wijzigen bij Mijn profiel. <a href="privacy.html" target="_blank" rel="noopener">Wat we met je gegevens doen</a></p>
+    <p class="tny muted" style="margin:0 0 8px">Alles hieronder is vrijwillig: vul alleen in wat je wilt delen, en gebruik gerust een alias. Voor een betaald programma hebben we later mogelijk je naam en adres nodig. Zonder geboortedatum kan Atempo geen hartslagbereik voor je berekenen. Je kunt alles later wijzigen bij Mijn profiel.${PUBLIC_BUILD ? ' <a href="privacy.html" target="_blank" rel="noopener">Wat we met je gegevens doen</a>' : ''}</p>
     <div class="form-grid cols-3">
       <div class="field"><label for="syncNaam">Naam of alias <span class="tny muted">optioneel</span></label><input type="text" id="syncNaam" maxlength="40" autocomplete="name"></div>
       <div class="field"><label for="syncGeb">Geboortedatum <span class="tny muted">optioneel</span></label><input type="date" id="syncGeb" min="1900-01-01" max="${todayISO()}" autocomplete="bday"></div>
@@ -6707,7 +6713,7 @@ function renderMore(){
       ${row('data-view="data"', TDI.run, 'Verbinding met sporthorloge', 'Koppeling en trainingen naar je horloge')}
       ${row('data-view="garmin"', TDI.bars, 'Garmin-gegevens laden', 'Export van Garmin Connect inlezen')}
       ${row('data-view="method"', TDI.list, 'Uitleg', 'Hoe Atempo werkt en waarom')}
-      <a class="more-row" href="privacy.html" target="_blank" rel="noopener">${TD_ICO(TDI.heart)}<span><b>Privacy</b><small>Wat er met je gegevens gebeurt</small></span>${TD_ICO(TDI.chev, 'more-chev')}</a>
+      ${PUBLIC_BUILD ? `<a class="more-row" href="privacy.html" target="_blank" rel="noopener">${TD_ICO(TDI.heart)}<span><b>Privacy</b><small>Wat er met je gegevens gebeurt</small></span>${TD_ICO(TDI.chev, 'more-chev')}</a>` : ''}
     </div>
     <p class="tny muted" style="text-align:center;margin-top:12px">Atempo · ${esc(APP_VERSION.replace('block2-','versie '))}</p>`);
 }
